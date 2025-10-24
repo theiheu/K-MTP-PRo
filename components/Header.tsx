@@ -27,13 +27,13 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onSearch })
           <div className="flex-shrink-0">
             <a href="#" className="flex items-center space-x-2 text-2xl font-bold text-gray-800">
               <StoreIcon className="h-8 w-8 text-indigo-600" />
-              <span>E-Pro</span>
+              <span>Kho Vật Tư</span>
             </a>
           </div>
 
           <div className="hidden lg:flex flex-1 justify-center px-2 lg:ml-6 lg:justify-end">
             <div className="max-w-lg w-full lg:max-w-xs">
-              <label htmlFor="search" className="sr-only">Search</label>
+              <label htmlFor="search" className="sr-only">Tìm kiếm</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -44,7 +44,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onSearch })
                   id="search"
                   name="search"
                   className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="Search products..."
+                  placeholder="Tìm kiếm vật tư..."
                   type="search"
                   onChange={(e) => onSearch(e.target.value)}
                 />
@@ -60,14 +60,14 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onSearch })
                   {cartItemCount}
                 </span>
               )}
-              <span className="sr-only">items in cart, view bag</span>
+              <span className="sr-only">vật tư trong danh sách, xem danh sách</span>
             </button>
           </div>
         </div>
       </div>
       {/* Mobile Search Bar */}
       <div className="lg:hidden container mx-auto px-4 sm:px-6 pb-4">
-        <label htmlFor="mobile-search" className="sr-only">Search</label>
+        <label htmlFor="mobile-search" className="sr-only">Tìm kiếm</label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -78,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onSearch })
             id="mobile-search"
             name="search"
             className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="Search products..."
+            placeholder="Tìm kiếm vật tư..."
             type="search"
             onChange={(e) => onSearch(e.target.value)}
           />

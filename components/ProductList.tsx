@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Product } from '../types';
 import ProductCard from './ProductCard';
@@ -12,8 +11,8 @@ const ProductList: React.FC<ProductListProps> = ({ products, onAddToCart }) => {
   if (products.length === 0) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-2xl font-semibold text-gray-700">No Products Found</h2>
-        <p className="mt-2 text-gray-500">Try adjusting your search or filters.</p>
+        <h2 className="text-2xl font-semibold text-gray-700">Không tìm thấy vật tư</h2>
+        <p className="mt-2 text-gray-500">Hãy thử điều chỉnh tìm kiếm hoặc bộ lọc của bạn.</p>
       </div>
     );
   }

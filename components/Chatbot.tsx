@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Product } from '../types';
 import { getAIRecommendations } from '../services/geminiService';
@@ -35,7 +34,7 @@ const PaperAirplaneIcon = () => (
 const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { sender: 'ai', text: "Hello! I'm your personal shopping assistant. How can I help you find the perfect product today?" },
+    { sender: 'ai', text: "Xin chào! Tôi là trợ lý kho của bạn. Tôi có thể giúp gì để bạn tìm thấy vật tư cần thiết hôm nay?" },
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +59,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
       const aiResponse: Message = { sender: 'ai', text: reasoning, products: recommendedProducts };
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      const errorResponse: Message = { sender: 'ai', text: 'Sorry, I encountered an error. Please try again.' };
+      const errorResponse: Message = { sender: 'ai', text: 'Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại.' };
       setMessages(prev => [...prev, errorResponse]);
     } finally {
       setIsLoading(false);
@@ -76,7 +75,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
       </div>
       <div className={`fixed bottom-0 right-0 sm:m-6 lg:m-8 w-full sm:max-w-md h-full sm:h-[70vh] flex flex-col bg-white rounded-t-lg sm:rounded-lg shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
         <header className="flex items-center justify-between p-4 bg-indigo-600 text-white rounded-t-lg">
-          <h3 className="text-lg font-semibold">AI Assistant</h3>
+          <h3 className="text-lg font-semibold">Trợ lý Kho</h3>
           <button onClick={() => setIsOpen(false)} className="hover:bg-indigo-700 p-1 rounded-full">
             <CloseIcon />
           </button>
@@ -92,7 +91,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
                     {msg.products.map(p => (
                       <div key={p.id} className="flex items-center gap-2 text-xs p-1 bg-white rounded">
                         <img src={p.images[0]} alt={p.name} className="w-8 h-8 rounded object-cover"/>
-                        <span className="font-medium">{p.name}</span>
+                        <div className="flex flex-col">
+                            <span className="font-medium">{p.name}</span>
+                            <span className="text-gray-600">Tồn kho: {p.stock}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -121,7 +123,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Ask for recommendations..."
+              placeholder="Hỏi tôi để tìm một vật tư..."
               className="w-full pr-12 pl-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
               disabled={isLoading}
             />

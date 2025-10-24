@@ -55,7 +55,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
                 <img
                     key={index}
                     src={image}
-                    alt={`${product.name} view ${index + 1}`}
+                    alt={`${product.name} ảnh ${index + 1}`}
                     className="w-full h-full object-center object-cover flex-shrink-0"
                     loading={index === 0 ? "eager" : "lazy"} // Eager load first image, lazy load others
                 />
@@ -64,17 +64,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
 
         {product.images.length > 1 && (
           <>
-            <button onClick={goToPrevious} aria-label="Previous image" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
+            <button onClick={goToPrevious} aria-label="Ảnh trước" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
               <ChevronLeftIcon className="w-5 h-5" />
             </button>
-            <button onClick={goToNext} aria-label="Next image" className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
+            <button onClick={goToNext} aria-label="Ảnh sau" className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
               <ChevronRightIcon className="w-5 h-5" />
             </button>
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
               {product.images.map((_, index) => (
                 <button
                   key={index}
-                  aria-label={`Go to image ${index + 1}`}
+                  aria-label={`Chuyển đến ảnh ${index + 1}`}
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -94,13 +94,16 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
         <p className="mt-1 text-sm text-gray-500">{product.category}</p>
         <div className="flex-grow"></div>
         <div className="flex justify-between items-center mt-4">
-          <p className="text-lg font-semibold text-gray-900">${product.price.toFixed(2)}</p>
+          <p className="text-md font-medium text-gray-700">
+            Tồn kho: <span className={`font-bold ${product.stock > 0 ? 'text-gray-900' : 'text-red-600'}`}>{product.stock}</span>
+          </p>
           <button
             onClick={() => onAddToCart(product)}
-            className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            disabled={product.stock === 0}
+            className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             <PlusIcon className="w-5 h-5 mr-1" />
-            Add
+            Yêu cầu
           </button>
         </div>
       </div>

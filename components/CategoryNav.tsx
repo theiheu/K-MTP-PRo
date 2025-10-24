@@ -39,11 +39,11 @@ const HomeGoodsIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const categoryIcons: { [key: string]: React.FC<React.SVGProps<SVGSVGElement>> } = {
-  'All': AllIcon,
-  'Electronics': ElectronicsIcon,
-  'Apparel': ApparelIcon,
-  'Books': BooksIcon,
-  'Home Goods': HomeGoodsIcon,
+  'Tất cả': AllIcon,
+  'Điện tử': ElectronicsIcon,
+  'Trang phục': ApparelIcon,
+  'Sách': BooksIcon,
+  'Đồ gia dụng': HomeGoodsIcon,
 };
 
 const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, onSelectCategory }) => {

@@ -1,5 +1,5 @@
 {
-  "name": "E-Pro",
-  "description": "A modern, responsive e-commerce web application featuring a product catalog, a fully functional shopping cart, and a Gemini-powered AI personal shopper assistant to help you find the perfect products.",
+  "name": "SupplyHub",
+  "description": "Một ứng dụng web quản lý kho vật tư hiện đại, đáp ứng, bao gồm danh mục vật tư, danh sách yêu cầu đầy đủ chức năng và một trợ lý AI cá nhân được cung cấp bởi Gemini để giúp bạn tìm thấy vật tư hoàn hảo.",
   "requestFramePermissions": []
 }

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import ProductList from './components/ProductList';
 import Cart from './components/Cart';
-import FilterSortControls from './components/FilterSortControls';
 import Chatbot from './components/Chatbot';
 import CategoryNav from './components/CategoryNav';
+import Banner from './components/Banner';
 import { Product, CartItem } from './types';
 import { PRODUCTS, CATEGORIES } from './constants';
 
@@ -14,8 +14,7 @@ const App: React.FC = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('All');
-  const [sortOption, setSortOption] = useState('default');
+  const [category, setCategory] = useState('Tất cả');
 
   const filterAndSortProducts = useCallback(() => {
     let tempProducts = [...PRODUCTS];
@@ -29,32 +28,17 @@ const App: React.FC = () => {
     }
 
     // Filter by category
-    if (category !== 'All') {
+    if (category !== 'Tất cả') {
       tempProducts = tempProducts.filter(p => p.category === category);
-    }
-
-    // Sort
-    switch (sortOption) {
-      case 'price-asc':
-        tempProducts.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-desc':
-        tempProducts.sort((a, b) => b.price - a.price);
-        break;
-      case 'name-asc':
-        tempProducts.sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case 'name-desc':
-        tempProducts.sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      default:
-        // No sort or sort by ID for stability
-        tempProducts.sort((a,b) => a.id - b.id);
-        break;
     }
     
     setProducts(tempProducts);
-  }, [searchTerm, category, sortOption]);
+  }, [searchTerm, category]);
+
+  useEffect(() => {
+    // Set initial category to "Tất cả"
+    setCategory(CATEGORIES[0]);
+  }, []);
 
   useEffect(() => {
     filterAndSortProducts();
@@ -63,8 +47,17 @@ const App: React.FC = () => {
 
   const addToCart = (product: Product) => {
     setCart(prevCart => {
+      if (product.stock <= 0) {
+        alert("Vật tư này đã hết hàng và không thể yêu cầu.");
+        return prevCart;
+      }
+
       const existingItem = prevCart.find(item => item.product.id === product.id);
       if (existingItem) {
+        if (existingItem.quantity >= product.stock) {
+            alert(`Không thể yêu cầu nhiều hơn số lượng tồn kho (${product.stock}).`);
+            return prevCart;
+        }
         return prevCart.map(item =>
           item.product.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
         );
@@ -78,13 +71,23 @@ const App: React.FC = () => {
   };
 
   const updateQuantity = (productId: number, quantity: number) => {
-    if (quantity < 1) {
+    const productInCart = cart.find(item => item.product.id === productId)?.product;
+    if (!productInCart) return;
+
+    let newQuantity = quantity;
+    if (newQuantity > productInCart.stock) {
+        alert(`Không thể yêu cầu nhiều hơn số lượng tồn kho (${productInCart.stock}).`);
+        newQuantity = productInCart.stock;
+    }
+    
+    if (newQuantity < 1) {
         removeFromCart(productId);
         return;
     }
+
     setCart(prevCart =>
       prevCart.map(item =>
-        item.product.id === productId ? { ...item, quantity } : item
+        item.product.id === productId ? { ...item, quantity: newQuantity } : item
       )
     );
   };
@@ -94,6 +97,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <Header cartItemCount={cartItemCount} onCartClick={() => setIsCartOpen(true)} onSearch={setSearchTerm}/>
+      <Banner />
       <CategoryNav 
         categories={CATEGORIES}
         activeCategory={category}
@@ -101,13 +105,6 @@ const App: React.FC = () => {
       />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <FilterSortControls 
-          categories={CATEGORIES}
-          onFilterChange={setCategory}
-          onSortChange={setSortOption}
-          selectedCategory={category}
-          selectedSort={sortOption}
-        />
         <ProductList products={products} onAddToCart={addToCart} />
       </main>
 
