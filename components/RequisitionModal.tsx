@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { User } from '../types';
 
 interface RequisitionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (details: { requesterName: string; zone: string; purpose: string }) => void;
+  user: User;
 }
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -12,25 +14,40 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-const RequisitionModal: React.FC<RequisitionModalProps> = ({ isOpen, onClose, onSubmit }) => {
+const RequisitionModal: React.FC<RequisitionModalProps> = ({ isOpen, onClose, onSubmit, user }) => {
   const [requesterName, setRequesterName] = useState('');
-  const [zone, setZone] = useState('Khu 1');
+  const [zone, setZone] = useState(user.zone || 'Khu 1');
   const [purpose, setPurpose] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+        // Đặt lại trạng thái biểu mẫu khi modal mở
+        setZone(user.zone || 'Khu 1');
+        setPurpose('');
+        if (user.role === 'requester') {
+          setRequesterName(user.name);
+        } else {
+          setRequesterName(''); // Xóa trống cho quản lý để nhập mới
+        }
+    }
+  }, [isOpen, user]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!requesterName.trim() || !purpose.trim()) {
-      alert('Vui lòng điền đầy đủ Tên người yêu cầu và Mục đích.');
+    if (!requesterName.trim()) {
+      alert('Vui lòng điền tên người yêu cầu.');
+      return;
+    }
+    if (!purpose.trim()) {
+      alert('Vui lòng điền Mục đích.');
       return;
     }
     onSubmit({ requesterName, zone, purpose });
-    // Reset form
-    setRequesterName('');
-    setZone('Khu 1');
-    setPurpose('');
   };
 
   if (!isOpen) return null;
+
+  const isManager = user.role === 'manager';
 
   return (
     <div className="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -56,9 +73,10 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({ isOpen, onClose, on
                             name="requesterName"
                             id="requesterName"
                             value={requesterName}
-                            onChange={(e) => setRequesterName(e.target.value)}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                            placeholder="Vd: Nguyễn Văn A"
+                            onChange={isManager ? (e) => setRequesterName(e.target.value) : undefined}
+                            readOnly={!isManager}
+                            className={`block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            placeholder={isManager ? 'Nhập tên người yêu cầu' : ''}
                             required
                           />
                         </div>

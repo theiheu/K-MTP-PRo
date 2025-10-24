@@ -71,15 +71,6 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
                         Tạo Phiếu Yêu cầu
                        </button>
                     </div>
-                    <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
-                      <p>
-                        hoặc{' '}
-                        <button type="button" className="font-medium text-indigo-600 hover:text-indigo-500" onClick={onClose}>
-                          Tiếp tục tìm kiếm
-                          <span aria-hidden="true"> &rarr;</span>
-                        </button>
-                      </p>
-                    </div>
                   </div>
                 )}
               </div>

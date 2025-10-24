@@ -68,12 +68,12 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
 
   return (
     <>
-      <div className={`fixed bottom-0 right-0 m-4 sm:m-6 lg:m-8 transition-transform duration-300 ease-out ${isOpen ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'}`}>
+      <div className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 lg:bottom-8 transition-transform duration-300 ease-out ${isOpen ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'} z-50`}>
         <button onClick={() => setIsOpen(true)} className="bg-indigo-600 text-white rounded-full p-4 shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
           <BotIcon />
         </button>
       </div>
-      <div className={`fixed bottom-0 right-0 sm:m-6 lg:m-8 w-full sm:max-w-md h-full sm:h-[70vh] flex flex-col bg-white rounded-t-lg sm:rounded-lg shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-y-0' : 'translate-y-full'}`}>
+      <div className={`fixed bottom-0 right-0 sm:m-6 lg:m-8 w-full sm:max-w-md h-full sm:h-[70vh] flex flex-col bg-white rounded-t-lg sm:rounded-lg shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-y-0' : 'translate-y-full'} z-50`}>
         <header className="flex items-center justify-between p-4 bg-indigo-600 text-white rounded-t-lg">
           <h3 className="text-lg font-semibold">Trợ lý Kho</h3>
           <button onClick={() => setIsOpen(false)} className="hover:bg-indigo-700 p-1 rounded-full">

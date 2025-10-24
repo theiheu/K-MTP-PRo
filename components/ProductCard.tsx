@@ -64,10 +64,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
 
         {product.images.length > 1 && (
           <>
-            <button onClick={goToPrevious} aria-label="Ảnh trước" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
+            <button onClick={goToPrevious} aria-label="Ảnh trước" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-60 hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
               <ChevronLeftIcon className="w-5 h-5" />
             </button>
-            <button onClick={goToNext} aria-label="Ảnh sau" className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
+            <button onClick={goToNext} aria-label="Ảnh sau" className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-60 hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
               <ChevronRightIcon className="w-5 h-5" />
             </button>
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-10">

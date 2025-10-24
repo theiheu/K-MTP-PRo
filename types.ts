@@ -1,4 +1,3 @@
-
 export interface Product {
   id: number;
   name: string;
@@ -26,4 +25,13 @@ export interface RequisitionForm {
   createdAt: string;
   fulfilledBy?: string;
   fulfilledAt?: string;
+  fulfillmentNotes?: string;
+}
+
+export type UserRole = 'requester' | 'manager';
+
+export interface User {
+  name: string;
+  role: UserRole;
+  zone?: string; // Khu vực chính của người yêu cầu
 }
