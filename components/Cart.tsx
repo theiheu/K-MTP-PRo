@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React from 'react';
 import { CartItem as CartItemType } from '../types';
 import CartItem from './CartItem';
 
@@ -8,6 +8,7 @@ interface CartProps {
   cartItems: CartItemType[];
   onRemove: (productId: number) => void;
   onUpdateQuantity: (productId: number, quantity: number) => void;
+  onCreateRequisition: () => void;
 }
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -17,7 +18,7 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 
-const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpdateQuantity }) => {
+const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpdateQuantity, onCreateRequisition }) => {
 
   return (
     <div className={`relative z-50 ${isOpen ? '' : 'hidden'}`} aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
@@ -30,7 +31,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
               <div className="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
                 <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
                   <div className="flex items-start justify-between">
-                    <h2 className="text-lg font-medium text-gray-900" id="slide-over-title">Danh sách Yêu cầu</h2>
+                    <h2 className="text-lg font-medium text-gray-900" id="slide-over-title">Phiếu Yêu Cầu Tạm Thời</h2>
                     <div className="ml-3 flex h-7 items-center">
                       <button type="button" className="-m-2 p-2 text-gray-400 hover:text-gray-500" onClick={onClose}>
                         <span className="sr-only">Đóng bảng</span>
@@ -54,7 +55,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
                         </ul>
                       ) : (
                         <div className="text-center">
-                          <p className="text-gray-500">Danh sách yêu cầu của bạn đang trống.</p>
+                          <p className="text-gray-500">Chưa có vật tư nào trong phiếu.</p>
                         </div>
                       )}
                     </div>
@@ -64,7 +65,11 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
                 {cartItems.length > 0 && (
                   <div className="border-t border-gray-200 px-4 py-6 sm:px-6">
                     <div className="mt-6">
-                      <a href="#" className="flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700">Gửi Yêu cầu</a>
+                       <button 
+                        onClick={onCreateRequisition}
+                        className="w-full flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
+                        Tạo Phiếu Yêu cầu
+                       </button>
                     </div>
                     <div className="mt-6 flex justify-center text-center text-sm text-gray-500">
                       <p>

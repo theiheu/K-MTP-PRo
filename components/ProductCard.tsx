@@ -103,7 +103,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
             <PlusIcon className="w-5 h-5 mr-1" />
-            Yêu cầu
+            Thêm vào phiếu
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 {
-  "name": "SupplyHub",
-  "description": "Một ứng dụng web quản lý kho vật tư hiện đại, đáp ứng, bao gồm danh mục vật tư, danh sách yêu cầu đầy đủ chức năng và một trợ lý AI cá nhân được cung cấp bởi Gemini để giúp bạn tìm thấy vật tư hoàn hảo.",
+  "name": "Quản lý Vật tư Trại Gà",
+  "description": "Một ứng dụng web để tạo và quản lý các phiếu yêu cầu vật tư cho các khu vực khác nhau của trang trại gà, theo dõi trạng thái và xác nhận việc cấp phát.",
   "requestFramePermissions": []
 }

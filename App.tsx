@@ -4,22 +4,28 @@ import ProductList from './components/ProductList';
 import Cart from './components/Cart';
 import Chatbot from './components/Chatbot';
 import CategoryNav from './components/CategoryNav';
-import Banner from './components/Banner';
-import { Product, CartItem } from './types';
+import RequisitionListPage from './components/RequisitionListPage';
+import RequisitionModal from './components/RequisitionModal';
+import BottomNav from './components/BottomNav';
+import { Product, CartItem, RequisitionForm } from './types';
 import { PRODUCTS, CATEGORIES } from './constants';
 
 const App: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isRequisitionModalOpen, setIsRequisitionModalOpen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('Tất cả');
+  
+  const [currentView, setCurrentView] = useState<'shop' | 'requisitions'>('shop');
+  const [requisitionForms, setRequisitionForms] = useState<RequisitionForm[]>([]);
+
 
   const filterAndSortProducts = useCallback(() => {
     let tempProducts = [...PRODUCTS];
 
-    // Filter by search term
     if (searchTerm) {
       tempProducts = tempProducts.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -27,7 +33,6 @@ const App: React.FC = () => {
       );
     }
 
-    // Filter by category
     if (category !== 'Tất cả') {
       tempProducts = tempProducts.filter(p => p.category === category);
     }
@@ -36,7 +41,6 @@ const App: React.FC = () => {
   }, [searchTerm, category]);
 
   useEffect(() => {
-    // Set initial category to "Tất cả"
     setCategory(CATEGORIES[0]);
   }, []);
 
@@ -92,20 +96,64 @@ const App: React.FC = () => {
     );
   };
 
+  const handleCreateRequisition = (details: { requesterName: string; zone: string; purpose: string }) => {
+    const newForm: RequisitionForm = {
+      id: `REQ-${Date.now()}`,
+      ...details,
+      items: cart,
+      status: 'Đang chờ xử lý',
+      createdAt: new Date().toISOString(),
+    };
+    setRequisitionForms(prev => [...prev, newForm]);
+    setCart([]);
+    setIsRequisitionModalOpen(false);
+    setIsCartOpen(false);
+    alert('Đã tạo phiếu yêu cầu thành công!');
+    setCurrentView('requisitions');
+  };
+  
+  const handleFulfillRequisition = (formId: string, fulfilledBy: string) => {
+    setRequisitionForms(prev =>
+      prev.map(form =>
+        form.id === formId
+          ? { ...form, status: 'Đã hoàn thành', fulfilledBy, fulfilledAt: new Date().toISOString() }
+          : form
+      )
+    );
+  };
+
+
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <Header cartItemCount={cartItemCount} onCartClick={() => setIsCartOpen(true)} onSearch={setSearchTerm}/>
-      <Banner />
-      <CategoryNav 
-        categories={CATEGORIES}
-        activeCategory={category}
-        onSelectCategory={setCategory}
+    <div className="min-h-screen bg-gray-50 font-sans pb-16 sm:pb-0">
+      <Header 
+        cartItemCount={cartItemCount} 
+        onCartClick={() => setIsCartOpen(true)} 
+        onSearch={setSearchTerm}
+        onNavigate={setCurrentView}
+        currentView={currentView}
       />
       
       <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <ProductList products={products} onAddToCart={addToCart} />
+        {currentView === 'shop' && (
+          <>
+            <CategoryNav 
+              categories={CATEGORIES}
+              activeCategory={category}
+              onSelectCategory={setCategory}
+            />
+            <div className="mt-8">
+              <ProductList products={products} onAddToCart={addToCart} />
+            </div>
+          </>
+        )}
+        {currentView === 'requisitions' && (
+            <RequisitionListPage 
+                forms={requisitionForms}
+                onFulfill={handleFulfillRequisition}
+            />
+        )}
       </main>
 
       <Cart 
@@ -114,6 +162,18 @@ const App: React.FC = () => {
         cartItems={cart}
         onRemove={removeFromCart}
         onUpdateQuantity={updateQuantity}
+        onCreateRequisition={() => setIsRequisitionModalOpen(true)}
+      />
+      
+      <RequisitionModal
+        isOpen={isRequisitionModalOpen}
+        onClose={() => setIsRequisitionModalOpen(false)}
+        onSubmit={handleCreateRequisition}
+      />
+      
+      <BottomNav 
+        onNavigate={setCurrentView}
+        currentView={currentView}
       />
 
       <Chatbot allProducts={PRODUCTS} />
