@@ -1,8 +1,10 @@
 import React from 'react';
+import { User } from '../types';
 
 interface BottomNavProps {
-  onNavigate: (view: 'shop' | 'requisitions') => void;
-  currentView: 'shop' | 'requisitions' | 'create-requisition';
+  onNavigate: (view: 'shop' | 'requisitions' | 'admin') => void;
+  currentView: 'shop' | 'requisitions' | 'create-requisition' | 'admin';
+  user: User;
 }
 
 const StoreIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -17,7 +19,14 @@ const ListBulletIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
-const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, currentView }) => {
+const WrenchScrewdriverIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17 17.25 21A2.652 2.652 0 0 0 21 17.25l-5.877-5.877M11.42 15.17l2.495-2.495a1.125 1.125 0 0 1 1.591 0l3.026 3.026a1.125 1.125 0 0 1 0 1.591l-2.495 2.495M11.42 15.17 8.617 12.364a1.125 1.125 0 0 1 0-1.591l6.061-6.061a1.125 1.125 0 0 1 1.591 0l.441.442a1.125 1.125 0 0 1 0 1.591l-5.59 5.59M11.42 15.17l-2.17-2.17m0 0a1.125 1.125 0 0 1 1.591 0L12 14.5m-3.879-3.879a1.125 1.125 0 0 1 0-1.591l2.17-2.17" />
+    </svg>
+);
+
+
+const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, currentView, user }) => {
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] z-40">
       <div className="flex justify-around items-center h-16">
@@ -35,6 +44,15 @@ const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, currentView }) => {
           <StoreIcon className="w-6 h-6 mb-1" />
           Kho vật tư
         </button>
+        {user.role === 'manager' && (
+            <button 
+            onClick={() => onNavigate('admin')} 
+            className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'admin' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+            >
+            <WrenchScrewdriverIcon className="w-6 h-6 mb-1" />
+            Quản lý
+            </button>
+        )}
       </div>
     </nav>
   );

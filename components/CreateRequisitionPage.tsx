@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, CartItem as CartItemType } from '../types';
 import CartItem from './CartItem';
+import ConfirmationModal from './ConfirmationModal';
 
 interface CreateRequisitionPageProps {
   user: User;
@@ -22,6 +23,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
   const [requesterName, setRequesterName] = useState(user.name);
   const [zone, setZone] = useState(user.zone || 'Khu 1');
   const [purpose, setPurpose] = useState('');
+  const [itemToRemove, setItemToRemove] = useState<CartItemType | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,6 +36,20 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
       return;
     }
     onSubmit({ requesterName, zone, purpose });
+  };
+  
+  const handleRequestRemove = (productId: number) => {
+    const item = cartItems.find(i => i.product.id === productId);
+    if (item) {
+      setItemToRemove(item);
+    }
+  };
+  
+  const handleConfirmRemove = () => {
+    if (itemToRemove) {
+      onRemoveItem(itemToRemove.product.id);
+    }
+    setItemToRemove(null);
   };
 
   const isManager = user.role === 'manager';
@@ -54,7 +70,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                 <CartItem
                   key={item.product.id}
                   item={item}
-                  onRemove={onRemoveItem}
+                  onRemove={handleRequestRemove}
                   onUpdateQuantity={onUpdateQuantity}
                 />
               ))}
@@ -137,6 +153,15 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
           </div>
         </div>
       </form>
+      <ConfirmationModal
+        isOpen={!!itemToRemove}
+        onClose={() => setItemToRemove(null)}
+        onConfirm={handleConfirmRemove}
+        title="Xóa Vật tư khỏi Phiếu"
+        message={`Bạn có chắc chắn muốn xóa "${itemToRemove?.product.name}" khỏi phiếu yêu cầu không?`}
+        confirmButtonText="Xóa"
+        confirmButtonClass="bg-red-600 hover:bg-red-500"
+      />
     </div>
   );
 };

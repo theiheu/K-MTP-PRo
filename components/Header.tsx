@@ -4,7 +4,7 @@ import { User } from '../types';
 interface HeaderProps {
   cartItemCount: number;
   onCartClick: () => void;
-  onNavigate: (view: 'shop' | 'requisitions' | 'create-requisition') => void;
+  onNavigate: (view: 'shop' | 'requisitions' | 'create-requisition' | 'admin') => void;
   currentView: string;
   user: User;
   onResetUser: () => void;
@@ -30,7 +30,7 @@ const ArrowPathIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 
 const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onNavigate, currentView, user, onResetUser }) => {
-  const isNavEnabled = currentView === 'shop' || currentView === 'requisitions';
+  const isNavEnabled = currentView === 'shop' || currentView === 'requisitions' || currentView === 'admin';
   return (
     <header className="bg-white shadow-md sticky top-0 z-40">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,6 +55,11 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onNavigate,
                 <button onClick={() => onNavigate('shop')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'shop' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
                     Kho vật tư
                 </button>
+                {user.role === 'manager' && (
+                    <button onClick={() => onNavigate('admin')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
+                        Quản lý Vật tư
+                    </button>
+                )}
             </nav>
           </div>
 
@@ -64,9 +69,15 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onNavigate,
                 <button onClick={onCartClick} className="group -m-2 p-2 flex items-center relative">
                   <ShoppingBagIcon className="flex-shrink-0 h-6 w-6 text-gray-400 group-hover:text-gray-500" aria-hidden="true" />
                   {cartItemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 w-5 h-5 bg-indigo-600 text-white text-xs rounded-full flex items-center justify-center">
-                      {cartItemCount}
-                    </span>
+                    <>
+                      {/* Mobile: Red dot indicator */}
+                      <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white sm:hidden" />
+                      
+                      {/* Desktop: Item count */}
+                      <span className="absolute -top-2 -right-2 hidden h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-xs text-white sm:flex">
+                        {cartItemCount}
+                      </span>
+                    </>
                   )}
                   <span className="sr-only">vật tư trong danh sách, xem danh sách</span>
                 </button>

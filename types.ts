@@ -5,7 +5,12 @@ export interface Product {
   price: number;
   stock: number;
   images: string[];
-  category: string;
+  category: string; // Vẫn là string để liên kết qua tên
+}
+
+export interface Category {
+  name: string;
+  icon: string; // Sẽ lưu trữ dưới dạng Base64 data URL
 }
 
 export interface CartItem {

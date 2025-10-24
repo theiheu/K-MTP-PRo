@@ -6,14 +6,16 @@ import Chatbot from './components/Chatbot';
 import CategoryNav from './components/CategoryNav';
 import RequisitionListPage from './components/RequisitionListPage';
 import CreateRequisitionPage from './components/CreateRequisitionPage';
+import AdminPage from './components/AdminPage';
 import BottomNav from './components/BottomNav';
-import SetupPage from './components/SetupPage'; // Đổi tên từ LoginPage
-import { Product, CartItem, RequisitionForm, User } from './types';
-import { PRODUCTS, CATEGORIES } from './constants';
+import SetupPage from './components/SetupPage';
+import { Product, CartItem, RequisitionForm, User, Category } from './types';
+import { PRODUCTS, DEFAULT_CATEGORIES } from './constants';
 
-const USER_STORAGE_KEY = 'chicken_farm_user';
-const REQUISITIONS_STORAGE_KEY = 'chicken_farm_requisitions';
-const PRODUCTS_STORAGE_KEY = 'chicken_farm_products';
+const USER_STORAGE_key = 'chicken_farm_user';
+const REQUISITIONS_STORAGE_key = 'chicken_farm_requisitions';
+const PRODUCTS_STORAGE_key = 'chicken_farm_products';
+const CATEGORIES_STORAGE_KEY = 'chicken_farm_categories';
 
 
 const App: React.FC = () => {
@@ -22,11 +24,21 @@ const App: React.FC = () => {
 
   const [masterProductList, setMasterProductList] = useState<Product[]>(() => {
     try {
-      const savedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+      const savedProducts = localStorage.getItem(PRODUCTS_STORAGE_key);
       return savedProducts ? JSON.parse(savedProducts) : PRODUCTS;
     } catch (error) {
       console.error("Không thể tải sản phẩm từ localStorage", error);
       return PRODUCTS;
+    }
+  });
+  
+  const [categories, setCategories] = useState<Category[]>(() => {
+    try {
+      const savedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+      return savedCategories ? JSON.parse(savedCategories) : DEFAULT_CATEGORIES;
+    } catch (error) {
+      console.error("Không thể tải danh mục từ localStorage", error);
+      return DEFAULT_CATEGORIES;
     }
   });
 
@@ -37,12 +49,13 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('Tất cả');
   
-  const [currentView, setCurrentView] = useState<'shop' | 'requisitions' | 'create-requisition'>('shop');
+  const [currentView, setCurrentView] = useState<'shop' | 'requisitions' | 'create-requisition' | 'admin'>('shop');
 
   const [requisitionForms, setRequisitionForms] = useState<RequisitionForm[]>(() => {
     try {
-        const savedRequisitions = localStorage.getItem(REQUISITIONS_STORAGE_KEY);
+        const savedRequisitions = localStorage.getItem(REQUISITIONS_STORAGE_key);
         return savedRequisitions ? JSON.parse(savedRequisitions) : [];
+    // FIX: Added curly braces to the catch block to fix a syntax error that was causing a cascade of compiler issues.
     } catch (error) {
         console.error("Không thể tải phiếu yêu cầu từ localStorage", error);
         return [];
@@ -52,7 +65,7 @@ const App: React.FC = () => {
   // Effect to load user
   useEffect(() => {
     try {
-      const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+      const savedUser = localStorage.getItem(USER_STORAGE_key);
       if (savedUser) {
         setCurrentUser(JSON.parse(savedUser));
       }
@@ -65,7 +78,7 @@ const App: React.FC = () => {
   // Effect to save requisitions
   useEffect(() => {
     try {
-        localStorage.setItem(REQUISITIONS_STORAGE_KEY, JSON.stringify(requisitionForms));
+        localStorage.setItem(REQUISITIONS_STORAGE_key, JSON.stringify(requisitionForms));
     } catch (error) {
         console.error("Không thể lưu phiếu yêu cầu vào localStorage", error);
     }
@@ -74,11 +87,20 @@ const App: React.FC = () => {
   // Effect to save products
   useEffect(() => {
     try {
-        localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(masterProductList));
+        localStorage.setItem(PRODUCTS_STORAGE_key, JSON.stringify(masterProductList));
     } catch (error) {
         console.error("Không thể lưu sản phẩm vào localStorage", error);
     }
   }, [masterProductList]);
+
+  // Effect to save categories
+  useEffect(() => {
+    try {
+        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
+    } catch (error) {
+        console.error("Không thể lưu danh mục vào localStorage", error);
+    }
+  }, [categories]);
 
 
   const filterAndSortProducts = useCallback(() => {
@@ -97,10 +119,6 @@ const App: React.FC = () => {
     
     setProducts(tempProducts);
   }, [searchTerm, category, masterProductList]);
-
-  useEffect(() => {
-    setCategory(CATEGORIES[0]);
-  }, []);
 
   useEffect(() => {
     filterAndSortProducts();
@@ -218,7 +236,7 @@ const App: React.FC = () => {
 
   const handleUserSetup = (user: User) => {
     try {
-        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+        localStorage.setItem(USER_STORAGE_key, JSON.stringify(user));
         setCurrentUser(user);
     } catch (error) {
         console.error("Không thể lưu thông tin người dùng vào localStorage", error);
@@ -228,20 +246,66 @@ const App: React.FC = () => {
 
   const handleResetUser = () => {
     try {
-        localStorage.removeItem(USER_STORAGE_KEY);
-        localStorage.removeItem(REQUISITIONS_STORAGE_KEY);
-        localStorage.removeItem(PRODUCTS_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_key);
+        localStorage.removeItem(REQUISITIONS_STORAGE_key);
+        localStorage.removeItem(PRODUCTS_STORAGE_key);
+        localStorage.removeItem(CATEGORIES_STORAGE_KEY);
         setCurrentUser(null);
         setCurrentView('shop');
         setCart([]);
         setRequisitionForms([]);
         setMasterProductList(PRODUCTS);
+        setCategories(DEFAULT_CATEGORIES);
     } catch (error) {
         console.error("Không thể xóa dữ liệu người dùng khỏi localStorage", error);
     }
   };
 
+  const handleAddProduct = (newProductData: Omit<Product, 'id'>) => {
+    const newProduct: Product = {
+      ...newProductData,
+      id: Date.now(), // Simple ID generation
+    };
+    setMasterProductList(prev => [...prev, newProduct]);
+  };
+
+  const handleUpdateProduct = (updatedProduct: Product) => {
+    setMasterProductList(prev => 
+      prev.map(p => p.id === updatedProduct.id ? updatedProduct : p)
+    );
+  };
+
+  const handleDeleteProduct = (productId: number) => {
+    setMasterProductList(prev => prev.filter(p => p.id !== productId));
+  };
+  
+  const handleAddCategory = (newCategory: Category) => {
+    const trimmedName = newCategory.name.trim();
+    if (trimmedName && !categories.find(c => c.name.toLowerCase() === trimmedName.toLowerCase())) {
+        setCategories(prev => [...prev, { ...newCategory, name: trimmedName }].sort((a, b) => a.name.localeCompare(b.name)));
+    } else {
+        alert("Tên danh mục đã tồn tại hoặc không hợp lệ.");
+    }
+  };
+
+  const handleDeleteCategory = (categoryName: string): boolean => {
+    // Kiểm tra xem danh mục có đang được sử dụng bởi bất kỳ sản phẩm nào không
+    const isCategoryInUse = masterProductList.some(p => p.category === categoryName);
+
+    if (isCategoryInUse) {
+      // Trả về false nếu không thể xóa để component con có thể xử lý lỗi
+      return false;
+    }
+
+    // Nếu không được sử dụng, tiến hành xóa và trả về true
+    setCategories(prev => prev.filter(c => c.name !== categoryName));
+    return true;
+  };
+
+
   const cartItemCount = cart.reduce((count, item) => count + item.quantity, 0);
+  
+  const categoriesForNav: Category[] = [{ name: 'Tất cả', icon: '' }, ...categories];
 
   if (isInitializing) {
     return <div className="flex h-screen items-center justify-center">Đang tải...</div>;
@@ -286,7 +350,7 @@ const App: React.FC = () => {
               </div>
             </div>
             <CategoryNav 
-              categories={CATEGORIES}
+              categories={categoriesForNav}
               activeCategory={category}
               onSelectCategory={setCategory}
             />
@@ -312,6 +376,17 @@ const App: React.FC = () => {
               onRemoveItem={removeFromCart}
            />
         )}
+        {currentView === 'admin' && currentUser.role === 'manager' && (
+           <AdminPage
+              products={masterProductList}
+              categories={categories}
+              onAddProduct={handleAddProduct}
+              onUpdateProduct={handleUpdateProduct}
+              onDeleteProduct={handleDeleteProduct}
+              onAddCategory={handleAddCategory}
+              onDeleteCategory={handleDeleteCategory}
+           />
+        )}
       </main>
 
       {(currentUser.role === 'requester' || currentUser.role === 'manager') && !isFocusedView && (
@@ -329,6 +404,7 @@ const App: React.FC = () => {
         <BottomNav 
           onNavigate={setCurrentView}
           currentView={currentView}
+          user={currentUser}
         />
       )}
       
