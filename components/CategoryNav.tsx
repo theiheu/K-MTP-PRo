@@ -20,7 +20,6 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, o
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-wrap justify-start gap-x-4 gap-y-2 sm:gap-x-8">
           {categories.map((category) => {
-            const isAllCategory = category.name === 'Tất cả';
             return (
               <button
                 key={category.name}
@@ -28,14 +27,14 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, o
                 aria-pressed={activeCategory === category.name}
                 className={`flex flex-col items-center justify-center p-2 rounded-lg w-24 h-20 transition-colors duration-200 ease-in-out ${
                   activeCategory === category.name
-                    ? 'bg-indigo-100 text-indigo-700'
+                    ? 'bg-yellow-100 text-yellow-800'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`}
               >
-                {isAllCategory ? (
-                    <AllIcon className="w-6 h-6 mb-1" />
+                {category.name === 'Tất cả' ? (
+                  <AllIcon className="w-6 h-6 mb-1" />
                 ) : (
-                    <img src={category.icon} alt={category.name} className="w-6 h-6 mb-1 object-contain" />
+                  <img src={category.icon} alt={category.name} className="w-6 h-6 mb-1 object-contain" />
                 )}
                 <span className="text-xs font-medium text-center">{category.name}</span>
               </button>

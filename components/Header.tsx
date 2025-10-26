@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { User } from '../types';
 
@@ -36,33 +37,37 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onNavigate,
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           
-          <div className="flex-1 flex justify-start items-center space-x-4">
-            <button onClick={() => onNavigate('shop')} className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-gray-800">
-              <StoreIcon className="h-8 w-8 text-indigo-600" />
-              <span className="sm:inline">Vật tư Trại Gà</span>
-            </button>
-             <div className="hidden sm:block border-l border-gray-300 pl-4 ml-4">
+          {/* Left Section */}
+          <div className="flex-1 flex justify-start items-center">
+            <nav className="hidden sm:flex items-center space-x-4">
+                <button onClick={() => onNavigate('shop')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'shop' ? 'bg-yellow-100 text-yellow-800' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
+                    Kho vật tư
+                </button>
+                <button onClick={() => onNavigate('requisitions')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'requisitions' ? 'bg-yellow-100 text-yellow-800' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
+                    Danh sách Phiếu
+                </button>
+                {user.role === 'manager' && (
+                    <button onClick={() => onNavigate('admin')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'admin' ? 'bg-yellow-100 text-yellow-800' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
+                        Quản lý
+                    </button>
+                )}
+            </nav>
+            <div className="hidden sm:block border-l border-gray-300 pl-4 ml-4">
                 <div className="text-sm font-medium text-gray-800">{user.name}</div>
                 <div className="text-xs text-gray-500">{user.role === 'manager' ? 'Quản lý kho' : `Người yêu cầu (Khu: ${user.zone})`}</div>
             </div>
           </div>
 
-          <div className="flex-1 flex justify-center items-center">
-            <nav className="hidden sm:flex items-center space-x-4">
-                <button onClick={() => onNavigate('requisitions')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'requisitions' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
-                    Danh sách Phiếu
-                </button>
-                <button onClick={() => onNavigate('shop')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'shop' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
-                    Kho vật tư
-                </button>
-                {user.role === 'manager' && (
-                    <button onClick={() => onNavigate('admin')} disabled={!isNavEnabled} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100'} disabled:text-gray-300 disabled:bg-transparent disabled:cursor-not-allowed`}>
-                        Quản lý Vật tư
-                    </button>
-                )}
-            </nav>
+          {/* Center Section (Logo) */}
+          <div className="flex-shrink-0 px-4">
+            <button onClick={() => onNavigate('shop')} className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-gray-800">
+              <StoreIcon className="h-8 w-8 text-yellow-600" />
+              <span className="hidden sm:inline">Vật tư Trại Gà</span>
+              <span className="sm:hidden text-lg">Vật tư Trại Gà</span>
+            </button>
           </div>
 
+          {/* Right Section */}
           <div className="flex-1 flex justify-end items-center space-x-4">
             {currentView === 'shop' && (
               <div className="flow-root">
@@ -74,7 +79,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemCount, onCartClick, onNavigate,
                       <span className="absolute top-0 right-0 block h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white sm:hidden" />
                       
                       {/* Desktop: Item count */}
-                      <span className="absolute -top-2 -right-2 hidden h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-xs text-white sm:flex">
+                      <span className="absolute -top-2 -right-2 hidden h-5 w-5 items-center justify-center rounded-full bg-yellow-600 text-xs text-white sm:flex">
                         {cartItemCount}
                       </span>
                     </>

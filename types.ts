@@ -1,11 +1,20 @@
+
+export interface Variant {
+  id: number;
+  attributes: { [key: string]: string }; // e.g., { "Màu sắc": "Đen", "Kích cỡ": "L" }
+  stock: number;
+  price?: number;
+  images?: string[]; // Specific images for this variant
+}
+
 export interface Product {
   id: number;
   name: string;
   description: string;
-  price: number;
-  stock: number;
-  images: string[];
-  category: string; // Vẫn là string để liên kết qua tên
+  images: string[]; // General images, can be overridden by variant
+  category: string;
+  options: string[]; // e.g., ["Màu sắc", "Kích cỡ"]
+  variants: Variant[];
 }
 
 export interface Category {
@@ -15,6 +24,7 @@ export interface Category {
 
 export interface CartItem {
   product: Product;
+  variant: Variant;
   quantity: number;
 }
 
@@ -24,7 +34,7 @@ export interface RequisitionForm {
   id: string;
   requesterName: string;
   zone: string;
-  purpose: string;
+  purpose:string;
   items: CartItem[];
   status: Status;
   createdAt: string;

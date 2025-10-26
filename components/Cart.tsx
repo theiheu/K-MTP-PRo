@@ -7,8 +7,8 @@ interface CartProps {
   isOpen: boolean;
   onClose: () => void;
   cartItems: CartItemType[];
-  onRemove: (productId: number) => void;
-  onUpdateQuantity: (productId: number, quantity: number) => void;
+  onRemove: (variantId: number) => void;
+  onUpdateItem: (variantId: number, quantity: number) => void;
   onCreateRequisition: () => void;
 }
 
@@ -19,11 +19,11 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 
-const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpdateQuantity, onCreateRequisition }) => {
+const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpdateItem, onCreateRequisition }) => {
   const [itemToRemove, setItemToRemove] = useState<CartItemType | null>(null);
 
-  const handleRequestRemove = (productId: number) => {
-    const item = cartItems.find(i => i.product.id === productId);
+  const handleRequestRemove = (variantId: number) => {
+    const item = cartItems.find(i => i.variant.id === variantId);
     if (item) {
       setItemToRemove(item);
     }
@@ -31,7 +31,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
 
   const handleConfirmRemove = () => {
     if (itemToRemove) {
-      onRemove(itemToRemove.product.id);
+      onRemove(itemToRemove.variant.id);
     }
     setItemToRemove(null);
   };
@@ -63,10 +63,10 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
                           <ul role="list" className="-my-6 divide-y divide-gray-200">
                             {cartItems.map((item) => (
                               <CartItem 
-                                key={item.product.id}
+                                key={item.variant.id}
                                 item={item}
                                 onRemove={handleRequestRemove}
-                                onUpdateQuantity={onUpdateQuantity}
+                                onUpdateItem={onUpdateItem}
                               />
                             ))}
                           </ul>
@@ -84,7 +84,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
                       <div className="mt-6">
                         <button 
                           onClick={onCreateRequisition}
-                          className="w-full flex items-center justify-center rounded-md border border-transparent bg-indigo-600 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-indigo-700">
+                          className="w-full flex items-center justify-center rounded-md border border-transparent bg-yellow-500 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-yellow-600">
                           Tạo Phiếu Yêu cầu
                         </button>
                       </div>

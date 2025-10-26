@@ -1,5 +1,7 @@
 {
   "name": "Quản lý Vật tư Trại Gà",
   "description": "Một ứng dụng web để tạo và quản lý các phiếu yêu cầu vật tư cho các khu vực khác nhau của trang trại gà, theo dõi trạng thái và xác nhận việc cấp phát.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

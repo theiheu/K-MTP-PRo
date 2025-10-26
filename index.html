@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Quản lý Vật tư Trại Gà</title>
     <script src="https://cdn.tailwindcss.com"></script>
   <script type="importmap">
@@ -42,6 +42,14 @@
     html {
       scrollbar-width: thin;
       scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+    }
+
+    /* Prevent iOS auto-zoom on input focus */
+    /* iOS Safari zooms on input fields if the font-size is less than 16px. */
+    input,
+    textarea,
+    select {
+      font-size: 16px !important;
     }
   </style>
 </head>

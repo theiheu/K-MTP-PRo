@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 interface FilterSortControlsProps {
@@ -19,7 +18,7 @@ const FilterSortControls: React.FC<FilterSortControlsProps> = ({ categories, onF
             id="category-filter"
             value={selectedCategory}
             onChange={(e) => onFilterChange(e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>{cat}</option>
@@ -32,11 +31,9 @@ const FilterSortControls: React.FC<FilterSortControlsProps> = ({ categories, onF
             id="sort-by"
             value={selectedSort}
             onChange={(e) => onSortChange(e.target.value)}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm rounded-md"
           >
             <option value="default">Default</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
             <option value="name-asc">Name: A to Z</option>
             <option value="name-desc">Name: Z to A</option>
           </select>

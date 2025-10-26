@@ -8,8 +8,8 @@ interface CreateRequisitionPageProps {
   cartItems: CartItemType[];
   onSubmit: (details: { requesterName: string; zone: string; purpose: string }) => void;
   onCancel: () => void;
-  onUpdateQuantity: (productId: number, quantity: number) => void;
-  onRemoveItem: (productId: number) => void;
+  onUpdateItem: (variantId: number, quantity: number) => void;
+  onRemoveItem: (variantId: number) => void;
 }
 
 const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
@@ -17,7 +17,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
   cartItems,
   onSubmit,
   onCancel,
-  onUpdateQuantity,
+  onUpdateItem,
   onRemoveItem
 }) => {
   const [requesterName, setRequesterName] = useState(user.name);
@@ -35,11 +35,15 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
       alert('Vui lòng điền Mục đích.');
       return;
     }
+    if (cartItems.length === 0) {
+      alert('Không thể tạo phiếu yêu cầu trống.');
+      return;
+    }
     onSubmit({ requesterName, zone, purpose });
   };
   
-  const handleRequestRemove = (productId: number) => {
-    const item = cartItems.find(i => i.product.id === productId);
+  const handleRequestRemove = (variantId: number) => {
+    const item = cartItems.find(i => i.variant.id === variantId);
     if (item) {
       setItemToRemove(item);
     }
@@ -47,12 +51,17 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
   
   const handleConfirmRemove = () => {
     if (itemToRemove) {
-      onRemoveItem(itemToRemove.product.id);
+      onRemoveItem(itemToRemove.variant.id);
+      if (cartItems.length === 1) { // If it was the last item
+        onCancel(); // Go back to shop
+      }
     }
     setItemToRemove(null);
   };
 
   const isManager = user.role === 'manager';
+  
+  const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -62,16 +71,16 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
         {/* Left side: Item List */}
         <div className="lg:col-span-3 bg-white p-4 sm:p-6 rounded-lg shadow-md">
           <h2 className="text-xl font-semibold text-gray-800 border-b pb-4">
-            Vật tư Yêu cầu ({cartItems.reduce((acc, item) => acc + item.quantity, 0)})
+            Vật tư Yêu cầu ({totalItems})
           </h2>
           {cartItems.length > 0 ? (
             <ul role="list" className="divide-y divide-gray-200 mt-4 max-h-[60vh] overflow-y-auto">
               {cartItems.map((item) => (
                 <CartItem
-                  key={item.product.id}
+                  key={item.variant.id}
                   item={item}
                   onRemove={handleRequestRemove}
-                  onUpdateQuantity={onUpdateQuantity}
+                  onUpdateItem={onUpdateItem}
                 />
               ))}
             </ul>
@@ -94,7 +103,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                   value={requesterName}
                   onChange={isManager ? (e) => setRequesterName(e.target.value) : undefined}
                   readOnly={!isManager}
-                  className={`block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  className={`block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   placeholder={isManager ? 'Nhập tên người yêu cầu' : ''}
                   required
                 />
@@ -108,7 +117,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                   name="zone"
                   value={zone}
                   onChange={(e) => setZone(e.target.value)}
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                 >
                   <option>Khu 1</option>
                   <option>Khu 2</option>
@@ -126,39 +135,38 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                   id="purpose"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                   placeholder="Vd: Sửa chữa máy cho gà ăn"
                   required
                 ></textarea>
               </div>
             </div>
-            
-            {/* Action buttons */}
-            <div className="pt-4 border-t flex flex-col-reverse sm:flex-row sm:justify-end sm:gap-4">
-                <button
-                    type="button"
-                    onClick={onCancel}
-                    className="mt-3 sm:mt-0 w-full inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                >
-                    Hủy
-                </button>
-                <button
-                    type="submit"
-                    disabled={cartItems.length === 0}
-                    className="w-full inline-flex justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:bg-indigo-300"
-                >
-                    Gửi Phiếu Yêu cầu
-                </button>
+            <div className="border-t pt-6 space-y-3">
+               <button
+                type="submit"
+                disabled={cartItems.length === 0}
+                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                Gửi Phiếu Yêu cầu
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              >
+                Hủy và Quay lại Kho
+              </button>
             </div>
           </div>
         </div>
       </form>
+      
       <ConfirmationModal
         isOpen={!!itemToRemove}
         onClose={() => setItemToRemove(null)}
         onConfirm={handleConfirmRemove}
         title="Xóa Vật tư khỏi Phiếu"
-        message={`Bạn có chắc chắn muốn xóa "${itemToRemove?.product.name}" khỏi phiếu yêu cầu không?`}
+        message={`Bạn có chắc chắn muốn xóa "${itemToRemove?.product.name}" khỏi phiếu yêu cầu này không?`}
         confirmButtonText="Xóa"
         confirmButtonClass="bg-red-600 hover:bg-red-500"
       />

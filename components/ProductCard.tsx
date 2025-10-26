@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Product } from '../types';
 
 interface ProductCardProps {
   product: Product;
-  onAddToCart: (product: Product) => void;
+  onSelectVariant: (product: Product) => void;
 }
 
 const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -24,32 +24,87 @@ const ChevronRightIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, onSelectVariant }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  
+  const touchStartX = useRef<number>(0);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  
+  const totalStock = product.variants.reduce((sum, variant) => sum + variant.stock, 0);
 
-  const goToPrevious = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const handleActionClick = () => {
+    onSelectVariant(product);
+  };
+
+  const goToPrevious = () => {
     const isFirstImage = currentImageIndex === 0;
     const newIndex = isFirstImage ? product.images.length - 1 : currentImageIndex - 1;
     setCurrentImageIndex(newIndex);
   };
 
-  const goToNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
+  const goToNext = () => {
     const isLastImage = currentImageIndex === product.images.length - 1;
     const newIndex = isLastImage ? 0 : currentImageIndex + 1;
     setCurrentImageIndex(newIndex);
   };
+  
+  const handlePrevClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    goToPrevious();
+  };
+
+  const handleNextClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    goToNext();
+  };
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (product.images.length <= 1) return;
+    setIsDragging(true);
+    touchStartX.current = e.targetTouches[0].clientX;
+    setDragOffset(0); 
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || product.images.length <= 1) return;
+    e.preventDefault(); 
+    const currentX = e.targetTouches[0].clientX;
+    const deltaX = currentX - touchStartX.current;
+    setDragOffset(deltaX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging || product.images.length <= 1) return;
+    const swipeThreshold = imageContainerRef.current ? imageContainerRef.current.offsetWidth / 4 : 50;
+    if (dragOffset < -swipeThreshold) {
+      goToNext();
+    } else if (dragOffset > swipeThreshold) {
+      goToPrevious();
+    }
+    setIsDragging(false);
+    setDragOffset(0);
+    touchStartX.current = 0;
+  };
 
   return (
     <div className="group relative flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300">
-      <div className="relative aspect-w-1 aspect-h-1 bg-gray-200 overflow-hidden">
-        {/* Image Carousel Container */}
+      <div 
+        ref={imageContainerRef}
+        className="relative aspect-w-1 aspect-h-1 bg-gray-200 overflow-hidden cursor-grab active:cursor-grabbing"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div
-            className="flex h-full transition-transform duration-500 ease-in-out will-change-transform"
-            style={{ transform: `translateX(-${currentImageIndex * 100}%)` }}
+            className="flex h-full will-change-transform"
+            style={{ 
+              transform: `translateX(calc(-${currentImageIndex * 100}% + ${dragOffset}px))`,
+              transition: isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+             }}
         >
             {product.images.map((image, index) => (
                 <img
@@ -57,17 +112,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
                     src={image}
                     alt={`${product.name} ảnh ${index + 1}`}
                     className="w-full h-full object-center object-cover flex-shrink-0"
-                    loading={index === 0 ? "eager" : "lazy"} // Eager load first image, lazy load others
+                    loading={index === 0 ? "eager" : "lazy"}
+                    draggable="false"
                 />
             ))}
         </div>
 
         {product.images.length > 1 && (
           <>
-            <button onClick={goToPrevious} aria-label="Ảnh trước" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
+            <button onClick={handlePrevClick} aria-label="Ảnh trước" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-40 sm:bg-opacity-30 text-white rounded-full p-1.5 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10 block sm:opacity-0 group-hover:opacity-100">
               <ChevronLeftIcon className="w-5 h-5" />
             </button>
-            <button onClick={goToNext} aria-label="Ảnh sau" className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10">
+            <button onClick={handleNextClick} aria-label="Ảnh sau" className="absolute top-1/2 right-2 -translate-y-1/2 bg-black bg-opacity-40 sm:bg-opacity-30 text-white rounded-full p-1.5 transition-opacity duration-300 focus:outline-none focus:ring-2 focus:ring-white z-10 block sm:opacity-0 group-hover:opacity-100">
               <ChevronRightIcon className="w-5 h-5" />
             </button>
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
@@ -92,19 +148,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart }) => {
             {product.name}
         </h3>
         <p className="mt-1 text-sm text-gray-500">{product.category}</p>
+        {product.options.length > 0 && (
+          <p className="mt-2 text-xs text-gray-400">Có các tùy chọn: {product.options.join(', ')}</p>
+        )}
         <div className="flex-grow"></div>
         <div className="flex justify-between items-center mt-4">
-          <p className="text-md font-medium text-gray-700">
-            Tồn kho: <span className={`font-bold ${product.stock > 0 ? 'text-gray-900' : 'text-red-600'}`}>{product.stock}</span>
+           <p className="text-sm font-medium text-gray-700">
+            Tồn kho: <span className={`font-bold ${totalStock > 0 ? 'text-gray-900' : 'text-red-600'}`}>
+              {totalStock.toLocaleString('vi-VN')}
+            </span>
           </p>
-          <button
-            onClick={() => onAddToCart(product)}
-            disabled={product.stock === 0}
-            className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            <PlusIcon className="w-5 h-5 mr-1" />
-            Yêu cầu
-          </button>
+          <div className="relative">
+            <button
+              onClick={handleActionClick}
+              disabled={totalStock === 0}
+              className="flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              <PlusIcon className="w-5 h-5 mr-1" />
+              {product.options.length > 0 ? 'Chọn tùy chọn' : 'Thêm vào phiếu'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

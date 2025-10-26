@@ -10,6 +10,7 @@ interface Message {
   sender: 'user' | 'ai';
   text?: string;
   products?: Product[];
+  responseType?: 'recommendation' | 'search';
 }
 
 const ChatBubbleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -52,8 +53,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
     setIsLoading(true);
 
     try {
-      const { recommendedProducts, reasoning } = await getAIRecommendations(inputValue, allProducts);
-      const aiResponse: Message = { sender: 'ai', text: reasoning, products: recommendedProducts };
+      const { recommendedProducts, message, responseType } = await getAIRecommendations(inputValue, allProducts);
+      const aiResponse: Message = { sender: 'ai', text: message, products: recommendedProducts, responseType };
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
       const errorResponse: Message = { sender: 'ai', text: 'Xin lỗi, tôi đã gặp lỗi. Vui lòng thử lại.' };
@@ -66,7 +67,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
   return (
     <>
       <div className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 lg:bottom-8 transition-transform duration-300 ease-out ${isOpen ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'} z-50`}>
-        <button onClick={() => setIsOpen(true)} className="bg-indigo-600 text-white rounded-full p-4 shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        <button onClick={() => setIsOpen(true)} className="bg-yellow-500 text-white rounded-full p-4 shadow-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
           <ChatBubbleIcon />
         </button>
       </div>
@@ -81,7 +82,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
             </button>
            {messages.length === 0 && !isLoading ? (
             <div className="flex flex-col h-full items-center justify-center text-center text-gray-500 p-4">
-              <div className="text-indigo-300">
+              <div className="text-yellow-300">
                 <ChatBubbleIcon className="w-12 h-12" />
               </div>
               <p className="mt-4 text-sm">Tôi có thể giúp gì cho bạn? <br /> Hãy bắt đầu bằng cách nhập câu hỏi của bạn vào bên dưới.</p>
@@ -89,8 +90,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
           ) : (
             messages.map((msg, index) => (
               <div key={index} className={`flex items-start gap-3 ${msg.sender === 'user' ? 'justify-end' : ''}`}>
-                {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0 text-white"><ChatBubbleIcon /></div>}
-                <div className={`p-3 rounded-lg max-w-xs md:max-w-sm ${msg.sender === 'user' ? 'bg-indigo-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
+                {msg.sender === 'ai' && <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 text-white"><ChatBubbleIcon /></div>}
+                <div className={`p-3 rounded-lg max-w-xs md:max-w-sm ${msg.sender === 'user' ? 'bg-yellow-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
                   <p className="text-sm">{msg.text}</p>
                   {msg.products && msg.products.length > 0 && (
                     <div className="mt-2 space-y-2 border-t border-gray-300 pt-2">
@@ -99,7 +100,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
                           <img src={p.images[0]} alt={p.name} className="w-8 h-8 rounded object-cover"/>
                           <div className="flex flex-col">
                               <span className="font-medium">{p.name}</span>
-                              <span className="text-gray-600">Tồn kho: {p.stock}</span>
+                              <span className="text-gray-600">Tồn kho: {p.variants.reduce((sum, v) => sum + v.stock, 0)}</span>
                           </div>
                         </div>
                       ))}
@@ -111,7 +112,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
           )}
           {isLoading && (
              <div className="flex items-start gap-3">
-               <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center flex-shrink-0 text-white"><ChatBubbleIcon /></div>
+               <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 text-white"><ChatBubbleIcon /></div>
                <div className="p-3 rounded-lg bg-gray-200">
                   <div className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -131,10 +132,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Hỏi tôi để tìm một vật tư..."
-              className="w-full pr-12 pl-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pr-12 pl-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
               disabled={isLoading}
             />
-            <button onClick={handleSend} disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 disabled:bg-indigo-300">
+            <button onClick={handleSend} disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 bg-yellow-500 text-white p-2 rounded-full hover:bg-yellow-600 disabled:bg-yellow-300">
               <PaperAirplaneIcon />
             </button>
           </div>

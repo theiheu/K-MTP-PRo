@@ -31,23 +31,23 @@ const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, currentView, user }) 
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] z-40">
       <div className="flex justify-around items-center h-16">
         <button 
-          onClick={() => onNavigate('requisitions')} 
-          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'requisitions' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
-        >
-          <ListBulletIcon className="w-6 h-6 mb-1" />
-          Danh sách Phiếu
-        </button>
-        <button 
           onClick={() => onNavigate('shop')} 
-          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'shop' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'shop' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
         >
           <StoreIcon className="w-6 h-6 mb-1" />
           Kho vật tư
         </button>
+        <button 
+          onClick={() => onNavigate('requisitions')} 
+          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'requisitions' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
+        >
+          <ListBulletIcon className="w-6 h-6 mb-1" />
+          Danh sách Phiếu
+        </button>
         {user.role === 'manager' && (
             <button 
             onClick={() => onNavigate('admin')} 
-            className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'admin' ? 'text-indigo-600' : 'text-gray-500 hover:text-indigo-600'}`}
+            className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'admin' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
             >
             <WrenchScrewdriverIcon className="w-6 h-6 mb-1" />
             Quản lý

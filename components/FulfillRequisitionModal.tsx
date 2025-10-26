@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { RequisitionForm, User } from '../types';
 
 interface FulfillRequisitionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (notes: string) => void;
+  onSubmit: (details: { notes: string; fulfillerName: string }) => void;
   form: RequisitionForm | null;
   currentUser: User;
 }
@@ -17,16 +18,22 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const FulfillRequisitionModal: React.FC<FulfillRequisitionModalProps> = ({ isOpen, onClose, onSubmit, form, currentUser }) => {
   const [notes, setNotes] = useState('');
+  const [fulfillerName, setFulfillerName] = useState('');
 
   useEffect(() => {
     if (isOpen) {
       setNotes(''); // Đặt lại ghi chú mỗi khi mở modal
+      setFulfillerName(currentUser.name); // Khởi tạo với tên người dùng hiện tại
     }
-  }, [isOpen]);
+  }, [isOpen, currentUser]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(notes);
+    if (!fulfillerName.trim()) {
+      alert('Vui lòng nhập tên người cấp phát.');
+      return;
+    }
+    onSubmit({ notes, fulfillerName });
   };
 
   if (!isOpen || !form) return null;
@@ -54,9 +61,10 @@ const FulfillRequisitionModal: React.FC<FulfillRequisitionModalProps> = ({ isOpe
                             type="text"
                             name="fulfillerName"
                             id="fulfillerName"
-                            value={currentUser.name}
-                            readOnly
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 bg-gray-100 cursor-not-allowed sm:text-sm sm:leading-6"
+                            value={fulfillerName}
+                            onChange={(e) => setFulfillerName(e.target.value)}
+                            required
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                           />
                         </div>
                       </div>
@@ -69,7 +77,7 @@ const FulfillRequisitionModal: React.FC<FulfillRequisitionModalProps> = ({ isOpe
                             id="notes"
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                             placeholder="Vd: Đã thay thế vật tư X bằng Y theo thỏa thuận."
                           ></textarea>
                         </div>

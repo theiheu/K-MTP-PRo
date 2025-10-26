@@ -48,7 +48,7 @@ const SetupPage: React.FC<SetupPageProps> = ({ onSetup }) => {
     <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-            <StoreIcon className="mx-auto h-12 w-auto text-indigo-600" />
+            <StoreIcon className="mx-auto h-12 w-auto text-yellow-600" />
             <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
                 Thiết lập Hệ thống Vật tư
             </h2>
@@ -68,7 +68,7 @@ const SetupPage: React.FC<SetupPageProps> = ({ onSetup }) => {
                             name="name"
                             type="text"
                             required
-                            className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                            className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-yellow-500 focus:outline-none focus:ring-yellow-500 sm:text-sm"
                             placeholder="Nhập tên của bạn"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
@@ -81,7 +81,7 @@ const SetupPage: React.FC<SetupPageProps> = ({ onSetup }) => {
                             name="zone"
                             value={zone}
                             onChange={(e) => setZone(e.target.value)}
-                            className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                            className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-yellow-500 focus:outline-none focus:ring-yellow-500 sm:text-sm"
                         >
                             <option>Khu 1</option>
                             <option>Khu 2</option>
@@ -91,7 +91,7 @@ const SetupPage: React.FC<SetupPageProps> = ({ onSetup }) => {
                     </div>
                     <button
                         type="submit"
-                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
                     >
                         Lưu và Bắt đầu
                     </button>
@@ -121,7 +121,7 @@ const SetupPage: React.FC<SetupPageProps> = ({ onSetup }) => {
                                 name="password"
                                 type="password"
                                 required
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pl-10 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pl-10 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-yellow-500 focus:outline-none focus:ring-yellow-500 sm:text-sm"
                                 placeholder="Mật khẩu"
                                 value={managerPassword}
                                 onChange={(e) => {
