@@ -1,198 +1,222 @@
-import { Product, Category } from './types';
+import { Product, Category, User } from './types';
 
 export const PRODUCTS: Product[] = [
   {
     id: 1,
-    name: 'Laptop Lượng Tử Pro',
-    description: 'Thế hệ laptop hiệu năng cao tiếp theo, với thiết kế đẹp mắt và bộ xử lý cực nhanh.',
+    name: 'Cám gà con',
+    description: 'Thức ăn hỗn hợp dạng viên, cung cấp đầy đủ dinh dưỡng cho gà con từ 1 đến 21 ngày tuổi.',
     images: [
-        'https://picsum.photos/seed/laptop-main/400/400',
-        'https://picsum.photos/seed/laptop-silver/400/400',
-        'https://picsum.photos/seed/laptop-black/400/400'
+        'https://picsum.photos/seed/chick-feed1/400/400',
+        'https://picsum.photos/seed/chick-feed2/400/400',
+        'https://picsum.photos/seed/chick-feed3/400/400'
     ],
-    category: 'Điện tử',
-    options: ["Màu sắc", "RAM"],
+    category: 'Thức ăn chăn nuôi',
+    options: ["Trọng lượng"],
     variants: [
-        { id: 101, attributes: { "Màu sắc": "Bạc", "RAM": "16GB" }, stock: 15, price: 2500 },
-        { id: 102, attributes: { "Màu sắc": "Bạc", "RAM": "32GB" }, stock: 5, price: 3000 },
-        { id: 103, attributes: { "Màu sắc": "Xám Không Gian", "RAM": "16GB" }, stock: 10, price: 2500 },
-        { id: 104, attributes: { "Màu sắc": "Xám Không Gian", "RAM": "32GB" }, stock: 0, price: 3000 }
+        { id: 101, attributes: { "Trọng lượng": "Bao 10kg" }, stock: 150, price: 180000, unit: 'Bao' },
+        { id: 102, attributes: { "Trọng lượng": "Bao 25kg" }, stock: 80, price: 420000, unit: 'Bao' },
     ]
   },
   {
     id: 2,
-    name: 'Tai nghe Acoustic Bliss',
-    description: 'Tai nghe chống ồn trùm tai cho trải nghiệm âm thanh đắm chìm.',
+    name: 'Vắc-xin Newcastle',
+    description: 'Vắc-xin đông khô phòng bệnh Newcastle (dịch tả gà) cho gà mọi lứa tuổi.',
     images: [
-        'https://picsum.photos/seed/headphones1/400/400',
-        'https://picsum.photos/seed/headphones2/400/400',
-        'https://picsum.photos/seed/headphones3/400/400'
+        'https://picsum.photos/seed/vaccine1/400/400',
+        'https://picsum.photos/seed/vaccine2/400/400',
     ],
-    category: 'Điện tử',
-    options: [],
+    category: 'Thuốc & Vắc-xin',
+    options: ["Liều"],
     variants: [
-        { id: 201, attributes: {}, stock: 75, price: 199 }
+        { id: 201, attributes: { "Liều": "Lọ 100 liều" }, stock: 200, price: 15000, unit: 'Lọ' },
+        { id: 202, attributes: { "Liều": "Lọ 500 liều" }, stock: 50, price: 60000, unit: 'Lọ' },
     ]
   },
   {
     id: 3,
-    name: 'Bộ điều khiển SmartHome 360',
-    description: 'Điều khiển tất cả các thiết bị thông minh của bạn từ một trung tâm điều khiển bằng giọng nói.',
+    name: 'Máng ăn dài cho gà',
+    description: 'Máng ăn bằng nhựa PP bền, chống mổ, dễ dàng vệ sinh. Thích hợp cho nhiều gà ăn cùng lúc.',
     images: [
-        'https://picsum.photos/seed/smarthome1/400/400',
-        'https://picsum.photos/seed/smarthome2/400/400',
-        'https://picsum.photos/seed/smarthome3/400/400'
+        'https://picsum.photos/seed/feeder1/400/400',
+        'https://picsum.photos/seed/feeder2/400/400',
     ],
-    category: 'Điện tử',
-    options: [],
+    category: 'Dụng cụ chăn nuôi',
+    options: ["Chiều dài"],
     variants: [
-      { id: 301, attributes: {}, stock: 40, price: 129 }
+      { id: 301, attributes: { "Chiều dài": "50 cm" }, stock: 75, price: 25000, unit: 'Cái' },
+      { id: 302, attributes: { "Chiều dài": "75 cm" }, stock: 60, price: 32000, unit: 'Cái' },
+      { id: 303, attributes: { "Chiều dài": "100 cm" }, stock: 0, price: 40000, unit: 'Cái' },
     ]
   },
   {
     id: 4,
-    name: 'Áo khoác Urban Explorer',
-    description: 'Một chiếc áo khoác thời trang và không thấm nước, hoàn hảo cho mọi cuộc phiêu lưu trong thành phố. Có nhiều màu sắc.',
+    name: 'Quạt thông gió công nghiệp',
+    description: 'Quạt thông gió vuông, lưu lượng gió lớn, chuyên dùng cho chuồng trại chăn nuôi.',
     images: [
-        'https://picsum.photos/seed/jacket-main/400/400',
-        'https://picsum.photos/seed/jacket-black/400/400',
-        'https://picsum.photos/seed/jacket-blue/400/400'
+        'https://picsum.photos/seed/fan1/400/400',
+        'https://picsum.photos/seed/fan2/400/400',
     ],
-    category: 'Trang phục',
-    options: ["Màu sắc", "Kích cỡ"],
+    category: 'Hệ thống chuồng trại',
+    options: [],
     variants: [
-        { id: 401, attributes: { "Màu sắc": "Đen", "Kích cỡ": "M" }, stock: 30, price: 89 },
-        { id: 402, attributes: { "Màu sắc": "Đen", "Kích cỡ": "L" }, stock: 25, price: 89 },
-        { id: 403, attributes: { "Màu sắc": "Xanh Navy", "Kích cỡ": "M" }, stock: 35, price: 89 },
-        { id: 404, attributes: { "Màu sắc": "Xanh Navy", "Kích cỡ": "L" }, stock: 20, price: 89 },
-        { id: 405, attributes: { "Màu sắc": "Xanh Navy", "Kích cỡ": "XL" }, stock: 10, price: 95 }
+        { id: 401, attributes: {}, stock: 12, price: 1250000, unit: 'Cái' }
     ]
   },
   {
     id: 5,
-    name: 'Giày Sneaker Da Cổ Điển',
-    description: 'Giày sneaker vượt thời gian được làm bằng da cao cấp cho sự thoải mái và phong cách tối đa.',
+    name: 'Thuốc sát trùng Vimekon',
+    description: 'Thuốc sát trùng phổ rộng, an toàn cho vật nuôi, tiêu diệt vi khuẩn, virus, nấm mốc.',
     images: [
-        'https://picsum.photos/seed/sneakers1/400/400',
-        'https://picsum.photos/seed/sneakers2/400/400',
-        'https://picsum.photos/seed/sneakers3/400/400'
+        'https://picsum.photos/seed/disinfect1/400/400',
     ],
-    category: 'Trang phục',
-    options: [],
+    category: 'Vệ sinh & Sát trùng',
+    options: ["Dung tích"],
     variants: [
-      { id: 501, attributes: {}, stock: 200, price: 120 }
+      { id: 501, attributes: { "Dung tích": "Chai 1 lít" }, stock: 45, price: 220000, unit: 'Chai' }
     ]
   },
   {
     id: 6,
-    name: 'Quần Jean Denim Voyager',
-    description: 'Quần jean slim-fit bền và thoải mái để mặc hàng ngày.',
+    name: 'Ủng bảo hộ cao su',
+    description: 'Ủng cao su cổ cao, chống thấm nước, chống trơn trượt, bảo vệ chân khi làm việc trong chuồng trại.',
     images: [
-        'https://picsum.photos/seed/jeans1/400/400',
-        'https://picsum.photos/seed/jeans2/400/400',
-        'https://picsum.photos/seed/jeans3/400/400'
+        'https://picsum.photos/seed/boots1/400/400',
+        'https://picsum.photos/seed/boots2/400/400',
     ],
-    category: 'Trang phục',
-    options: [],
+    category: 'Bảo hộ lao động',
+    options: ["Kích cỡ"],
     variants: [
-      { id: 601, attributes: {}, stock: 120, price: 75 }
+      { id: 601, attributes: { "Kích cỡ": "39" }, stock: 20, price: 85000, unit: 'Đôi' },
+      { id: 602, attributes: { "Kích cỡ": "40" }, stock: 35, price: 85000, unit: 'Đôi' },
+      { id: 603, attributes: { "Kích cỡ": "41" }, stock: 40, price: 85000, unit: 'Đôi' },
+      { id: 604, attributes: { "Kích cỡ": "42" }, stock: 25, price: 85000, unit: 'Đôi' },
     ]
   },
   {
     id: 7,
-    name: 'Mê Cung Vũ Trụ',
-    description: 'Một cuốn tiểu thuyết khoa học viễn tưởng hấp dẫn của tác giả nổi tiếng J.X. Sterling.',
+    name: 'Bóng đèn úm hồng ngoại',
+    description: 'Bóng đèn sưởi ấm cho gà con, gia cầm non, giúp giữ nhiệt và tăng tỷ lệ sống.',
     images: [
-        'https://picsum.photos/seed/book1a/400/400',
-        'https://picsum.photos/seed/book1b/400/400',
-        'https://picsum.photos/seed/book1c/400/400'
+        'https://picsum.photos/seed/heatlamp1/400/400',
     ],
-    category: 'Sách',
-    options: [],
+    category: 'Phụ tùng & Sửa chữa',
+    options: ["Công suất"],
     variants: [
-      { id: 701, attributes: {}, stock: 85, price: 15 }
+      { id: 701, attributes: { "Công suất": "100W" }, stock: 95, price: 45000, unit: 'Cái' },
+      { id: 702, attributes: { "Công suất": "150W" }, stock: 110, price: 55000, unit: 'Cái' },
+      { id: 703, attributes: { "Công suất": "250W" }, stock: 60, price: 70000, unit: 'Cái' },
     ]
   },
   {
     id: 8,
-    name: 'Lược Sử Vạn Vật',
-    description: 'Một hướng dẫn toàn diện và được minh họa đẹp mắt về lịch sử thế giới của chúng ta.',
+    name: 'Men tiêu hóa cho gia cầm',
+    description: 'Bổ sung lợi khuẩn, giúp gia cầm tiêu hóa tốt, hấp thu tối đa dinh dưỡng, giảm mùi hôi chuồng trại.',
     images: [
-        'https://picsum.photos/seed/book2a/400/400',
-        'https://picsum.photos/seed/book2b/400/400',
-        'https://picsum.photos/seed/book2c/400/400'
+        'https://picsum.photos/seed/probiotic1/400/400',
     ],
-    category: 'Sách',
+    category: 'Thuốc & Vắc-xin',
     options: [],
     variants: [
-      { id: 801, attributes: {}, stock: 95, price: 22 }
+      { id: 801, attributes: {}, stock: 88, price: 95000, unit: 'Gói' }
     ]
   },
   {
     id: 9,
-    name: 'Sách Nấu Ăn Gourmet Chef',
-    description: 'Hơn 100 công thức nấu ăn từ các đầu bếp nổi tiếng thế giới để nâng tầm tài nấu nướng tại nhà của bạn.',
+    name: 'Tấm lót chuồng trấu',
+    description: 'Trấu khô, sạch, dùng làm đệm lót sinh học cho chuồng gà, giúp chuồng khô ráo, sạch sẽ.',
     images: [
-        'https://picsum.photos/seed/cookbook1/400/400',
-        'https://picsum.photos/seed/cookbook2/400/400',
-        'https://picsum.photos/seed/cookbook3/400/400'
+        'https://picsum.photos/seed/bedding1/400/400',
     ],
-    category: 'Sách',
+    category: 'Hệ thống chuồng trại',
     options: [],
     variants: [
-      { id: 901, attributes: {}, stock: 0, price: 30 }
+      { id: 901, attributes: {}, stock: 0, price: 30000, unit: 'Bao' }
     ]
   },
   {
     id: 10,
-    name: 'Dụng cụ pha cà phê AeroPress',
-    description: 'Một dụng cụ pha cà phê đột phá giúp pha cà phê đậm đà, mượt mà không bị đắng.',
+    name: 'Xẻng xúc cám',
+    description: 'Xẻng chuyên dụng để xúc thức ăn chăn nuôi, có 2 loại nhựa và inox.',
     images: [
-        'https://picsum.photos/seed/coffee1/400/400',
-        'https://picsum.photos/seed/coffee2/400/400',
-        'https://picsum.photos/seed/coffee3/400/400'
+        'https://picsum.photos/seed/shovel1/400/400',
+        'https://picsum.photos/seed/shovel2/400/400',
     ],
-    category: 'Đồ gia dụng',
-    options: [],
+    category: 'Dụng cụ chăn nuôi',
+    options: ["Loại"],
     variants: [
-      { id: 1001, attributes: {}, stock: 60, price: 35 }
+      { id: 1001, attributes: { "Loại": "Nhựa" }, stock: 120, price: 20000, unit: 'Cái' },
+      { id: 1002, attributes: { "Loại": "Inox" }, stock: 50, price: 65000, unit: 'Cái' },
     ]
   },
   {
     id: 11,
-    name: 'Đèn bàn tối giản',
-    description: 'Một chiếc đèn bàn LED trang nhã với độ sáng và nhiệt độ màu có thể điều chỉnh.',
+    name: 'Bộ máng uống núm tự động',
+    description: 'Hệ thống cung cấp nước uống sạch tự động cho gà, bao gồm các bộ phận có thể yêu cầu riêng lẻ.',
     images: [
-        'https://picsum.photos/seed/lamp1/400/400',
-        'https://picsum.photos/seed/lamp2/400/400',
-        'https://picsum.photos/seed/lamp3/400/400'
+        'https://picsum.photos/seed/drinker-set/400/400',
+        'https://picsum.photos/seed/drinker-nipple/400/400',
+        'https://picsum.photos/seed/drinker-cup/400/400',
     ],
-    category: 'Đồ gia dụng',
-    options: [],
+    category: 'Dụng cụ chăn nuôi',
+    options: ["Loại"],
     variants: [
-      { id: 1101, attributes: {}, stock: 35, price: 45 }
+      { 
+        id: 1101, 
+        attributes: { "Loại": "Bộ Hoàn chỉnh" }, 
+        stock: 0, // Stock is calculated from components
+        price: 7500,
+        unit: 'Bộ',
+        components: [
+            { variantId: 1102, quantity: 1 },
+            { variantId: 1103, quantity: 1 },
+        ]
+      },
+      { 
+        id: 1102, 
+        attributes: { "Loại": "Núm uống" }, 
+        stock: 500,
+        price: 5000,
+        unit: 'Cái'
+      },
+      { 
+        id: 1103, 
+        attributes: { "Loại": "Cốc hứng" }, 
+        stock: 450,
+        price: 2500,
+        unit: 'Cái'
+      }
     ]
   },
   {
     id: 12,
-    name: 'Nến thơm Evergreen',
-    description: 'Một ngọn nến sáp đậu nành được làm thủ công với hương thơm tươi mát của gỗ thông và tuyết tùng.',
+    name: 'Vôi bột khử trùng',
+    description: 'Vôi bột dùng để rắc chuồng trại, khử trùng, diệt mầm bệnh và cân bằng pH nền chuồng.',
     images: [
-        'https://picsum.photos/seed/candle1/400/400',
-        'https://picsum.photos/seed/candle2/400/400',
-        'https://picsum.photos/seed/candle3/400/400'
+        'https://picsum.photos/seed/limepowder/400/400',
     ],
-    category: 'Đồ gia dụng',
+    category: 'Vệ sinh & Sát trùng',
     options: [],
     variants: [
-      { id: 1201, attributes: {}, stock: 250, price: 18 }
+      { id: 1201, attributes: {}, stock: 200, price: 50000, unit: 'Bao' }
     ]
   },
 ];
 
 export const DEFAULT_CATEGORIES: Category[] = [
-    { name: 'Điện tử', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBhcmlhLWhpZGRlbj0idHJ1ZSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNOSAxNy4yNXYxLjAwN2EzIDMgMCAwIDEtLjg3OSAyLjEyMkw3LjUgMjFoOWwtLjYyMS0uNjIxQTMgMyAwIDAgMSAxNSAxOC4yNTdWMTcuMjVtNi0xMlYxNWEyLjI1IDIuMjUgMCAwIDEtMi4yNSAyLjI1SDUuMjVBMi4yNSAyLjI1IDAgMCAxIDMgMTVWNS4yNUEyLjI1IDIuMjUgMCAwIDEgNS4yNSAzbDEzLjVBMS4yNSAyLjI1IDAgMCAxIDIxIDUuMjVaIiAvPjwvc3ZnPg==' },
-    { name: 'Trang phục', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBhcmlhLWhpZGRlbj0idHJ1ZSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNOS41NjggM0g1LjI1QTIuMjUgMi4yNSAwIDAwMyA1LjI1djQuMzE4YzAgLjU5Ny4yMzcgMS4xNy42NTkgMS41OTFsOS41ODEgOS41ODFjLjY5OS42OTkgMS43OC44NzIgMi42MDcuMzNhMTguMDk1IDE4LjA5NSAwIDAwNS4yMjMtNS4yMjNjLjU0Mi0uODI3LjM2OS0xLjkwOC0uMzMtMi42MDdMMTExLjE2IDMuNjZBMi4yNSAyLjI1IDAgMDA5LjU2OCAzWiIgLz48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik02IDZoLjAwOHYwLjAwOEg2VjZaIiAvPjwvc3ZnPg==' },
-    { name: 'Sách', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBhcmlhLWhpZGRlbj0idHJ1ZSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMTIgNi4wNDJBOC45NjcgOC45NjcgMCAwIDAgNiAzLjc1Yy0xLjA1MiAwLTIuMDYyLjE4LTMgLjUxMnYxNC4yNUE4Ljk4NyA4Ljk4NyAwIDAgMSA2IDE4YzIuMzA1IDAgNC40MDguODY3IDYgMi4yOTJtMC0xNC4yNWE4Ljk2NiA4Ljk2NiAwIDAgMSA2LTIuMjkyYzEuMDUyIDAgMi4wNjIuMTggMyAuNTEydjE4LjI1QOC45ODcgOC45ODcgMCAwIDAgMTggMThhOC45NjcgOC45NjcgMCAwIDAtNiAyLjI5Mm0wLTE0LjI1djE0LjI1IiAvPjwvc3ZnPg==' },
-    { name: 'Đồ gia dụng', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBhcmlhLWhpZGRlbj0idHJ1ZSI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJtMi4yNSAxMiA4Ljk1NC04Ljk1NWMuNDQtLjQzOSAxLjE1Mi0uNDM5IDEuNTkxIDBMMjEuNzUgMTJNNC41IDkuNzV2MTAuMTI1YzAgLjYyMS41MDQgMS4xMjUgMS4xMjUgMS4xMjVIO lofty5djEuODc1YzAtLjYyMS41MDQtMS4xMjUgMS4xMjUtMS4xMjVoMi4yNWMuNjIxIDAgMS4xMjUuNTA0IDEuMTI1IDEuMTI1VjIx'+'aDQuMTI1Yy42MjEgMCAxLjEyNS0uNTA0IDEuMTI1LTEuMTI1VjkuNzVNOC4yNSAyMWg3LjUiIC8+PC9zdmc+' }
+    { name: 'Thức ăn chăn nuôi', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik04LjI1IDcuNSY4LjI1IDcuNWExLjUgMS41IDAgMCAxIDIuMTIyLjcwN2wzIDQuNUMxMy44IDExLjgzMyAxMiA3LjUgMTIgNy41cy0xLjggNC4zMzMtMS4xMjggNS43MDdsMy00LjVDMTQuNTMyIDcuOTU3IDE1LjY4MiA4LjI1IDE2LjE3IDkuMDYyYy40ODcgLjgxMi4yMDQgMS44NTYtLjYwOCAyLjM0M2wtNi43NSAzLjc1YTIuMjUgMi4yNSAwIDAgMS0yLjYxNi0uNTIxbC0zLjQ0LTMuNDRhMi4yNSAyLjI1IDAgMCAxIC41MjEtMi42MTZsNi43NS0zLjc1WiIgLz48L3N2Zz4=' },
+    { name: 'Thuốc & Vắc-xin', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xMy41IDEwLjVTMTIgMTAuNSA5IDEzLjVNMTAuODc5IDEyLjEyMS41LjVhLjUuNSAwIDAgMC0uNzA3LjcwN2wzLjg5IDMuODg5YS41LjUgMCAwIDAgLjcwNy0uNzA3bC0zLjg5LTMuODg5Wk0yMS4xODIgMTMuMTgybC02LjE4MS02LjE4MWEuNS41IDAgMCAwLS43MDcgMCAuNS41IDAgMCAwIDAgLjcwN2w2LjE4MSA2LjE4MWEuNS41IDAgMCAwIC43MDcgMCAuNS41IDAgMCAwIDAtLjcwN1oiIC8+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMTggNC41bDIuNSAyLjVtLTYuNSA2LjUgNCA0bS0zLjUgNWgyLjVNMjEuMTg3IDExLjA4NmwtLjQyNC40MjMtOS4xOTEgOS4xOTFhMS41IDEuNSAwIDAgMS0yLjEyMSAwTDMuMjcxIDE0LjVhMS41IDEuNSAwIDAgMSAwLTIuMTIxbDkuMTkxLTkuMTkxYTEuNSAxLjUgMCAwIDEgMi4xMjEgMGw2LjU5NyA2LjU5N2ExLjUgMS41IDAgMCAxIDAgMi4xMjFaIiAvPjwvc3ZnPg==' },
+    { name: 'Dụng cụ chăn nuôi', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0yLjI1IDEzLjVDMi4yNSAxMi41NjcgMy4wMTcgMTEuOCA0LjEyNSAxMS44SDguNU0yLjI1IDguNzVIMTQuMjVDMTUuMjMzIDguNzUgMTYgOS40MzMgMTYgMTAuMzc1VjEzLjVDMTYgMTQuNDMzIDE1LjIzMyAxNS4xMjUgMTQuMjUgMTUuMTI1SDguNU04LjUgMTUuMTI1SDQuMTI1QzMuMDE3IDE1LjEyNSAyLjI1IDE0LjQzMyAyLjI1IDEzLjVNNy41IDIxVjE1LjEyNU0xOC43NSAxMS44SDIwLjI1QzIxLjIzMyAxMS44IDIyIDEyLjU2NyAyMiAxMy41TTIyIDEzLjVWMTguNzVDMjIgMTkuNjk4IDIxLjI3NyAyMC41IDIwLjM4NiAyMC41SDIwLjI1QzE5LjI2NyAyMC41IDE4LjUgMTkuNzMzIDE4LjUgMTguNzVWMTMuNU0xMiAzVjYuNzUiIC8+PC9zdmc+' },
+    { name: 'Hệ thống chuồng trại', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xMiA2bC00LjUtMy43NVY4LjI1TDQgMTAuNVYxOEgyMHYtNy41bC0zLjc1LTIuMjVWMi4yNUwxMiA2Wk0xMiA2bC0xLjUgMS41TTIgOGw3LjUtNS4yNUwxNyA4bS01IDEwLjV2LTEuNU00IDE4bDEuNS0xLjUiIC8+PC9zdmc+' },
+    { name: 'Vệ sinh & Sát trùng', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xOC4zNjQgMTguMzY0Yy0yLjMxOCAyLjMxOC01LjQyNCAzLjU0LTYuODYzIDMuNjMtMS40NC4wOS0yLjgzMy0uMjY4LTQuMDQ1LS45OTVhOS4wMSA5LjAxIDAgMCAxLTUuNDg1LTguMzQ1Yy4wMS0yLjMxOC43NDgtNC40MjQgMi4wMDctNi4yMDVhOS4wMTEgOS4wMTEgMCAwIDEgNi4yMDUtMi4wMDdjNC41OTktLjM0MiA4LjU1MSAzLjMxNyA4LjE4NiA3LjkyNy0uMjIgMy4wOTUtMi4yMyA1LjY1My00LjY4OCA3LjM1MVoiIC8+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNOS43NSA1LjI1YTMgMyAwIDAgMSAzLTIuNU0zLjM3NSAxOC4zNzVhMyAzIDAgMCAwIDIuMjUgMi4yNU0xMi43NSA2LjI1bDIuMjUtMi4yNU04LjI1IDEyLjI1bDQuNSA0LjVNNTYgMTNsMSAxbS0xMC41LThMMiA3LjVNNiAxOC41bC0yLjUgMi41TTIwLjI1IDguNzVsMS41LTEuNU0xNS43NSA4LjI1YzAgNS4xMjEtNC42NDQgNy41LTguMjUgNy41SDQuNW0xMC41IDBjMCAuNDU1LS4wMi45MDYtLjA1OCAxLjM1MyIgLz48L3N2Zz4=' },
+    { name: 'Bảo hộ lao động', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik05IDEyLjc1IDExLjI1IDE1IDE1IDkuNzVtLTMtNy4wMzZBMS45NTkgMTEuOTU5IDAgMCAxIDMuNTk4IDYgMTEuOTkgMTEuOTkgMCAwIDAgMyA5Ljc0OWMwIDUuNTkyIDMuODI0IDEwLjI5IDkgMTEuNjIyIDUuMTc2LTEuMzMyIDktNi4wMyA5LTExLjYyMiAwLTEuMzEtLjIxLTIuNTcxLS41OTgtMy43NTFoLS4xNTJjLTMuMTk2IDAtNi4xLTEuMjQ4LTguMjUtMy4yODZaIiAvPjwvc3ZnPg==' },
+    { name: 'Phụ tùng & Sửa chữa', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik05LjU5NCAzLjk0Yy4wOS0uNTQyLjU2LTEuMDA3IDEuMTEtMS4yMjYuNTUtLjIyIDEuMTU2LS4yMiAxLjcwNiAwIC41NS4yMiAxLjAyLjY4NCAxLjExIDEuMjI2bC4wNDMuMjY4Yz40MzMuMjcuODUuNTk2IDEuMjM0Ljk2Ni4zODMuMzcuNzE3Ljc4NCAxLjAxOCAxLjIyOC4zMDIuNDQ1LjU0NS45MjIuNzI3IDEuNDI4bC4wNDMuMjdjLjEzNC41NDIuMTM0IDEuMTEgMCAxLjY1MmwtLjA0My4yN2MtLjE4Mi41MDYtLjQyNS45ODMtLjcyNyAxLjQyOGE5LjAwOSA5LjAwOSAwIDAgMS0xLjAxOCAxLjIyOGMtLjM4My4zNy0uOC42OTctMS4yMzQuOTY2bC0uMDQzLjI2OGMtLjA5LjU0Mi0uNTYgMS4wMDctMS4xMSAxLjIyNi0uNTUtLjIyLTEuMTU2LS4yMi0xLjcwNiAwLS41NS0uMjItMS4wMi0uNjg0LTEuMTEtMS4yMjZsLS4wNDMtLjI2OGE5LjAwOSA5LjAwOSAwIDAgMS0xLjIzNC0uOTY2Yy0uMzgzLS4zNy0uNzE3LS43ODQtMS4wMTgtMS4yMjhhOS4wMSA5LjAxIDAgMCAxLS43MjctMS40MjhsLS4wNDMtLjI3Yy0uMTM0LS41NDItLjEzNC0xLjExIDAtMS42NTJsLjA0My0uMjdhOS4wMSA5LjAxIDAgMCAxIC43MjctMS40MjhjLjMwMi0uNDQ1LjYzNi0uODU4IDEuMDE4LTEuMjI4LjM4NC0uMzcuODAxLS42OTYgMS4yMzQtLjk2NmwuMDQzLS4yNjhaTTEyIDE1Ljc1YTMuNzUgMy43NSAwIDEgMCAwLTcuNSAzLjc1IDMuNzUgMCAwIDAgMCA3LjVaIiAvPjwvc3ZnPg==' },
+    { name: 'Khác', icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZT0iY3VycmVudENvbG9yIj48cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik02Ljc1IDEyYS43NS43NSAwIDEgMS0xLjUgMCAuNzUuNzUgMCAwIDEgMS41IDBNMTIuNzUgMTJhLjc1Ljc1IDAgMSAxLTEuNSAwIC43NS43NSAwIDAgMSAxLjUgME0xOC43NSAxMmEuNzUuNzUgMCAxIDEtMS41IDAgLjc1Ljc1IDAgMCAxIDEuNSAwWiIgLz48L3N2Zz4=' }
+];
+
+export const USERS: User[] = [
+  { id: 'requester-1', name: 'Nguyễn Văn An', role: 'requester', zone: 'Khu 1' },
+  { id: 'requester-2', name: 'Trần Thị Bình', role: 'requester', zone: 'Khu 2' },
+  { id: 'requester-3', name: 'Lê Văn Cường', role: 'requester', zone: 'Khu 3' },
+  { id: 'requester-4', name: 'Phạm Thị Dung', role: 'requester', zone: 'Khu 4' },
+  { id: 'manager-1', name: 'Quản lý Kho', role: 'manager' },
 ];

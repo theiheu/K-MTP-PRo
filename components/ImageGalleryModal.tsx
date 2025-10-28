@@ -1,5 +1,6 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
+import ImageWithPlaceholder from './ImageWithPlaceholder';
 
 const ChevronLeftIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -66,6 +67,7 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ isOpen, onClose, 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, currentIndex, images.length]);
 
   if (!isOpen || images.length === 0) return null;
@@ -89,8 +91,13 @@ const ImageGalleryModal: React.FC<ImageGalleryModalProps> = ({ isOpen, onClose, 
             
             <div className="relative">
                 {/* Image Display */}
-                <div className="flex items-center justify-center">
-                    <img src={images[currentIndex]} alt={`Xem ảnh ${currentIndex + 1}`} className="max-h-[80vh] w-auto object-contain rounded-lg shadow-2xl"/>
+                <div className="flex items-center justify-center max-h-[80vh] w-full">
+                    <ImageWithPlaceholder 
+                        src={images[currentIndex]} 
+                        alt={`Xem ảnh ${currentIndex + 1}`} 
+                        className="max-h-[80vh] w-auto object-contain rounded-lg shadow-2xl"
+                        placeholderClassName="rounded-lg"
+                    />
                 </div>
 
                 {/* Navigation Buttons */}

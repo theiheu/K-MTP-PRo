@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { User, CartItem as CartItemType } from '../types';
+import { User, CartItem as CartItemType, Product } from '../types';
 import CartItem from './CartItem';
 import ConfirmationModal from './ConfirmationModal';
 
 interface CreateRequisitionPageProps {
   user: User;
   cartItems: CartItemType[];
+  allProducts: Product[];
   onSubmit: (details: { requesterName: string; zone: string; purpose: string }) => void;
   onCancel: () => void;
   onUpdateItem: (variantId: number, quantity: number) => void;
@@ -15,6 +16,7 @@ interface CreateRequisitionPageProps {
 const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
   user,
   cartItems,
+  allProducts,
   onSubmit,
   onCancel,
   onUpdateItem,
@@ -79,6 +81,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                 <CartItem
                   key={item.variant.id}
                   item={item}
+                  allProducts={allProducts}
                   onRemove={handleRequestRemove}
                   onUpdateItem={onUpdateItem}
                 />
@@ -103,7 +106,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                   value={requesterName}
                   onChange={isManager ? (e) => setRequesterName(e.target.value) : undefined}
                   readOnly={!isManager}
-                  className={`block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   placeholder={isManager ? 'Nhập tên người yêu cầu' : ''}
                   required
                 />
@@ -117,7 +120,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                   name="zone"
                   value={zone}
                   onChange={(e) => setZone(e.target.value)}
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                  className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                 >
                   <option>Khu 1</option>
                   <option>Khu 2</option>
@@ -135,7 +138,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({
                   id="purpose"
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                  className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                   placeholder="Vd: Sửa chữa máy cho gà ăn"
                   required
                 ></textarea>

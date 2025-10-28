@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CartItem as CartItemType } from '../types';
+import { CartItem as CartItemType, Product } from '../types';
 import CartItem from './CartItem';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -7,6 +7,7 @@ interface CartProps {
   isOpen: boolean;
   onClose: () => void;
   cartItems: CartItemType[];
+  allProducts: Product[];
   onRemove: (variantId: number) => void;
   onUpdateItem: (variantId: number, quantity: number) => void;
   onCreateRequisition: () => void;
@@ -19,7 +20,7 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 
-const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpdateItem, onCreateRequisition }) => {
+const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, allProducts, onRemove, onUpdateItem, onCreateRequisition }) => {
   const [itemToRemove, setItemToRemove] = useState<CartItemType | null>(null);
 
   const handleRequestRemove = (variantId: number) => {
@@ -43,7 +44,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
 
         <div className="fixed inset-0 overflow-hidden">
           <div className="absolute inset-0 overflow-hidden">
-            <div className={`pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10 transform transition ${isOpen ? 'ease-in-out duration-500 sm:duration-700 translate-x-0' : 'translate-x-full'}`}>
+            <div className={`pointer-events-none fixed inset-y-0 left-0 flex max-w-full pr-10 transform transition ${isOpen ? 'ease-in-out duration-500 sm:duration-700 translate-x-0' : '-translate-x-full'}`}>
               <div className="pointer-events-auto w-screen max-w-md">
                 <div className="flex h-full flex-col overflow-y-scroll bg-white shadow-xl">
                   <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6">
@@ -67,6 +68,7 @@ const Cart: React.FC<CartProps> = ({ isOpen, onClose, cartItems, onRemove, onUpd
                                 item={item}
                                 onRemove={handleRequestRemove}
                                 onUpdateItem={onUpdateItem}
+                                allProducts={allProducts}
                               />
                             ))}
                           </ul>

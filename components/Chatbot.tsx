@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Product } from '../types';
 import { getAIRecommendations } from '../services/geminiService';
+import ImageWithPlaceholder from './ImageWithPlaceholder';
 
 interface ChatbotProps {
   allProducts: Product[];
@@ -30,6 +31,7 @@ const PaperAirplaneIcon = () => (
   </svg>
 );
 
+const CHATBOT_POSITION_STORAGE_KEY = 'chatbot_position';
 
 const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,12 +39,109 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const dragRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  
+  // Load position from localStorage on initial render
+  useEffect(() => {
+    const savedPosition = localStorage.getItem(CHATBOT_POSITION_STORAGE_KEY);
+    if (savedPosition) {
+      setPosition(JSON.parse(savedPosition));
+    } else {
+      // Default to bottom right if no position is saved
+      const buttonSize = 80; // Approximate size of the button + padding
+      setPosition({ 
+        x: window.innerWidth - buttonSize, 
+        y: window.innerHeight - buttonSize - 24 // 24px is bottom margin
+      });
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(scrollToBottom, [messages]);
+  
+  const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    
+    const dragNode = dragRef.current;
+    if (!dragNode) return;
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const rect = dragNode.getBoundingClientRect();
+    setOffset({
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    });
+  }, []);
+
+  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    
+    const dragNode = dragRef.current;
+    if (!dragNode) return;
+    
+    const rect = dragNode.getBoundingClientRect();
+
+    let newX = clientX - offset.x;
+    let newY = clientY - offset.y;
+
+    // Boundary checks
+    newX = Math.max(0, Math.min(newX, window.innerWidth - rect.width));
+    newY = Math.max(0, Math.min(newY, window.innerHeight - rect.height));
+
+    setPosition({ x: newX, y: newY });
+
+  }, [isDragging, offset]);
+
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    // Use a timeout to prevent click event from firing after drag
+    setTimeout(() => {
+       localStorage.setItem(CHATBOT_POSITION_STORAGE_KEY, JSON.stringify(position));
+    }, 0);
+  }, [position]);
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mousemove', handleDragMove);
+      window.addEventListener('touchmove', handleDragMove);
+      window.addEventListener('mouseup', handleDragEnd);
+      window.addEventListener('touchend', handleDragEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+      window.removeEventListener('touchend', handleDragEnd);
+    };
+  }, [isDragging, handleDragMove, handleDragEnd]);
+
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    // When dragging starts, prevent page scrolling.
+    if (isDragging) {
+      document.body.style.overflow = 'hidden';
+    }
+    // When dragging stops or component unmounts, restore original scroll behavior.
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, [isDragging]);
+
 
   const handleSend = async () => {
     if (inputValue.trim() === '' || isLoading) return;
@@ -63,14 +162,34 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
       setIsLoading(false);
     }
   };
+  
+  const handleBubbleClick = () => {
+    if (!isDragging) {
+      setIsOpen(true);
+    }
+  }
 
   return (
     <>
-      <div className={`fixed bottom-20 right-4 sm:bottom-6 sm:right-6 lg:bottom-8 transition-transform duration-300 ease-out ${isOpen ? 'translate-y-full opacity-0' : 'translate-y-0 opacity-100'} z-50`}>
-        <button onClick={() => setIsOpen(true)} className="bg-yellow-500 text-white rounded-full p-4 shadow-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+      <div 
+        ref={dragRef}
+        style={{
+          position: 'fixed',
+          top: `${position.y}px`,
+          left: `${position.x}px`,
+          cursor: isDragging ? 'grabbing' : 'grab',
+          transition: isDragging ? 'none' : 'opacity 0.3s ease-out',
+        }}
+        className={`z-50 transition-opacity duration-300 ease-out ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        onMouseDown={handleDragStart}
+        onTouchStart={handleDragStart}
+        onClick={handleBubbleClick}
+      >
+        <div className="bg-yellow-500 text-white rounded-full p-4 shadow-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
           <ChatBubbleIcon />
-        </button>
+        </div>
       </div>
+      
       <div className={`fixed bottom-[-25] right-0 sm:m-6 lg:m-8 w-full sm:max-w-md h-full sm:h-[70vh] flex flex-col bg-white rounded-t-lg sm:rounded-lg shadow-2xl transition-transform duration-300 ease-out ${isOpen ? 'translate-y-0' : 'translate-y-full'} z-50`}>
         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 relative">
             <button 
@@ -97,7 +216,9 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
                     <div className="mt-2 space-y-2 border-t border-gray-300 pt-2">
                       {msg.products.map(p => (
                         <div key={p.id} className="flex items-center gap-2 text-xs p-1 bg-white rounded">
-                          <img src={p.images[0]} alt={p.name} className="w-8 h-8 rounded object-cover"/>
+                          <div className="w-8 h-8 rounded flex-shrink-0">
+                            <ImageWithPlaceholder src={p.images[0]} alt={p.name} className="w-full h-full rounded object-cover"/>
+                          </div>
                           <div className="flex flex-col">
                               <span className="font-medium">{p.name}</span>
                               <span className="text-gray-600">Tồn kho: {p.variants.reduce((sum, v) => sum + v.stock, 0)}</span>
@@ -132,7 +253,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Hỏi tôi để tìm một vật tư..."
-              className="w-full pr-12 pl-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
               disabled={isLoading}
             />
             <button onClick={handleSend} disabled={isLoading} className="absolute right-1 top-1/2 -translate-y-1/2 bg-yellow-500 text-white p-2 rounded-full hover:bg-yellow-600 disabled:bg-yellow-300">

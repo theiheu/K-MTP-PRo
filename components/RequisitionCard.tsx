@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RequisitionForm, UserRole } from '../types';
+import ImageWithPlaceholder from './ImageWithPlaceholder';
 
 interface RequisitionCardProps {
   form: RequisitionForm;
@@ -85,22 +86,40 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
               const displayImage = galleryImages[0];
 
               return (
-                <li key={`${item.product.id}-${item.variant.id}`} className="flex py-4 items-center">
-                  <img 
-                      src={displayImage}
-                      alt={`${item.product.name}${variantAttributes ? ` - ${variantAttributes}` : ''}`}
-                      className="h-16 w-16 rounded-md object-cover flex-shrink-0 cursor-pointer transition-transform duration-200 hover:scale-105 hover:shadow-md"
-                      onClick={(e) => {
-                          e.stopPropagation();
-                          onImageClick(galleryImages, 0);
-                      }}
-                  />
+                <li key={`${item.product.id}-${item.variant.id}`} className="flex py-4 items-start">
+                   <div
+                    className="h-16 w-16 rounded-md flex-shrink-0 cursor-pointer overflow-hidden"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onImageClick(galleryImages, 0);
+                    }}
+                  >
+                    <ImageWithPlaceholder 
+                        src={displayImage}
+                        alt={`${item.product.name}${variantAttributes ? ` - ${variantAttributes}` : ''}`}
+                        className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
+                    />
+                  </div>
+
                   <div className="ml-4 flex-1">
                     <p className="font-medium text-gray-900">{item.product.name}</p>
                     {variantAttributes && <p className="text-sm text-gray-500">{variantAttributes}</p>}
+                     {item.variant.components && item.variant.components.length > 0 && (
+                        <div className="mt-2 text-xs text-gray-600">
+                          <ul className="list-disc list-inside">
+                            {item.variant.components.map(comp => {
+                                const componentVariant = item.product.variants.find(v => v.id === comp.variantId);
+                                const variantName = componentVariant ? (Object.values(componentVariant.attributes).join(' / ') || 'Thành phần') : `ID ${comp.variantId}`;
+                                return (
+                                    <li key={comp.variantId}>{comp.quantity} x {variantName}</li>
+                                );
+                            })}
+                          </ul>
+                        </div>
+                      )}
                   </div>
-                  <div className="text-right">
-                      <p className="font-medium text-gray-900">SL: {item.quantity}</p>
+                  <div className="text-right flex-shrink-0">
+                      <p className="font-medium text-gray-900">SL: {item.quantity} {item.variant.unit}</p>
                   </div>
                 </li>
               );

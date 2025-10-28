@@ -18,28 +18,32 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, o
   return (
     <nav className="bg-white shadow-sm">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-3">
-        <div className="flex flex-wrap justify-start gap-x-4 gap-y-2 sm:gap-x-8">
-          {categories.map((category) => {
-            return (
-              <button
-                key={category.name}
-                onClick={() => onSelectCategory(category.name)}
-                aria-pressed={activeCategory === category.name}
-                className={`flex flex-col items-center justify-center p-2 rounded-lg w-24 h-20 transition-colors duration-200 ease-in-out ${
-                  activeCategory === category.name
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                }`}
-              >
-                {category.name === 'Tất cả' ? (
-                  <AllIcon className="w-6 h-6 mb-1" />
-                ) : (
-                  <img src={category.icon} alt={category.name} className="w-6 h-6 mb-1 object-contain" />
-                )}
-                <span className="text-xs font-medium text-center">{category.name}</span>
-              </button>
-            );
-          })}
+        <div className="overflow-x-auto no-scrollbar">
+          <div className="flex justify-start sm:justify-center">
+            <div className="grid grid-rows-2 grid-flow-col gap-x-4 gap-y-2 sm:gap-x-8">
+              {categories.map((category) => {
+                return (
+                  <button
+                    key={category.name}
+                    onClick={() => onSelectCategory(category.name)}
+                    aria-pressed={activeCategory === category.name}
+                    className={`flex flex-col items-center justify-center p-2 rounded-lg w-24 h-20 transition-colors duration-200 ease-in-out ${
+                      activeCategory === category.name
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    {category.name === 'Tất cả' ? (
+                      <AllIcon className="w-6 h-6 mb-1" />
+                    ) : (
+                      <img src={category.icon} alt={category.name} className="w-6 h-6 mb-1 object-contain" />
+                    )}
+                    <span className="text-xs font-medium text-center">{category.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </nav>

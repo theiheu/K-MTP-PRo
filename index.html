@@ -51,6 +51,15 @@
     select {
       font-size: 16px !important;
     }
+
+    /* Utility to hide scrollbar */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
   </style>
 </head>
   <body class="bg-gray-50">

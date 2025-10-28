@@ -1,5 +1,6 @@
 import React from 'react';
 import { RequisitionForm, UserRole } from '../types';
+import ImageWithPlaceholder from './ImageWithPlaceholder';
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -103,7 +104,9 @@ const RequisitionDetailModal: React.FC<RequisitionDetailModalProps> = ({ isOpen,
                     <ul role="list" className="divide-y divide-gray-200 mt-4">
                       {form.items.map(item => (
                         <li key={item.product.id} className="flex py-4 items-center">
-                          <img src={item.product.images[0]} alt={item.product.name} className="h-16 w-16 rounded-md object-cover flex-shrink-0"/>
+                          <div className="h-16 w-16 rounded-md object-cover flex-shrink-0 overflow-hidden">
+                            <ImageWithPlaceholder src={item.product.images[0]} alt={item.product.name} className="h-full w-full object-cover"/>
+                          </div>
                           <div className="ml-4 flex-1">
                             <p className="font-medium text-gray-900">{item.product.name}</p>
                             <p className="text-sm text-gray-500">{item.product.category}</p>

@@ -75,7 +75,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({ isOpen, onClose, on
                             value={requesterName}
                             onChange={isManager ? (e) => setRequesterName(e.target.value) : undefined}
                             readOnly={!isManager}
-                            className={`block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                            className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${!isManager ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                             placeholder={isManager ? 'Nhập tên người yêu cầu' : ''}
                             required
                           />
@@ -89,7 +89,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({ isOpen, onClose, on
                             name="zone"
                             value={zone}
                             onChange={(e) => setZone(e.target.value)}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                            className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                           >
                             <option>Khu 1</option>
                             <option>Khu 2</option>
@@ -107,7 +107,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({ isOpen, onClose, on
                             id="purpose"
                             value={purpose}
                             onChange={(e) => setPurpose(e.target.value)}
-                            className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                            className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
                             placeholder="Vd: Sửa chữa máy cho gà ăn"
                             required
                           ></textarea>

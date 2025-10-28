@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product, Variant } from '../types';
+import ImageWithPlaceholder from './ImageWithPlaceholder';
 
 interface VariantSelectorModalProps {
   product: Product | null;
@@ -95,6 +96,7 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({ product, on
 
   const goToPrevious = () => {
     const isFirstImage = currentImageIndex === 0;
+    // FIX: Changed `currentIndex` to `currentImageIndex` to match state variable.
     const newIndex = isFirstImage ? imagesToShow.length - 1 : currentImageIndex - 1;
     setCurrentImageIndex(newIndex);
   };
@@ -152,8 +154,8 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({ product, on
             {/* Image Carousel */}
             <div className="w-full bg-gray-200 overflow-hidden">
                 {imagesToShow.length > 0 ? (
-                    <div className="relative group h-[45vh] sm:h-auto sm:aspect-w-1 sm:aspect-h-1">
-                        <img src={imagesToShow[currentImageIndex]} alt={`${product.name} ảnh ${currentImageIndex + 1}`} className="h-full w-full object-cover object-center" />
+                    <div className="relative group h-[35vh] sm:h-auto sm:aspect-square">
+                        <ImageWithPlaceholder src={imagesToShow[currentImageIndex]} alt={`${product.name} ảnh ${currentImageIndex + 1}`} className="h-full w-full object-cover object-center" />
                         {imagesToShow.length > 1 && (
                             <>
                                 <button onClick={goToPrevious} aria-label="Ảnh trước" className="absolute top-1/2 left-2 -translate-y-1/2 bg-black bg-opacity-30 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10">
@@ -164,14 +166,15 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({ product, on
                                 </button>
                                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex space-x-2 z-10">
                                     {imagesToShow.map((_, index) => (
-                                        <button key={index} onClick={() => setCurrentImageIndex(index)} className={`w-2 h-2 rounded-full ${currentImageIndex === index ? 'bg-white' : 'bg-white/50'}`} />
+                                        <button key={index} onClick={() => setCurrentImageIndex(index)} className={`w-2 h-2 rounded-full ${
+currentImageIndex === index ? 'bg-white' : 'bg-white/50'}`} />
                                     ))}
                                 </div>
                             </>
                         )}
                     </div>
                 ) : (
-                    <div className="flex items-center justify-center h-[45vh] sm:h-auto sm:aspect-w-1 sm:aspect-h-1 text-gray-500">
+                    <div className="flex items-center justify-center h-[35vh] sm:h-auto sm:aspect-square text-gray-500">
                         <span>Không có ảnh</span>
                     </div>
                 )}
@@ -202,7 +205,7 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({ product, on
                                 type="number" 
                                 value={quantity} 
                                 onChange={handleQuantityChange} 
-                                className="w-16 text-center border-l border-r border-gray-300 focus:outline-none"
+                                className="w-16 text-center border-l border-r border-gray-300 focus:outline-none py-2"
                                 min="1"
                                 max={currentVariant?.stock || 1}
                                 aria-label="Số lượng"

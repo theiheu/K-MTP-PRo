@@ -3,24 +3,25 @@ import Header from './components/Header';
 import ProductList from './components/ProductList';
 import Cart from './components/Cart';
 import Chatbot from './components/Chatbot';
-import CategoryNav from './components/CategoryNav';
 import RequisitionListPage from './components/RequisitionListPage';
 import CreateRequisitionPage from './components/CreateRequisitionPage';
 import AdminPage from './components/AdminPage';
 import BottomNav from './components/BottomNav';
-import SetupPage from './components/SetupPage';
+import DesktopNav from './components/DesktopNav';
+import LoginPage from './components/LoginPage';
 import Pagination from './components/Pagination';
 import SearchBar from './components/SearchBar';
-import VariantSelectorModal from './components/VariantSelectorModal'; // New component
+import CategoryNav from './components/CategoryNav';
 import { Product, CartItem, RequisitionForm, User, Category, Variant } from './types';
 import { PRODUCTS, DEFAULT_CATEGORIES } from './constants';
+import { calculateVariantStock } from './utils/stockCalculator';
 
 const USER_STORAGE_key = 'chicken_farm_user';
 const REQUISITIONS_STORAGE_key = 'chicken_farm_requisitions';
 const PRODUCTS_STORAGE_key = 'chicken_farm_products';
 const CATEGORIES_STORAGE_KEY = 'chicken_farm_categories';
 
-const PRODUCTS_PER_PAGE = 8;
+const PRODUCTS_PER_PAGE = 10; // Giảm để kích hoạt phân trang
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -66,7 +67,6 @@ const App: React.FC = () => {
     }
   });
   
-  const [productForVariantSelection, setProductForVariantSelection] = useState<Product | null>(null);
 
   // Effects for localStorage...
   useEffect(() => {
@@ -83,37 +83,19 @@ const App: React.FC = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [currentUser, currentView]); 
+  }, [currentUser, currentView, productCurrentPage]); 
 
   useEffect(() => {
     try {
         const requisitionsToSave = requisitionForms.map(form => {
             const sanitizedItems = form.items.map(cartItem => {
                 const { product, variant, ...restOfCartItem } = cartItem;
-
-                // Function to filter out base64 images
                 const sanitizeImages = (images: string[] | undefined) => (images || []).filter(img => !img.startsWith('data:image'));
-
-                // Sanitize the main product object within the cart item
-                const sanitizedProductVariants = product.variants.map(v => ({
-                    ...v,
-                    images: sanitizeImages(v.images)
-                }));
-                const sanitizedProduct = {
-                    ...product,
-                    images: sanitizeImages(product.images),
-                    variants: sanitizedProductVariants
-                };
-
-                // Sanitize the specific variant object for the cart item
-                const sanitizedVariant = {
-                    ...variant,
-                    images: sanitizeImages(variant.images)
-                };
-
+                const sanitizedProductVariants = product.variants.map(v => ({ ...v, images: sanitizeImages(v.images) }));
+                const sanitizedProduct = { ...product, images: sanitizeImages(product.images), variants: sanitizedProductVariants };
+                const sanitizedVariant = { ...variant, images: sanitizeImages(variant.images) };
                 return { ...restOfCartItem, product: sanitizedProduct, variant: sanitizedVariant };
             });
-
             return { ...form, items: sanitizedItems };
         });
         localStorage.setItem(REQUISITIONS_STORAGE_key, JSON.stringify(requisitionsToSave));
@@ -126,17 +108,8 @@ const App: React.FC = () => {
     try {
         const productsToSave = masterProductList.map(product => {
             const sanitizeImages = (images: string[] | undefined) => (images || []).filter(img => !img.startsWith('data:image'));
-
-            const sanitizedVariants = product.variants.map(variant => ({
-                ...variant,
-                images: sanitizeImages(variant.images),
-            }));
-
-            return {
-                ...product,
-                images: sanitizeImages(product.images),
-                variants: sanitizedVariants,
-            };
+            const sanitizedVariants = product.variants.map(variant => ({ ...variant, images: sanitizeImages(variant.images) }));
+            return { ...product, images: sanitizeImages(product.images), variants: sanitizedVariants };
         });
         localStorage.setItem(PRODUCTS_STORAGE_key, JSON.stringify(productsToSave));
     } catch (error) {
@@ -156,7 +129,7 @@ const App: React.FC = () => {
     setProductCurrentPage(1);
   }, [searchTerm, category]);
 
-  const getFilteredProducts = useCallback(() => {
+  const getFilteredAndSortedProducts = useCallback(() => {
     let tempProducts = [...masterProductList];
     if (searchTerm) {
       tempProducts = tempProducts.filter(p =>
@@ -169,36 +142,18 @@ const App: React.FC = () => {
     }
     return tempProducts;
   }, [searchTerm, category, masterProductList]);
-
-  const handleSelectVariant = (product: Product) => {
-    setProductForVariantSelection(product);
-  };
   
   const addToCart = (product: Product, variant: Variant, quantity: number) => {
     setCart(prevCart => {
-      if (variant.stock <= 0) {
-        alert("Biến thể này của vật tư đã hết hàng.");
-        return prevCart;
-      }
-      
+      // Stock check logic will be handled within components based on calculated stock.
       const existingItemIndex = prevCart.findIndex(item => item.variant.id === variant.id);
-
       if (existingItemIndex > -1) {
         const updatedCart = [...prevCart];
-        const newQuantity = updatedCart[existingItemIndex].quantity + quantity;
-        
-        if (newQuantity > variant.stock) {
-            alert(`Không đủ tồn kho. Bạn đã yêu cầu ${updatedCart[existingItemIndex].quantity} và muốn thêm ${quantity}, nhưng chỉ còn ${variant.stock}.`);
-            return prevCart;
-        }
-        
-        updatedCart[existingItemIndex].quantity = newQuantity;
+        updatedCart[existingItemIndex].quantity += quantity;
         return updatedCart;
       }
-      
       return [...prevCart, { product, variant, quantity }];
     });
-    setProductForVariantSelection(null);
   };
 
   const removeFromCart = (variantId: number) => {
@@ -208,20 +163,10 @@ const App: React.FC = () => {
   const updateCartItem = (variantId: number, quantity: number) => {
     setCart(prevCart =>
       prevCart.map(item => {
-        if (item.variant.id !== variantId) {
-          return item;
-        }
-
-        let newQuantity = quantity;
-        if (newQuantity > item.variant.stock) {
-            alert(`Không thể yêu cầu nhiều hơn số lượng tồn kho (${item.variant.stock}).`);
-            newQuantity = item.variant.stock;
-        }
-        
-        if (newQuantity < 1) {
-            return { ...item, quantity: 1 };
-        }
-    
+        if (item.variant.id !== variantId) return item;
+        // Stock checks are now more complex and better handled at the point of action.
+        // We'll trust the input for now, or add more complex validation if needed.
+        let newQuantity = Math.max(1, quantity);
         return { ...item, quantity: newQuantity };
       })
     );
@@ -239,11 +184,8 @@ const App: React.FC = () => {
   const handleCreateRequisition = (details: { requesterName: string, zone: string; purpose: string }) => {
     if (!currentUser) return;
     const newForm: RequisitionForm = {
-      id: `REQ-${Date.now()}`,
-      ...details,
-      items: cart,
-      status: 'Đang chờ xử lý',
-      createdAt: new Date().toISOString(),
+      id: `REQ-${Date.now()}`, ...details, items: cart,
+      status: 'Đang chờ xử lý', createdAt: new Date().toISOString(),
     };
     setRequisitionForms(prev => [newForm, ...prev]);
     setCart([]);
@@ -252,123 +194,97 @@ const App: React.FC = () => {
   };
 
   const handleFulfillRequisition = (formId: string, details: { notes: string; fulfillerName: string }) => {
-    const formToFulfill = requisitionForms.find(f => f.id === formId);
-    if (!formToFulfill) {
-      alert("Lỗi: Không tìm thấy phiếu yêu cầu.");
-      return;
-    }
-    
-    const updatedProductList = JSON.parse(JSON.stringify(masterProductList)); // Deep copy
-    let stockSufficient = true;
-    const stockErrors: string[] = [];
-
-    for (const item of formToFulfill.items) {
-      const productInStock = updatedProductList.find((p: Product) => p.id === item.product.id);
-      if (!productInStock) {
-          stockErrors.push(`- Vật tư "${item.product.name}" không còn tồn tại.`);
-          stockSufficient = false;
-          continue;
+      const formToFulfill = requisitionForms.find(f => f.id === formId);
+      if (!formToFulfill) {
+          alert("Lỗi: Không tìm thấy phiếu yêu cầu.");
+          return;
       }
-
-      const variantInStock = productInStock.variants.find((v: Variant) => v.id === item.variant.id);
-      if (!variantInStock) {
-          stockErrors.push(`- Biến thể của "${item.product.name}" không còn tồn tại.`);
-          stockSufficient = false;
-          continue;
-      }
-      
-      if (variantInStock.stock < item.quantity) {
-          stockErrors.push(`- Không đủ tồn kho cho "${item.product.name}" (${Object.values(item.variant.attributes).join(', ')}). Yêu cầu ${item.quantity}, còn lại ${variantInStock.stock}.`);
-          stockSufficient = false;
-      }
-    }
-
-    if (!stockSufficient) {
-        alert("Không thể hoàn thành phiếu:\n" + stockErrors.join("\n"));
-        return;
-    }
-
-    formToFulfill.items.forEach(item => {
-        const productIndex = updatedProductList.findIndex((p: Product) => p.id === item.product.id);
-        if (productIndex !== -1) {
-            const variantIndex = updatedProductList[productIndex].variants.findIndex((v: Variant) => v.id === item.variant.id);
-            if (variantIndex !== -1) {
-                updatedProductList[productIndex].variants[variantIndex].stock -= item.quantity;
-            }
-        }
-    });
-
-    setMasterProductList(updatedProductList);
-
-    setRequisitionForms(prev =>
-        prev.map(form =>
-            form.id === formId
-                ? {
-                    ...form,
-                    status: 'Đã hoàn thành',
-                    fulfilledBy: details.fulfillerName,
-                    fulfillmentNotes: details.notes,
-                    fulfilledAt: new Date().toISOString(),
-                }
-                : form
-        )
-    );
-    alert('Đã hoàn thành phiếu yêu cầu thành công!');
-  };
-
-  // Admin handlers
-  const handleAddProduct = (productData: Omit<Product, 'id'>) => {
-    const newProduct: Product = {
-      ...productData,
-      id: Date.now()
-    };
-    setMasterProductList(prev => [...prev, newProduct]);
-  };
-
-  const handleUpdateProduct = (updatedProduct: Product) => {
-    setMasterProductList(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-  };
   
-  const handleDeleteProduct = (productId: number) => {
-    setMasterProductList(prev => prev.filter(p => p.id !== productId));
+      const updatedProductList = JSON.parse(JSON.stringify(masterProductList));
+      let stockSufficient = true;
+      const stockErrors: string[] = [];
+  
+      // Check stock sufficiency first
+      for (const item of formToFulfill.items) {
+          const currentStock = calculateVariantStock(item.variant, updatedProductList);
+          if (currentStock < item.quantity) {
+              const variantName = Object.values(item.variant.attributes).join(' / ') || '';
+              stockErrors.push(`- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`);
+              stockSufficient = false;
+          }
+      }
+  
+      if (!stockSufficient) {
+          alert("Không thể hoàn thành phiếu:\n" + stockErrors.join("\n"));
+          return;
+      }
+  
+      // If stock is sufficient, deduct it
+      formToFulfill.items.forEach(item => {
+          const isComposite = item.variant.components && item.variant.components.length > 0;
+          const parentProductIndex = updatedProductList.findIndex((p: Product) => p.id === item.product.id);
+          if (parentProductIndex === -1) return;
+
+          if (isComposite) {
+              item.variant.components!.forEach(component => {
+                  const componentVariantIndex = updatedProductList[parentProductIndex].variants.findIndex((v: Variant) => v.id === component.variantId);
+                  if (componentVariantIndex !== -1) {
+                      updatedProductList[parentProductIndex].variants[componentVariantIndex].stock -= item.quantity * component.quantity;
+                  }
+              });
+          } else {
+              const variantIndex = updatedProductList[parentProductIndex].variants.findIndex((v: Variant) => v.id === item.variant.id);
+              if (variantIndex !== -1) {
+                  updatedProductList[parentProductIndex].variants[variantIndex].stock -= item.quantity;
+              }
+          }
+      });
+  
+      setMasterProductList(updatedProductList);
+      setRequisitionForms(prev => prev.map(form =>
+          form.id === formId ? { ...form, status: 'Đã hoàn thành', fulfilledBy: details.fulfillerName, fulfillmentNotes: details.notes, fulfilledAt: new Date().toISOString() } : form
+      ));
+      alert('Đã hoàn thành phiếu yêu cầu thành công!');
   };
 
+  const handleAddProduct = (productData: Omit<Product, 'id'>) => setMasterProductList(prev => [...prev, { ...productData, id: Date.now() }]);
+  const handleUpdateProduct = (updatedProduct: Product) => setMasterProductList(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  const handleDeleteProduct = (productId: number) => setMasterProductList(prev => prev.filter(p => p.id !== productId));
   const handleAddCategory = (category: Category) => {
-    if (categories.some(c => c.name.toLowerCase() === category.name.toLowerCase())) {
-        alert("Một danh mục với tên này đã tồn tại.");
-        return;
-    }
+    if (categories.some(c => c.name.toLowerCase() === category.name.toLowerCase())) { alert("Một danh mục với tên này đã tồn tại."); return; }
     setCategories(prev => [...prev, category]);
   };
-  
   const handleDeleteCategory = (categoryName: string): boolean => {
-    const isUsed = masterProductList.some(p => p.category === categoryName);
-    if (isUsed) {
-      return false;
-    }
+    if (masterProductList.some(p => p.category === categoryName)) return false;
     setCategories(prev => prev.filter(c => c.name !== categoryName));
     return true;
   };
-  
-  // User setup handlers
-  const handleSetup = (user: User) => {
-    try {
-        localStorage.setItem(USER_STORAGE_key, JSON.stringify(user));
-        setCurrentUser(user);
-    } catch (error) {
-        console.error("Không thể lưu thông tin người dùng vào localStorage", error);
-        alert("Đã xảy ra lỗi khi lưu thông tin của bạn.");
+
+  const handleUpdateCategory = (originalName: string, updatedCategory: Category) => {
+    if (originalName !== updatedCategory.name && categories.some(c => c.name.toLowerCase() === updatedCategory.name.toLowerCase())) {
+      alert("Một danh mục với tên này đã tồn tại.");
+      return;
+    }
+    setCategories(prev => prev.map(c => (c.name === originalName ? updatedCategory : c)));
+    if (originalName !== updatedCategory.name) {
+      setMasterProductList(prev =>
+        prev.map(p => (p.category === originalName ? { ...p, category: updatedCategory.name } : p))
+      );
     }
   };
 
-  const handleResetUser = () => {
-    if (window.confirm("Bạn có chắc chắn muốn thiết lập lại người dùng không? Hành động này sẽ đưa bạn trở lại màn hình thiết lập.")) {
-      try {
-        localStorage.removeItem(USER_STORAGE_key);
-        setCurrentUser(null);
-      } catch (error) {
-        console.error("Không thể xóa thông tin người dùng khỏi localStorage", error);
-      }
+  const handleReorderCategories = (reorderedCategories: Category[]) => {
+    setCategories(reorderedCategories);
+  };
+  
+  const handleLogin = (user: User) => {
+    try { localStorage.setItem(USER_STORAGE_key, JSON.stringify(user)); setCurrentUser(user); }
+    catch (error) { console.error("Không thể lưu thông tin người dùng vào localStorage", error); alert("Đã xảy ra lỗi khi lưu thông tin của bạn."); }
+  };
+  const handleLogout = () => {
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất không?")) {
+      try { localStorage.removeItem(USER_STORAGE_key); setCurrentUser(null); }
+      catch (error) { console.error("Không thể xóa thông tin người dùng khỏi localStorage", error); }
     }
   };
 
@@ -381,95 +297,84 @@ const App: React.FC = () => {
   }
 
   if (!currentUser) {
-    return <SetupPage onSetup={handleSetup} />;
+    return <LoginPage onLogin={handleLogin} />;
   }
+  
+  const showDesktopNav = ['shop', 'requisitions', 'admin'].includes(currentView);
 
   const renderContent = () => {
     switch (currentView) {
-      case 'shop':
-        const filteredProducts = getFilteredProducts();
-        const paginatedProducts = filteredProducts.slice(
+      case 'shop': {
+        const filteredAndSortedProducts = getFilteredAndSortedProducts();
+        const paginatedProducts = filteredAndSortedProducts.slice(
             (productCurrentPage - 1) * PRODUCTS_PER_PAGE,
             productCurrentPage * PRODUCTS_PER_PAGE
         );
-        const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+        const totalPages = Math.ceil(filteredAndSortedProducts.length / PRODUCTS_PER_PAGE);
+
+        const allCategoriesForNav: Category[] = [
+            { name: 'Tất cả', icon: '' },
+            ...categories
+        ];
 
         return (
           <>
-            <div className="bg-white pt-6 pb-4 shadow-sm sticky top-16 z-30">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-                </div>
+            <div className="bg-white sm:bg-gray-50 pt-6 pb-2 sm:pb-4">
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+              </div>
             </div>
             <CategoryNav
-              categories={[{ name: 'Tất cả', icon: '' }, ...categories]}
-              activeCategory={category}
-              onSelectCategory={setCategory}
+                categories={allCategoriesForNav}
+                activeCategory={category}
+                onSelectCategory={setCategory}
             />
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
               <ProductList 
-                products={paginatedProducts} 
-                onSelectVariant={handleSelectVariant}
-                totalProducts={filteredProducts.length}
+                  products={paginatedProducts} 
+                  onAddToCart={addToCart}
+                  totalProducts={filteredAndSortedProducts.length}
+                  allProducts={masterProductList}
               />
               {totalPages > 1 && (
-                <div className="mt-8">
+                  <div className="mt-8">
                   <Pagination 
-                    currentPage={productCurrentPage}
-                    totalPages={totalPages}
-                    onPageChange={setProductCurrentPage}
+                      currentPage={productCurrentPage}
+                      totalPages={totalPages}
+                      onPageChange={setProductCurrentPage}
                   />
-                </div>
+                  </div>
               )}
-            </main>
+            </div>
           </>
         );
+      }
       case 'requisitions':
-        return (
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <RequisitionListPage forms={requisitionForms} onFulfill={handleFulfillRequisition} currentUser={currentUser!} />
-            </main>
-        );
+        return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <RequisitionListPage forms={requisitionForms} onFulfill={handleFulfillRequisition} currentUser={currentUser!} /> </main> );
       case 'create-requisition':
-         return (
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                <CreateRequisitionPage 
-                    user={currentUser}
-                    cartItems={cart}
-                    onSubmit={handleCreateRequisition}
-                    onCancel={() => setCurrentView('shop')}
-                    onUpdateItem={updateCartItem}
-                    onRemoveItem={removeFromCart}
-                />
-            </main>
-         );
+         return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <CreateRequisitionPage user={currentUser} allProducts={masterProductList} cartItems={cart} onSubmit={handleCreateRequisition} onCancel={() => setCurrentView('shop')} onUpdateItem={updateCartItem} onRemoveItem={removeFromCart} /> </main> );
       case 'admin':
-         return (
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                 <AdminPage 
-                    products={masterProductList} 
-                    categories={categories}
-                    onAddProduct={handleAddProduct}
-                    onUpdateProduct={handleUpdateProduct}
-                    onDeleteProduct={handleDeleteProduct}
-                    onAddCategory={handleAddCategory}
-                    onDeleteCategory={handleDeleteCategory}
-                 />
-            </main>
-        );
+         return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <AdminPage products={masterProductList} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory} onUpdateCategory={handleUpdateCategory} onReorderCategories={handleReorderCategories} /> </main> );
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 sm:pb-0">
       <Header 
-        cartItemCount={cart.length} 
+        cartItemCount={cart.reduce((total, item) => total + item.quantity, 0)} 
         onCartClick={() => setIsCartOpen(true)} 
         onNavigate={setCurrentView}
         currentView={currentView}
         user={currentUser}
-        onResetUser={handleResetUser}
+        onLogout={handleLogout}
       />
+      {showDesktopNav && (
+        <DesktopNav
+          onNavigate={setCurrentView}
+          currentView={currentView}
+          user={currentUser}
+        />
+      )}
       {renderContent()}
       <Cart 
         isOpen={isCartOpen} 
@@ -478,14 +383,10 @@ const App: React.FC = () => {
         onRemove={removeFromCart}
         onUpdateItem={updateCartItem}
         onCreateRequisition={handleNavigateToCreateRequisition}
+        allProducts={masterProductList}
       />
       <Chatbot allProducts={masterProductList} />
       <BottomNav onNavigate={setCurrentView} currentView={currentView} user={currentUser} />
-      <VariantSelectorModal
-        product={productForVariantSelection}
-        onClose={() => setProductForVariantSelection(null)}
-        onAddToCart={addToCart}
-      />
     </div>
   );
 };
