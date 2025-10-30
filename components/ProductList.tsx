@@ -27,4 +27,4 @@ const ProductList: React.FC<ProductListProps> = ({ products, allProducts, onAddT
   );
 };
 
-export default ProductList;
+export default React.memo(ProductList);

@@ -317,4 +317,4 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, allProducts, onAddTo
   );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard);
