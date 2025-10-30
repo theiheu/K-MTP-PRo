@@ -99,27 +99,32 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, allProducts, onAddTo
     }
     let num = parseInt(value, 10);
     if (isNaN(num)) {
-      return;
+      return; // Do nothing if not a number
+    }
+    
+    if (num < 0) { // prevent negative
+        num = 0;
     }
 
     if (calculatedStock > 0) {
         if (num > calculatedStock) {
             num = calculatedStock;
         }
-        if (num < 1) {
-            num = 1;
-        }
     } else {
-        num = 1;
+        // If no stock, quantity should be 0, but input is disabled anyway
+        num = 0;
     }
     setQuantity(num);
   };
 
   const handleQuantityBlur = () => {
-      if (quantity === '' || (typeof quantity === 'number' && quantity < 1)) {
-          if (calculatedStock > 0) {
-              setQuantity(1);
-          }
+      // If the field is empty or 0 on blur, reset to 1 (if there is stock).
+      if ((quantity === '' || (typeof quantity === 'number' && quantity < 1)) && calculatedStock > 0) {
+          setQuantity(1);
+      } else if (calculatedStock === 0) {
+          // If no stock, ensure quantity is not set to a number.
+          // Since it's disabled, an empty string is fine.
+          setQuantity('');
       }
   };
 

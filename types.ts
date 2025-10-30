@@ -58,3 +58,27 @@ export interface User {
   role: UserRole;
   zone?: string; // Khu vực chính của người yêu cầu
 }
+
+// --- START: Thêm mới cho Phiếu Nhập Kho ---
+export interface ReceiptItem {
+  variantId: number;
+  productId: number;
+  quantity: number;
+  // Dùng để hiển thị, không lưu vào localStorage
+  productName?: string;
+  variantAttributes?: { [key: string]: string };
+  unit?: string;
+}
+
+export interface GoodsReceiptNote {
+  id: string;
+  supplier: string;
+  items: ReceiptItem[];
+  createdAt: string;
+  createdBy: string; // Tên người quản lý đã tạo
+  notes?: string;
+  linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
+}
+
+export type AdminTab = 'products' | 'categories';
+// --- END: Thêm mới cho Phiếu Nhập Kho ---

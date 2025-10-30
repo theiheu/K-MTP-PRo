@@ -1,9 +1,11 @@
+
+
 import React from 'react';
-import { User } from '../types';
+import { User, AdminTab } from '../types';
 
 interface BottomNavProps {
-  onNavigate: (view: 'shop' | 'requisitions' | 'admin') => void;
-  currentView: 'shop' | 'requisitions' | 'create-requisition' | 'admin';
+  onNavigate: (view: 'shop' | 'requisitions' | 'receipts' | 'admin', tab?: AdminTab) => void;
+  currentView: 'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt';
   user: User;
 }
 
@@ -25,14 +27,20 @@ const WrenchScrewdriverIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) =
     </svg>
 );
 
+const ArchiveBoxArrowDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+    </svg>
+);
 
 const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, currentView, user }) => {
+  const viewsForReceipts = ['receipts', 'create-receipt'];
   return (
     <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] z-40">
       <div className="flex justify-around items-center h-16">
         <button 
           onClick={() => onNavigate('shop')} 
-          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'shop' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
+          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'shop' || currentView === 'create-requisition' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
         >
           <StoreIcon className="w-6 h-6 mb-1" />
           Kho vật tư
@@ -45,13 +53,22 @@ const BottomNav: React.FC<BottomNavProps> = ({ onNavigate, currentView, user }) 
           Danh sách Phiếu
         </button>
         {user.role === 'manager' && (
-            <button 
-            onClick={() => onNavigate('admin')} 
-            className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'admin' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
-            >
-            <WrenchScrewdriverIcon className="w-6 h-6 mb-1" />
-            Quản lý
-            </button>
+            <>
+                <button 
+                onClick={() => onNavigate('receipts')} 
+                className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${viewsForReceipts.includes(currentView) ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
+                >
+                <ArchiveBoxArrowDownIcon className="w-6 h-6 mb-1" />
+                Nhập Kho
+                </button>
+                <button 
+                onClick={() => onNavigate('admin')} 
+                className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${currentView === 'admin' ? 'text-yellow-600' : 'text-gray-500 hover:text-yellow-600'}`}
+                >
+                <WrenchScrewdriverIcon className="w-6 h-6 mb-1" />
+                Quản lý
+                </button>
+            </>
         )}
       </div>
     </nav>

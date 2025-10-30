@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import ProductList from './components/ProductList';
@@ -12,7 +14,9 @@ import LoginPage from './components/LoginPage';
 import Pagination from './components/Pagination';
 import SearchBar from './components/SearchBar';
 import CategoryNav from './components/CategoryNav';
-import { Product, CartItem, RequisitionForm, User, Category, Variant } from './types';
+import CreateReceiptPage from './components/CreateReceiptPage';
+import ReceiptList from './components/ReceiptList';
+import { Product, CartItem, RequisitionForm, User, Category, Variant, GoodsReceiptNote, AdminTab, ReceiptItem } from './types';
 import { PRODUCTS, DEFAULT_CATEGORIES } from './constants';
 import { calculateVariantStock } from './utils/stockCalculator';
 
@@ -20,8 +24,9 @@ const USER_STORAGE_key = 'chicken_farm_user';
 const REQUISITIONS_STORAGE_key = 'chicken_farm_requisitions';
 const PRODUCTS_STORAGE_key = 'chicken_farm_products';
 const CATEGORIES_STORAGE_KEY = 'chicken_farm_categories';
+const RECEIPTS_STORAGE_KEY = 'chicken_farm_receipts';
 
-const PRODUCTS_PER_PAGE = 10; // Giảm để kích hoạt phân trang
+const PRODUCTS_PER_PAGE = 10;
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -55,7 +60,8 @@ const App: React.FC = () => {
   const [category, setCategory] = useState('Tất cả');
   const [productCurrentPage, setProductCurrentPage] = useState(1);
   
-  const [currentView, setCurrentView] = useState<'shop' | 'requisitions' | 'create-requisition' | 'admin'>('shop');
+  const [currentView, setCurrentView] = useState<'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt'>('shop');
+  const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('products');
 
   const [requisitionForms, setRequisitionForms] = useState<RequisitionForm[]>(() => {
     try {
@@ -63,6 +69,16 @@ const App: React.FC = () => {
         return savedRequisitions ? JSON.parse(savedRequisitions) : [];
     } catch (error) {
         console.error("Không thể tải phiếu yêu cầu từ localStorage", error);
+        return [];
+    }
+  });
+
+  const [goodsReceiptNotes, setGoodsReceiptNotes] = useState<GoodsReceiptNote[]>(() => {
+    try {
+        const savedReceipts = localStorage.getItem(RECEIPTS_STORAGE_KEY);
+        return savedReceipts ? JSON.parse(savedReceipts) : [];
+    } catch (error) {
+        console.error("Không thể tải phiếu nhập kho từ localStorage", error);
         return [];
     }
   });
@@ -87,31 +103,23 @@ const App: React.FC = () => {
 
   useEffect(() => {
     try {
-        const requisitionsToSave = requisitionForms.map(form => {
-            const sanitizedItems = form.items.map(cartItem => {
-                const { product, variant, ...restOfCartItem } = cartItem;
-                const sanitizeImages = (images: string[] | undefined) => (images || []).filter(img => !img.startsWith('data:image'));
-                const sanitizedProductVariants = product.variants.map(v => ({ ...v, images: sanitizeImages(v.images) }));
-                const sanitizedProduct = { ...product, images: sanitizeImages(product.images), variants: sanitizedProductVariants };
-                const sanitizedVariant = { ...variant, images: sanitizeImages(variant.images) };
-                return { ...restOfCartItem, product: sanitizedProduct, variant: sanitizedVariant };
-            });
-            return { ...form, items: sanitizedItems };
-        });
-        localStorage.setItem(REQUISITIONS_STORAGE_key, JSON.stringify(requisitionsToSave));
+        localStorage.setItem(REQUISITIONS_STORAGE_key, JSON.stringify(requisitionForms));
     } catch (error) {
         console.error("Không thể lưu phiếu yêu cầu vào localStorage", error);
     }
   }, [requisitionForms]);
+  
+  useEffect(() => {
+    try {
+        localStorage.setItem(RECEIPTS_STORAGE_KEY, JSON.stringify(goodsReceiptNotes));
+    } catch (error) {
+        console.error("Không thể lưu phiếu nhập kho vào localStorage", error);
+    }
+  }, [goodsReceiptNotes]);
 
   useEffect(() => {
     try {
-        const productsToSave = masterProductList.map(product => {
-            const sanitizeImages = (images: string[] | undefined) => (images || []).filter(img => !img.startsWith('data:image'));
-            const sanitizedVariants = product.variants.map(variant => ({ ...variant, images: sanitizeImages(variant.images) }));
-            return { ...product, images: sanitizeImages(product.images), variants: sanitizedVariants };
-        });
-        localStorage.setItem(PRODUCTS_STORAGE_key, JSON.stringify(productsToSave));
+        localStorage.setItem(PRODUCTS_STORAGE_key, JSON.stringify(masterProductList));
     } catch (error) {
         console.error("Không thể lưu sản phẩm vào localStorage", error);
     }
@@ -129,6 +137,13 @@ const App: React.FC = () => {
     setProductCurrentPage(1);
   }, [searchTerm, category]);
 
+  const handleNavigate = (view: 'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt', tab?: AdminTab) => {
+    setCurrentView(view);
+    if (view === 'admin' && tab) {
+      setAdminInitialTab(tab);
+    }
+  };
+  
   const getFilteredAndSortedProducts = useCallback(() => {
     let tempProducts = [...masterProductList];
     if (searchTerm) {
@@ -145,7 +160,6 @@ const App: React.FC = () => {
   
   const addToCart = (product: Product, variant: Variant, quantity: number) => {
     setCart(prevCart => {
-      // Stock check logic will be handled within components based on calculated stock.
       const existingItemIndex = prevCart.findIndex(item => item.variant.id === variant.id);
       if (existingItemIndex > -1) {
         const updatedCart = [...prevCart];
@@ -164,8 +178,6 @@ const App: React.FC = () => {
     setCart(prevCart =>
       prevCart.map(item => {
         if (item.variant.id !== variantId) return item;
-        // Stock checks are now more complex and better handled at the point of action.
-        // We'll trust the input for now, or add more complex validation if needed.
         let newQuantity = Math.max(1, quantity);
         return { ...item, quantity: newQuantity };
       })
@@ -178,7 +190,7 @@ const App: React.FC = () => {
       return;
     }
     setIsCartOpen(false);
-    setCurrentView('create-requisition');
+    handleNavigate('create-requisition');
   };
 
   const handleCreateRequisition = (details: { requesterName: string, zone: string; purpose: string }) => {
@@ -190,62 +202,66 @@ const App: React.FC = () => {
     setRequisitionForms(prev => [newForm, ...prev]);
     setCart([]);
     alert('Đã tạo phiếu yêu cầu thành công!');
-    setCurrentView('requisitions');
+    handleNavigate('requisitions');
   };
 
-  const handleFulfillRequisition = (formId: string, details: { notes: string; fulfillerName: string }) => {
-      const formToFulfill = requisitionForms.find(f => f.id === formId);
-      if (!formToFulfill) {
-          alert("Lỗi: Không tìm thấy phiếu yêu cầu.");
-          return;
-      }
-  
-      const updatedProductList = JSON.parse(JSON.stringify(masterProductList));
-      let stockSufficient = true;
-      const stockErrors: string[] = [];
-  
-      // Check stock sufficiency first
-      for (const item of formToFulfill.items) {
-          const currentStock = calculateVariantStock(item.variant, updatedProductList);
-          if (currentStock < item.quantity) {
-              const variantName = Object.values(item.variant.attributes).join(' / ') || '';
-              stockErrors.push(`- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`);
-              stockSufficient = false;
-          }
-      }
-  
-      if (!stockSufficient) {
-          alert("Không thể hoàn thành phiếu:\n" + stockErrors.join("\n"));
-          return;
-      }
-  
-      // If stock is sufficient, deduct it
-      formToFulfill.items.forEach(item => {
-          const isComposite = item.variant.components && item.variant.components.length > 0;
-          const parentProductIndex = updatedProductList.findIndex((p: Product) => p.id === item.product.id);
-          if (parentProductIndex === -1) return;
+  const handleFulfillRequisition = (formId: string, details: { notes: string; fulfillerName: string }, currentProductList: Product[]): { success: boolean; updatedProducts: Product[], message?: string } => {
+    const formToFulfill = requisitionForms.find(f => f.id === formId);
+    if (!formToFulfill) {
+      return { success: false, updatedProducts: currentProductList, message: "Lỗi: Không tìm thấy phiếu yêu cầu." };
+    }
 
-          if (isComposite) {
-              item.variant.components!.forEach(component => {
-                  const componentVariantIndex = updatedProductList[parentProductIndex].variants.findIndex((v: Variant) => v.id === component.variantId);
-                  if (componentVariantIndex !== -1) {
-                      updatedProductList[parentProductIndex].variants[componentVariantIndex].stock -= item.quantity * component.quantity;
-                  }
-              });
-          } else {
-              const variantIndex = updatedProductList[parentProductIndex].variants.findIndex((v: Variant) => v.id === item.variant.id);
-              if (variantIndex !== -1) {
-                  updatedProductList[parentProductIndex].variants[variantIndex].stock -= item.quantity;
-              }
+    const updatedProductList = JSON.parse(JSON.stringify(currentProductList));
+    let stockSufficient = true;
+    const stockErrors: string[] = [];
+
+    for (const item of formToFulfill.items) {
+      const currentStock = calculateVariantStock(item.variant, updatedProductList);
+      if (currentStock < item.quantity) {
+        const variantName = Object.values(item.variant.attributes).join(' / ') || '';
+        stockErrors.push(`- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`);
+        stockSufficient = false;
+      }
+    }
+
+    if (!stockSufficient) {
+      return { success: false, updatedProducts: currentProductList, message: "Không thể hoàn thành phiếu:\n" + stockErrors.join("\n") };
+    }
+
+    formToFulfill.items.forEach(item => {
+      const parentProductIndex = updatedProductList.findIndex((p: Product) => p.id === item.product.id);
+      if (parentProductIndex === -1) return;
+
+      const isComposite = item.variant.components && item.variant.components.length > 0;
+      if (isComposite) {
+        item.variant.components!.forEach(component => {
+          const componentVariantIndex = updatedProductList[parentProductIndex].variants.findIndex((v: Variant) => v.id === component.variantId);
+          if (componentVariantIndex !== -1) {
+            updatedProductList[parentProductIndex].variants[componentVariantIndex].stock -= item.quantity * component.quantity;
           }
-      });
-  
-      setMasterProductList(updatedProductList);
-      setRequisitionForms(prev => prev.map(form =>
-          form.id === formId ? { ...form, status: 'Đã hoàn thành', fulfilledBy: details.fulfillerName, fulfillmentNotes: details.notes, fulfilledAt: new Date().toISOString() } : form
-      ));
-      alert('Đã hoàn thành phiếu yêu cầu thành công!');
+        });
+      } else {
+        const variantIndex = updatedProductList[parentProductIndex].variants.findIndex((v: Variant) => v.id === item.variant.id);
+        if (variantIndex !== -1) {
+          updatedProductList[parentProductIndex].variants[variantIndex].stock -= item.quantity;
+        }
+      }
+    });
+
+    setRequisitionForms(prev => prev.map(form =>
+      form.id === formId ? { ...form, status: 'Đã hoàn thành', fulfilledBy: details.fulfillerName, fulfillmentNotes: details.notes, fulfilledAt: new Date().toISOString() } : form
+    ));
+    
+    return { success: true, updatedProducts: updatedProductList, message: 'Đã hoàn thành phiếu yêu cầu thành công!' };
   };
+  
+  const triggerFulfillRequisition = (formId: string, details: { notes: string; fulfillerName: string }) => {
+      const result = handleFulfillRequisition(formId, details, masterProductList);
+      if (result.success) {
+          setMasterProductList(result.updatedProducts);
+      }
+      alert(result.message);
+  }
 
   const handleAddProduct = (productData: Omit<Product, 'id'>) => setMasterProductList(prev => [...prev, { ...productData, id: Date.now() }]);
   const handleUpdateProduct = (updatedProduct: Product) => setMasterProductList(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
@@ -288,6 +304,60 @@ const App: React.FC = () => {
     }
   };
 
+  const handleConfirmReceipt = (receiptData: Omit<GoodsReceiptNote, 'id' | 'createdAt'>) => {
+    if (!currentUser) return;
+
+    let updatedProducts = JSON.parse(JSON.stringify(masterProductList));
+    
+    // 1. Cập nhật tồn kho từ phiếu nhập
+    receiptData.items.forEach(item => {
+        const productIndex = updatedProducts.findIndex((p: Product) => p.id === item.productId);
+        if (productIndex !== -1) {
+            const variantIndex = updatedProducts[productIndex].variants.findIndex((v: Variant) => v.id === item.variantId);
+            if (variantIndex !== -1) {
+                updatedProducts[productIndex].variants[variantIndex].stock += item.quantity;
+            }
+        }
+    });
+
+    // 2. Logic tự động cấp phát
+    const fulfilledReqIds: string[] = [];
+    const pendingRequisitions = requisitionForms
+      .filter(f => f.status === 'Đang chờ xử lý')
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+    for (const form of pendingRequisitions) {
+        const result = handleFulfillRequisition(form.id, {
+            notes: `Tự động cấp phát từ Phiếu nhập kho GRN-${Date.now()}`,
+            fulfillerName: "Hệ thống (Nhập kho)"
+        }, updatedProducts);
+
+        if (result.success) {
+            updatedProducts = result.updatedProducts; // Cập nhật lại danh sách sản phẩm sau khi trừ kho
+            fulfilledReqIds.push(form.id);
+        }
+    }
+
+    // 3. Tạo phiếu nhập kho mới
+    const newReceipt: GoodsReceiptNote = {
+      ...receiptData,
+      id: `GRN-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.name,
+      linkedRequisitionIds: fulfilledReqIds,
+    };
+    
+    setGoodsReceiptNotes(prev => [newReceipt, ...prev]);
+    setMasterProductList(updatedProducts);
+
+    let alertMessage = `Đã tạo Phiếu nhập kho thành công và cập nhật tồn kho.`;
+    if (fulfilledReqIds.length > 0) {
+      alertMessage += `\nHệ thống đã tự động cấp phát cho các phiếu yêu cầu: ${fulfilledReqIds.join(', ')}.`;
+    }
+    alert(alertMessage);
+    handleNavigate('receipts');
+  };
+
   if (isInitializing) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -300,7 +370,7 @@ const App: React.FC = () => {
     return <LoginPage onLogin={handleLogin} />;
   }
   
-  const showDesktopNav = ['shop', 'requisitions', 'admin'].includes(currentView);
+  const showDesktopNav = ['shop', 'requisitions', 'receipts', 'admin'].includes(currentView);
 
   const renderContent = () => {
     switch (currentView) {
@@ -350,11 +420,15 @@ const App: React.FC = () => {
         );
       }
       case 'requisitions':
-        return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <RequisitionListPage forms={requisitionForms} onFulfill={handleFulfillRequisition} currentUser={currentUser!} /> </main> );
+        return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <RequisitionListPage forms={requisitionForms} onFulfill={triggerFulfillRequisition} currentUser={currentUser!} /> </main> );
+      case 'receipts':
+        return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <ReceiptList receipts={goodsReceiptNotes} products={masterProductList} onNavigate={handleNavigate} /> </main> );
       case 'create-requisition':
-         return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <CreateRequisitionPage user={currentUser} allProducts={masterProductList} cartItems={cart} onSubmit={handleCreateRequisition} onCancel={() => setCurrentView('shop')} onUpdateItem={updateCartItem} onRemoveItem={removeFromCart} /> </main> );
+         return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <CreateRequisitionPage user={currentUser} allProducts={masterProductList} cartItems={cart} onSubmit={handleCreateRequisition} onCancel={() => handleNavigate('shop')} onUpdateItem={updateCartItem} onRemoveItem={removeFromCart} /> </main> );
       case 'admin':
-         return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <AdminPage products={masterProductList} categories={categories} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory} onUpdateCategory={handleUpdateCategory} onReorderCategories={handleReorderCategories} /> </main> );
+         return ( <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <AdminPage products={masterProductList} categories={categories} initialTab={adminInitialTab} onNavigate={handleNavigate} onAddProduct={handleAddProduct} onUpdateProduct={handleUpdateProduct} onDeleteProduct={handleDeleteProduct} onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory} onUpdateCategory={handleUpdateCategory} onReorderCategories={handleReorderCategories} /> </main> );
+      case 'create-receipt':
+        return (<main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6"> <CreateReceiptPage user={currentUser} products={masterProductList} categories={categories} onSubmit={handleConfirmReceipt} onCancel={() => handleNavigate('receipts')} onAddProduct={handleAddProduct} /> </main>);
     }
   };
 
@@ -363,14 +437,14 @@ const App: React.FC = () => {
       <Header 
         cartItemCount={cart.reduce((total, item) => total + item.quantity, 0)} 
         onCartClick={() => setIsCartOpen(true)} 
-        onNavigate={setCurrentView}
+        onNavigate={handleNavigate}
         currentView={currentView}
         user={currentUser}
         onLogout={handleLogout}
       />
       {showDesktopNav && (
         <DesktopNav
-          onNavigate={setCurrentView}
+          onNavigate={handleNavigate}
           currentView={currentView}
           user={currentUser}
         />
@@ -386,7 +460,7 @@ const App: React.FC = () => {
         allProducts={masterProductList}
       />
       <Chatbot allProducts={masterProductList} />
-      <BottomNav onNavigate={setCurrentView} currentView={currentView} user={currentUser} />
+      <BottomNav onNavigate={handleNavigate} currentView={currentView} user={currentUser} />
     </div>
   );
 };

@@ -1,8 +1,10 @@
+
+
 import React from 'react';
-import { User } from '../types';
+import { User, AdminTab } from '../types';
 
 interface DesktopNavProps {
-  onNavigate: (view: 'shop' | 'requisitions' | 'admin') => void;
+  onNavigate: (view: 'shop' | 'requisitions' | 'receipts' | 'admin', tab?: AdminTab) => void;
   currentView: string;
   user: User;
 }
@@ -19,9 +21,15 @@ const DesktopNav: React.FC<DesktopNavProps> = ({ onNavigate, currentView, user }
               Danh sách Phiếu
           </button>
           {user.role === 'manager' && (
-              <button onClick={() => onNavigate('admin')} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'admin' ? 'bg-yellow-100 text-yellow-800' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <>
+              <button onClick={() => onNavigate('receipts')} className={`px-3 py-2 rounded-md text-sm font-medium ${['receipts', 'create-receipt'].includes(currentView) ? 'bg-yellow-100 text-yellow-800' : 'text-gray-500 hover:bg-gray-100'}`}>
+                  Nhập Kho
+              </button>
+              <div className="h-6 border-l border-gray-300"></div>
+              <button onClick={() => onNavigate('admin', 'products')} className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'admin' ? 'bg-yellow-100 text-yellow-800' : 'text-gray-500 hover:bg-gray-100'}`}>
                   Quản lý
               </button>
+            </>
           )}
         </div>
       </div>

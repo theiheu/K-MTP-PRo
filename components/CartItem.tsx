@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { CartItem as CartItemType, Product } from '../types';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import { calculateVariantStock } from '../utils/stockCalculator';
@@ -11,20 +11,56 @@ interface CartItemProps {
 }
 
 const CartItem: React.FC<CartItemProps> = ({ item, allProducts, onRemove, onUpdateItem }) => {
+  const [inputValue, setInputValue] = useState<number | ''>(item.quantity);
+
+  useEffect(() => {
+    // Sync local state if the parent's state changes
+    if (item.quantity !== inputValue) {
+        setInputValue(item.quantity);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.quantity]);
   
   const calculatedStock = useMemo(() => {
     return calculateVariantStock(item.variant, allProducts);
   }, [item.variant, allProducts]);
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let quantity = parseInt(e.target.value, 10);
-    if (isNaN(quantity) || quantity < 1) {
-      quantity = 1;
+    const value = e.target.value;
+    if (value === '') {
+      setInputValue('');
+      return;
     }
-    if (quantity > calculatedStock) {
-        quantity = calculatedStock;
+    const num = parseInt(value, 10);
+    if (isNaN(num)) {
+      return;
     }
-    onUpdateItem(item.variant.id, quantity);
+    
+    let newQuantity = num < 0 ? 0 : num;
+
+    if (newQuantity > calculatedStock) {
+      newQuantity = calculatedStock;
+    }
+    setInputValue(newQuantity);
+  };
+
+  const handleBlur = () => {
+    let finalQuantity = typeof inputValue === 'number' ? inputValue : 0;
+    
+    if (finalQuantity < 1) {
+      finalQuantity = 1;
+    }
+
+    if (finalQuantity > calculatedStock) {
+      finalQuantity = calculatedStock;
+    }
+    
+    // Only call update if the value is actually different or invalid
+    if (finalQuantity !== item.quantity || inputValue === '' || inputValue === 0) {
+      onUpdateItem(item.variant.id, finalQuantity);
+    }
+    // Sync local state with the final valid value
+    setInputValue(finalQuantity); 
   };
   
   const increment = () => {
@@ -80,8 +116,9 @@ const CartItem: React.FC<CartItemProps> = ({ item, allProducts, onRemove, onUpda
                 <button type="button" onClick={decrement} className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-l-md" disabled={item.quantity <= 1}>-</button>
                 <input 
                     type="number" 
-                    value={item.quantity} 
+                    value={inputValue} 
                     onChange={handleQuantityChange} 
+                    onBlur={handleBlur}
                     className="w-12 text-center border-l border-r border-gray-300 focus:outline-none py-1"
                     min="1"
                     max={calculatedStock}

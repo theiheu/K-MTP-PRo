@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { Product, Category, Variant } from '../types';
+
+
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Product, Category, Variant, AdminTab } from '../types';
 import ProductFormModal from './ProductFormModal';
 import ConfirmationModal from './ConfirmationModal';
 import ImageGalleryModal from './ImageGalleryModal';
@@ -7,10 +9,13 @@ import CategoryFormModal from './CategoryFormModal';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import SearchBar from './SearchBar';
 import { calculateVariantStock } from '../utils/stockCalculator';
+import ReceiptList from './ReceiptList';
 
 interface AdminPageProps {
   products: Product[];
   categories: Category[];
+  initialTab?: AdminTab;
+  onNavigate: (view: 'shop' | 'requisitions' | 'admin', tab?: AdminTab) => void;
   onAddProduct: (productData: Omit<Product, 'id'>) => void;
   onUpdateProduct: (product: Product) => void;
   onDeleteProduct: (productId: number) => void;
@@ -46,7 +51,7 @@ const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 const LOW_STOCK_THRESHOLD = 10;
 type StockFilter = 'all' | 'out-of-stock' | 'low-stock';
-type AdminTab = 'products' | 'categories';
+
 
 const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -55,8 +60,13 @@ const toBase64 = (file: File): Promise<string> => new Promise((resolve, reject) 
     reader.onerror = error => reject(error);
 });
 
-const AdminPage: React.FC<AdminPageProps> = ({ products, categories, onAddProduct, onUpdateProduct, onDeleteProduct, onAddCategory, onDeleteCategory, onUpdateCategory, onReorderCategories }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('products');
+const AdminPage: React.FC<AdminPageProps> = ({ products, categories, initialTab = 'products', onNavigate, onAddProduct, onUpdateProduct, onDeleteProduct, onAddCategory, onDeleteCategory, onUpdateCategory, onReorderCategories }) => {
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+  
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
