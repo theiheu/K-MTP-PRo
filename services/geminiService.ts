@@ -1,45 +1,61 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Product } from '../types';
+import { Product } from "../types";
 
-if (!process.env.API_KEY) {
-  console.warn("API_KEY environment variable not set. AI features will be disabled.");
+if (!import.meta.env.VITE_GEMINI_API_KEY) {
+  console.error(
+    "VITE_GEMINI_API_KEY environment variable not set. AI features will be disabled."
+  );
+  throw new Error(
+    "VITE_GEMINI_API_KEY environment variable is required for AI features."
+  );
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 const recommendationSchema = {
   type: Type.OBJECT,
   properties: {
     response_type: {
       type: Type.STRING,
-      description: "Loại phản hồi. Phải là 'recommendation' (đề xuất) hoặc 'search' (tìm kiếm).",
-      enum: ["recommendation", "search"]
+      description:
+        "Loại phản hồi. Phải là 'recommendation' (đề xuất) hoặc 'search' (tìm kiếm).",
+      enum: ["recommendation", "search"],
     },
     product_ids: {
       type: Type.ARRAY,
-      description: "Một mảng gồm các ID sản phẩm phù hợp nhất với yêu cầu của người dùng.",
+      description:
+        "Một mảng gồm các ID sản phẩm phù hợp nhất với yêu cầu của người dùng.",
       items: {
         type: Type.NUMBER,
       },
     },
     message: {
-        type: Type.STRING,
-        description: "Một tin nhắn thân thiện. Nếu là 'recommendation', đây là lý do. Nếu là 'search', đây là một xác nhận đơn giản (vd: 'Đây là kết quả cho...')."
-    }
+      type: Type.STRING,
+      description:
+        "Một tin nhắn thân thiện. Nếu là 'recommendation', đây là lý do. Nếu là 'search', đây là một xác nhận đơn giản (vd: 'Đây là kết quả cho...').",
+    },
   },
   required: ["response_type", "product_ids", "message"],
 };
 
-export const getAIRecommendations = async (query: string, products: Product[]): Promise<{recommendedProducts: Product[], message: string, responseType: 'recommendation' | 'search'}> => {
-  if (!process.env.API_KEY) {
+export const getAIRecommendations = async (
+  query: string,
+  products: Product[]
+): Promise<{
+  recommendedProducts: Product[];
+  message: string;
+  responseType: "recommendation" | "search";
+}> => {
+  if (!import.meta.env.VITE_GEMINI_API_KEY) {
     return {
       recommendedProducts: [],
-      message: "Trợ lý AI hiện không khả dụng. Vui lòng kiểm tra cấu hình API key.",
-      responseType: 'recommendation',
+      message:
+        "Trợ lý AI hiện không khả dụng. Vui lòng kiểm tra cấu hình API key.",
+      responseType: "recommendation",
     };
   }
 
-  const simplifiedProducts = products.map(p => ({
+  const simplifiedProducts = products.map((p) => ({
     id: p.id,
     name: p.name,
     description: p.description,
@@ -73,18 +89,23 @@ export const getAIRecommendations = async (query: string, products: Product[]): 
 
     const jsonResponse = JSON.parse(response.text);
     const recommendedIds: number[] = jsonResponse.product_ids || [];
-    const message: string = jsonResponse.message || "Đây là một vài vật tư tôi nghĩ bạn sẽ thích!";
-    const responseType: 'recommendation' | 'search' = jsonResponse.response_type || 'recommendation';
+    const message: string =
+      jsonResponse.message || "Đây là một vài vật tư tôi nghĩ bạn sẽ thích!";
+    const responseType: "recommendation" | "search" =
+      jsonResponse.response_type || "recommendation";
 
-    const recommendedProducts = products.filter(p => recommendedIds.includes(p.id));
+    const recommendedProducts = products.filter((p) =>
+      recommendedIds.includes(p.id)
+    );
 
     return { recommendedProducts, message, responseType };
   } catch (error) {
     console.error("Error getting AI recommendations:", error);
     return {
       recommendedProducts: [],
-      message: "Tôi gặp sự cố khi tìm kiếm đề xuất. Bạn có thể thử diễn đạt lại yêu cầu của mình không?",
-      responseType: 'recommendation'
+      message:
+        "Tôi gặp sự cố khi tìm kiếm đề xuất. Bạn có thể thử diễn đạt lại yêu cầu của mình không?",
+      responseType: "recommendation",
     };
   }
 };

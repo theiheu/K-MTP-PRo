@@ -5,17 +5,18 @@ import React, {
   useMemo,
   Suspense,
   lazy,
-} from 'react';
-import Header from './components/Header';
-import ProductList from './components/ProductList';
-import Cart from './components/Cart';
-import Chatbot from './components/Chatbot';
-import BottomNav from './components/BottomNav';
-import DesktopNav from './components/DesktopNav';
-import LoginPage from './components/LoginPage';
-import Pagination from './components/Pagination';
-import SearchBar from './components/SearchBar';
-import CategoryNav from './components/CategoryNav';
+} from "react";
+import { Toaster, toast } from "react-hot-toast";
+import Header from "./components/Header";
+import ProductList from "./components/ProductList";
+import Cart from "./components/Cart";
+import Chatbot from "./components/Chatbot";
+import BottomNav from "./components/BottomNav";
+import DesktopNav from "./components/DesktopNav";
+import LoginPage from "./components/LoginPage";
+import Pagination from "./components/Pagination";
+import SearchBar from "./components/SearchBar";
+import CategoryNav from "./components/CategoryNav";
 import {
   Product,
   CartItem,
@@ -25,32 +26,36 @@ import {
   Variant,
   GoodsReceiptNote,
   AdminTab,
-} from './types';
-import { PRODUCTS, DEFAULT_CATEGORIES } from './constants';
-import { calculateVariantStock } from './utils/stockCalculator';
-import { cloneProductList } from './utils/productUtils';
+} from "./types";
+import { PRODUCTS, DEFAULT_CATEGORIES } from "./constants";
+import { calculateVariantStock } from "./utils/stockCalculator";
+import { cloneProductList } from "./utils/productUtils";
 
-const RequisitionListPage = lazy(() => import('./components/RequisitionListPage'));
-const CreateRequisitionPage = lazy(() => import('./components/CreateRequisitionPage'));
-const AdminPage = lazy(() => import('./components/AdminPage'));
-const CreateReceiptPage = lazy(() => import('./components/CreateReceiptPage'));
-const ReceiptList = lazy(() => import('./components/ReceiptList'));
+const RequisitionListPage = lazy(
+  () => import("./components/RequisitionListPage")
+);
+const CreateRequisitionPage = lazy(
+  () => import("./components/CreateRequisitionPage")
+);
+const AdminPage = lazy(() => import("./components/AdminPage"));
+const CreateReceiptPage = lazy(() => import("./components/CreateReceiptPage"));
+const ReceiptList = lazy(() => import("./components/ReceiptList"));
 
-const USER_STORAGE_KEY = 'chicken_farm_user';
-const REQUISITIONS_STORAGE_KEY = 'chicken_farm_requisitions';
-const PRODUCTS_STORAGE_KEY = 'chicken_farm_products';
-const CATEGORIES_STORAGE_KEY = 'chicken_farm_categories';
-const RECEIPTS_STORAGE_KEY = 'chicken_farm_receipts';
+const USER_STORAGE_KEY = "chicken_farm_user";
+const REQUISITIONS_STORAGE_KEY = "chicken_farm_requisitions";
+const PRODUCTS_STORAGE_KEY = "chicken_farm_products";
+const CATEGORIES_STORAGE_KEY = "chicken_farm_categories";
+const RECEIPTS_STORAGE_KEY = "chicken_farm_receipts";
 
 const PRODUCTS_PER_PAGE = 10;
 
 type ViewKey =
-  | 'shop'
-  | 'requisitions'
-  | 'receipts'
-  | 'create-requisition'
-  | 'admin'
-  | 'create-receipt';
+  | "shop"
+  | "requisitions"
+  | "receipts"
+  | "create-requisition"
+  | "admin"
+  | "create-receipt";
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -61,7 +66,7 @@ const App: React.FC = () => {
       const savedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
       return savedProducts ? JSON.parse(savedProducts) : PRODUCTS;
     } catch (error) {
-      console.error('Không thể tải sản phẩm từ localStorage', error);
+      console.error("Không thể tải sản phẩm từ localStorage", error);
       return PRODUCTS;
     }
   });
@@ -69,40 +74,48 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>(() => {
     try {
       const savedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      const parsed = savedCategories ? JSON.parse(savedCategories) : DEFAULT_CATEGORIES;
-      return parsed.filter((c: Category) => c.name !== 'Tất cả');
+      const parsed = savedCategories
+        ? JSON.parse(savedCategories)
+        : DEFAULT_CATEGORIES;
+      return parsed.filter((c: Category) => c.name !== "Tất cả");
     } catch (error) {
-      console.error('Không thể tải danh mục từ localStorage', error);
-      return DEFAULT_CATEGORIES.filter((c) => c.name !== 'Tất cả');
+      console.error("Không thể tải danh mục từ localStorage", error);
+      return DEFAULT_CATEGORIES.filter((c) => c.name !== "Tất cả");
     }
   });
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('Tất cả');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [category, setCategory] = useState("Tất cả");
   const [productCurrentPage, setProductCurrentPage] = useState(1);
 
-  const [currentView, setCurrentView] = useState<ViewKey>('shop');
-  const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('products');
+  const [currentView, setCurrentView] = useState<ViewKey>("shop");
+  const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>("products");
 
-  const [requisitionForms, setRequisitionForms] = useState<RequisitionForm[]>(() => {
-    try {
-      const savedRequisitions = localStorage.getItem(REQUISITIONS_STORAGE_KEY);
-      return savedRequisitions ? JSON.parse(savedRequisitions) : [];
-    } catch (error) {
-      console.error('Không thể tải phiếu yêu cầu từ localStorage', error);
-      return [];
+  const [requisitionForms, setRequisitionForms] = useState<RequisitionForm[]>(
+    () => {
+      try {
+        const savedRequisitions = localStorage.getItem(
+          REQUISITIONS_STORAGE_KEY
+        );
+        return savedRequisitions ? JSON.parse(savedRequisitions) : [];
+      } catch (error) {
+        console.error("Không thể tải phiếu yêu cầu từ localStorage", error);
+        return [];
+      }
     }
-  });
+  );
 
-  const [goodsReceiptNotes, setGoodsReceiptNotes] = useState<GoodsReceiptNote[]>(() => {
+  const [goodsReceiptNotes, setGoodsReceiptNotes] = useState<
+    GoodsReceiptNote[]
+  >(() => {
     try {
       const savedReceipts = localStorage.getItem(RECEIPTS_STORAGE_KEY);
       return savedReceipts ? JSON.parse(savedReceipts) : [];
     } catch (error) {
-      console.error('Không thể tải phiếu nhập kho từ localStorage', error);
+      console.error("Không thể tải phiếu nhập kho từ localStorage", error);
       return [];
     }
   });
@@ -114,7 +127,10 @@ const App: React.FC = () => {
         setCurrentUser(JSON.parse(savedUser));
       }
     } catch (error) {
-      console.error('Không thể đọc thông tin người dùng từ localStorage', error);
+      console.error(
+        "Không thể đọc thông tin người dùng từ localStorage",
+        error
+      );
     }
     setIsInitializing(false);
   }, []);
@@ -125,25 +141,34 @@ const App: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(REQUISITIONS_STORAGE_KEY, JSON.stringify(requisitionForms));
+      localStorage.setItem(
+        REQUISITIONS_STORAGE_KEY,
+        JSON.stringify(requisitionForms)
+      );
     } catch (error) {
-      console.error('Không thể lưu phiếu yêu cầu vào localStorage', error);
+      console.error("Không thể lưu phiếu yêu cầu vào localStorage", error);
     }
   }, [requisitionForms]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(RECEIPTS_STORAGE_KEY, JSON.stringify(goodsReceiptNotes));
+      localStorage.setItem(
+        RECEIPTS_STORAGE_KEY,
+        JSON.stringify(goodsReceiptNotes)
+      );
     } catch (error) {
-      console.error('Không thể lưu phiếu nhập kho vào localStorage', error);
+      console.error("Không thể lưu phiếu nhập kho vào localStorage", error);
     }
   }, [goodsReceiptNotes]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(masterProductList));
+      localStorage.setItem(
+        PRODUCTS_STORAGE_KEY,
+        JSON.stringify(masterProductList)
+      );
     } catch (error) {
-      console.error('Không thể lưu sản phẩm vào localStorage', error);
+      console.error("Không thể lưu sản phẩm vào localStorage", error);
     }
   }, [masterProductList]);
 
@@ -151,7 +176,7 @@ const App: React.FC = () => {
     try {
       localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
     } catch (error) {
-      console.error('Không thể lưu danh mục vào localStorage', error);
+      console.error("Không thể lưu danh mục vào localStorage", error);
     }
   }, [categories]);
 
@@ -166,11 +191,11 @@ const App: React.FC = () => {
       tempProducts = tempProducts.filter(
         (p) =>
           p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.description.toLowerCase().includes(searchTerm.toLowerCase()),
+          p.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (category !== 'Tất cả') {
+    if (category !== "Tất cả") {
       tempProducts = tempProducts.filter((p) => p.category === category);
     }
 
@@ -181,71 +206,237 @@ const App: React.FC = () => {
     () =>
       filteredAndSortedProducts.slice(
         (productCurrentPage - 1) * PRODUCTS_PER_PAGE,
-        productCurrentPage * PRODUCTS_PER_PAGE,
+        productCurrentPage * PRODUCTS_PER_PAGE
       ),
-    [filteredAndSortedProducts, productCurrentPage],
+    [filteredAndSortedProducts, productCurrentPage]
   );
 
   const totalPages = useMemo(
     () => Math.ceil(filteredAndSortedProducts.length / PRODUCTS_PER_PAGE),
-    [filteredAndSortedProducts],
+    [filteredAndSortedProducts]
   );
 
   const allCategoriesForNav: Category[] = useMemo(
-    () => [{ name: 'Tất cả', icon: '' }, ...categories],
-    [categories],
+    () => [{ name: "Tất cả", icon: "" }, ...categories],
+    [categories]
   );
 
   const cartItemCount = useMemo(
     () => cart.reduce((total, item) => total + item.quantity, 0),
-    [cart],
+    [cart]
   );
 
   const showDesktopNav = useMemo(
-    () => ['shop', 'requisitions', 'receipts', 'admin'].includes(currentView),
-    [currentView],
+    () => ["shop", "requisitions", "receipts", "admin"].includes(currentView),
+    [currentView]
   );
 
   const handleNavigate = useCallback((view: ViewKey, tab?: AdminTab) => {
     setCurrentView(view);
-    if (view === 'admin' && tab) {
+    if (view === "admin" && tab) {
       setAdminInitialTab(tab);
     }
   }, []);
 
-  const addToCart = useCallback((product: Product, variant: Variant, quantity: number) => {
-    setCart((prevCart) => {
-      const existingItemIndex = prevCart.findIndex((item) => item.variant.id === variant.id);
-      if (existingItemIndex > -1) {
-        const updatedCart = [...prevCart];
-        updatedCart[existingItemIndex].quantity += quantity;
-        return updatedCart;
-      }
-      return [...prevCart, { product, variant, quantity }];
-    });
-  }, []);
+  const showToast = useCallback(
+    (product: Product, quantity: number, isUpdate: boolean) => {
+      const message = isUpdate
+        ? `Đã cập nhật: ${product.name} (${quantity})`
+        : `Đã thêm: ${product.name} (${quantity})`;
+
+      toast.custom(
+        (t) => (
+          <div
+            className={`${
+              t.visible ? "animate-enter" : "animate-leave"
+            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+          >
+            <div className="flex-1 w-0 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <svg
+                      className="h-6 w-6 text-yellow-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="text-sm font-medium text-gray-900">{message}</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Nhấn giỏ hàng để xem chi tiết
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="flex border-l border-gray-200">
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-yellow-600 hover:text-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        ),
+        {
+          position: "top-right",
+          duration: 3000,
+        }
+      );
+    },
+    []
+  );
+  const addToCart = useCallback(
+    (product: Product, variant: Variant, quantity: number) => {
+      const toastId = `cart-${product.id}-${variant.id}-${Date.now()}`;
+
+      setCart((prevCart) => {
+        const existingItem = prevCart.find(
+          (item) => item.variant.id === variant.id
+        );
+
+        if (existingItem) {
+          // Nếu sản phẩm đã tồn tại, cập nhật số lượng
+          const newQuantity = existingItem.quantity + quantity;
+
+          // Hiển thị toast
+          toast.custom(
+            (t) => (
+              <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5">
+                <div className="flex-1 w-0 p-4">
+                  <div className="flex items-start">
+                    <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                      <svg
+                        className="h-6 w-6 text-yellow-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                    </div>
+                    <div className="ml-3 flex-1">
+                      <p className="text-sm font-medium text-gray-900">
+                        Đã cập nhật: {product.name} ({newQuantity})
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ),
+            {
+              id: toastId,
+              duration: 2000,
+              position: "top-right",
+            }
+          );
+
+          return prevCart.map((item) =>
+            item.variant.id === variant.id
+              ? { ...item, quantity: newQuantity }
+              : item
+          );
+        }
+
+        // Nếu là sản phẩm mới
+        toast.custom(
+          (t) => (
+            <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5">
+              <div className="flex-1 w-0 p-4">
+                <div className="flex items-start">
+                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <svg
+                      className="h-6 w-6 text-yellow-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                  <div className="ml-3 flex-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      Đã thêm: {product.name} ({quantity})
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ),
+          {
+            id: toastId,
+            duration: 2000,
+            position: "top-right",
+          }
+        );
+
+        return [...prevCart, { product, variant, quantity }];
+      });
+    },
+    []
+  );
 
   const removeFromCart = useCallback((variantId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.variant.id !== variantId));
-  }, []);
-
-  const updateCartItem = useCallback((variantId: number, quantity: number) => {
     setCart((prevCart) =>
-      prevCart.map((item) => {
-        if (item.variant.id !== variantId) return item;
-        const newQuantity = Math.max(1, quantity);
-        return { ...item, quantity: newQuantity };
-      }),
+      prevCart.filter((item) => item.variant.id !== variantId)
     );
   }, []);
 
+  const updateCartItem = useCallback(
+    (variantId: number, quantity: number, oldVariantId?: number) => {
+      setCart((prevCart) =>
+        prevCart.map((item) => {
+          if (oldVariantId !== undefined && item.variant.id === oldVariantId) {
+            // Nếu đang thay đổi biến thể
+            const newVariant = item.product.variants.find(
+              (v) => v.id === variantId
+            );
+            if (!newVariant) return item;
+            return {
+              ...item,
+              variant: newVariant,
+              quantity,
+            };
+          } else if (!oldVariantId && item.variant.id === variantId) {
+            // Nếu chỉ cập nhật số lượng
+            return {
+              ...item,
+              quantity: Math.max(1, quantity),
+            };
+          }
+          return item;
+        })
+      );
+    },
+    []
+  );
+
   const handleNavigateToCreateRequisition = useCallback(() => {
     if (cartItemCount === 0) {
-      alert('Vui lòng thêm vật tư vào phiếu trước khi tạo.');
+      alert("Vui lòng thêm vật tư vào phiếu trước khi tạo.");
       return;
     }
-    setIsCartOpen(false);
-    handleNavigate('create-requisition');
+    handleNavigate("create-requisition");
   }, [cartItemCount, handleNavigate]);
 
   const handleCreateRequisition = useCallback(
@@ -255,15 +446,15 @@ const App: React.FC = () => {
         id: `REQ-${Date.now()}`,
         ...details,
         items: cart,
-        status: 'Đang chờ xử lý',
+        status: "Đang chờ xử lý",
         createdAt: new Date().toISOString(),
       };
       setRequisitionForms((prev) => [newForm, ...prev]);
       setCart([]);
-      alert('Đã tạo phiếu yêu cầu thành công!');
-      handleNavigate('requisitions');
+      alert("Đã tạo phiếu yêu cầu thành công!");
+      handleNavigate("requisitions");
     },
-    [cart, currentUser, handleNavigate],
+    [cart, currentUser, handleNavigate]
   );
 
   const handleFulfillRequisition = useCallback(
@@ -271,14 +462,14 @@ const App: React.FC = () => {
       formId: string,
       details: { notes: string; fulfillerName: string },
       currentProductList: Product[],
-      shouldClone: boolean = true,
+      shouldClone: boolean = true
     ): { success: boolean; updatedProducts: Product[]; message?: string } => {
       const formToFulfill = requisitionForms.find((f) => f.id === formId);
       if (!formToFulfill) {
         return {
           success: false,
           updatedProducts: currentProductList,
-          message: 'Lỗi: Không tìm thấy phiếu yêu cầu.',
+          message: "Lỗi: Không tìm thấy phiếu yêu cầu.",
         };
       }
 
@@ -290,11 +481,15 @@ const App: React.FC = () => {
       const stockErrors: string[] = [];
 
       for (const item of formToFulfill.items) {
-        const currentStock = calculateVariantStock(item.variant, workingProductList);
+        const currentStock = calculateVariantStock(
+          item.variant,
+          workingProductList
+        );
         if (currentStock < item.quantity) {
-          const variantName = Object.values(item.variant.attributes).join(' / ') || '';
+          const variantName =
+            Object.values(item.variant.attributes).join(" / ") || "";
           stockErrors.push(
-            `- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`,
+            `- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`
           );
           stockSufficient = false;
         }
@@ -304,31 +499,37 @@ const App: React.FC = () => {
         return {
           success: false,
           updatedProducts: currentProductList,
-          message: 'Không thể hoàn thành phiếu:\n' + stockErrors.join('\n'),
+          message: "Không thể hoàn thành phiếu:\n" + stockErrors.join("\n"),
         };
       }
 
       formToFulfill.items.forEach((item) => {
-        const parentProductIndex = workingProductList.findIndex((p) => p.id === item.product.id);
+        const parentProductIndex = workingProductList.findIndex(
+          (p) => p.id === item.product.id
+        );
         if (parentProductIndex === -1) return;
 
-        const isComposite = item.variant.components && item.variant.components.length > 0;
+        const isComposite =
+          item.variant.components && item.variant.components.length > 0;
         if (isComposite) {
           item.variant.components!.forEach((component) => {
-            const componentVariantIndex = workingProductList[parentProductIndex].variants.findIndex(
-              (v) => v.id === component.variantId,
-            );
+            const componentVariantIndex = workingProductList[
+              parentProductIndex
+            ].variants.findIndex((v) => v.id === component.variantId);
             if (componentVariantIndex !== -1) {
-              workingProductList[parentProductIndex].variants[componentVariantIndex].stock -=
-                item.quantity * component.quantity;
+              workingProductList[parentProductIndex].variants[
+                componentVariantIndex
+              ].stock -= item.quantity * component.quantity;
             }
           });
         } else {
-          const variantIndex = workingProductList[parentProductIndex].variants.findIndex(
-            (v) => v.id === item.variant.id,
-          );
+          const variantIndex = workingProductList[
+            parentProductIndex
+          ].variants.findIndex((v) => v.id === item.variant.id);
           if (variantIndex !== -1) {
-            workingProductList[parentProductIndex].variants[variantIndex].stock -= item.quantity;
+            workingProductList[parentProductIndex].variants[
+              variantIndex
+            ].stock -= item.quantity;
           }
         }
       });
@@ -338,27 +539,31 @@ const App: React.FC = () => {
           form.id === formId
             ? {
                 ...form,
-                status: 'Đã hoàn thành',
+                status: "Đã hoàn thành",
                 fulfilledBy: details.fulfillerName,
                 fulfillmentNotes: details.notes,
                 fulfilledAt: new Date().toISOString(),
               }
-            : form,
-        ),
+            : form
+        )
       );
 
       return {
         success: true,
         updatedProducts: workingProductList,
-        message: 'Đã hoàn thành phiếu yêu cầu thành công!',
+        message: "Đã hoàn thành phiếu yêu cầu thành công!",
       };
     },
-    [requisitionForms],
+    [requisitionForms]
   );
 
   const triggerFulfillRequisition = useCallback(
     (formId: string, details: { notes: string; fulfillerName: string }) => {
-      const result = handleFulfillRequisition(formId, details, masterProductList);
+      const result = handleFulfillRequisition(
+        formId,
+        details,
+        masterProductList
+      );
       if (result.success) {
         setMasterProductList(result.updatedProducts);
       }
@@ -366,122 +571,156 @@ const App: React.FC = () => {
         alert(result.message);
       }
     },
-    [handleFulfillRequisition, masterProductList],
+    [handleFulfillRequisition, masterProductList]
   );
 
   const handleAddProduct = useCallback(
-    (productData: Omit<Product, 'id'>) =>
-      setMasterProductList((prev) => [...prev, { ...productData, id: Date.now() }]),
-    [],
+    (productData: Omit<Product, "id">) =>
+      setMasterProductList((prev) => [
+        ...prev,
+        { ...productData, id: Date.now() },
+      ]),
+    []
   );
 
   const handleUpdateProduct = useCallback(
     (updatedProduct: Product) =>
-      setMasterProductList((prev) => prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))),
-    [],
+      setMasterProductList((prev) =>
+        prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+      ),
+    []
   );
 
   const handleDeleteProduct = useCallback(
-    (productId: number) => setMasterProductList((prev) => prev.filter((p) => p.id !== productId)),
-    [],
+    (productId: number) =>
+      setMasterProductList((prev) => prev.filter((p) => p.id !== productId)),
+    []
   );
 
   const handleAddCategory = useCallback(
     (categoryData: Category) => {
-      if (categories.some((c) => c.name.toLowerCase() === categoryData.name.toLowerCase())) {
-        alert('Một danh mục với tên này đã tồn tại.');
+      if (
+        categories.some(
+          (c) => c.name.toLowerCase() === categoryData.name.toLowerCase()
+        )
+      ) {
+        alert("Một danh mục với tên này đã tồn tại.");
         return;
       }
       setCategories((prev) => [...prev, categoryData]);
     },
-    [categories],
+    [categories]
   );
 
   const handleDeleteCategory = useCallback(
     (categoryName: string): boolean => {
-      if (masterProductList.some((p) => p.category === categoryName)) return false;
+      if (masterProductList.some((p) => p.category === categoryName))
+        return false;
       setCategories((prev) => prev.filter((c) => c.name !== categoryName));
       return true;
     },
-    [masterProductList],
+    [masterProductList]
   );
 
   const handleUpdateCategory = useCallback(
     (originalName: string, updatedCategory: Category) => {
       if (
         originalName !== updatedCategory.name &&
-        categories.some((c) => c.name.toLowerCase() === updatedCategory.name.toLowerCase())
+        categories.some(
+          (c) => c.name.toLowerCase() === updatedCategory.name.toLowerCase()
+        )
       ) {
-        alert('Một danh mục với tên này đã tồn tại.');
+        alert("Một danh mục với tên này đã tồn tại.");
         return;
       }
-      setCategories((prev) => prev.map((c) => (c.name === originalName ? updatedCategory : c)));
+      setCategories((prev) =>
+        prev.map((c) => (c.name === originalName ? updatedCategory : c))
+      );
       if (originalName !== updatedCategory.name) {
         setMasterProductList((prev) =>
-          prev.map((p) => (p.category === originalName ? { ...p, category: updatedCategory.name } : p)),
+          prev.map((p) =>
+            p.category === originalName
+              ? { ...p, category: updatedCategory.name }
+              : p
+          )
         );
       }
     },
-    [categories],
+    [categories]
   );
 
-  const handleReorderCategories = useCallback((reorderedCategories: Category[]) => {
-    setCategories(reorderedCategories);
-  }, []);
+  const handleReorderCategories = useCallback(
+    (reorderedCategories: Category[]) => {
+      setCategories(reorderedCategories);
+    },
+    []
+  );
 
   const handleLogin = useCallback((user: User) => {
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
       setCurrentUser(user);
     } catch (error) {
-      console.error('Không thể lưu thông tin người dùng vào localStorage', error);
-      alert('Đã xảy ra lỗi khi lưu thông tin của bạn.');
+      console.error(
+        "Không thể lưu thông tin người dùng vào localStorage",
+        error
+      );
+      alert("Đã xảy ra lỗi khi lưu thông tin của bạn.");
     }
   }, []);
 
   const handleLogout = useCallback(() => {
-    if (window.confirm('Bạn có chắc chắn muốn đăng xuất không?')) {
+    if (window.confirm("Bạn có chắc chắn muốn đăng xuất không?")) {
       try {
         localStorage.removeItem(USER_STORAGE_KEY);
         setCurrentUser(null);
       } catch (error) {
-        console.error('Không thể xóa thông tin người dùng khỏi localStorage', error);
+        console.error(
+          "Không thể xóa thông tin người dùng khỏi localStorage",
+          error
+        );
       }
     }
   }, []);
 
   const handleConfirmReceipt = useCallback(
-    (receiptData: Omit<GoodsReceiptNote, 'id' | 'createdAt'>) => {
+    (receiptData: Omit<GoodsReceiptNote, "id" | "createdAt">) => {
       if (!currentUser) return;
 
       let updatedProducts = cloneProductList(masterProductList);
 
       receiptData.items.forEach((item) => {
-        const productIndex = updatedProducts.findIndex((p) => p.id === item.productId);
+        const productIndex = updatedProducts.findIndex(
+          (p) => p.id === item.productId
+        );
         if (productIndex !== -1) {
           const variantIndex = updatedProducts[productIndex].variants.findIndex(
-            (v) => v.id === item.variantId,
+            (v) => v.id === item.variantId
           );
           if (variantIndex !== -1) {
-            updatedProducts[productIndex].variants[variantIndex].stock += item.quantity;
+            updatedProducts[productIndex].variants[variantIndex].stock +=
+              item.quantity;
           }
         }
       });
 
       const fulfilledReqIds: string[] = [];
       const pendingRequisitions = requisitionForms
-        .filter((f) => f.status === 'Đang chờ xử lý')
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        .filter((f) => f.status === "Đang chờ xử lý")
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
 
       for (const form of pendingRequisitions) {
         const result = handleFulfillRequisition(
           form.id,
           {
             notes: `Tự động cấp phát từ Phiếu nhập kho GRN-${Date.now()}`,
-            fulfillerName: 'Hệ thống (Nhập kho)',
+            fulfillerName: "Hệ thống (Nhập kho)",
           },
           updatedProducts,
-          false,
+          false
         );
 
         if (result.success) {
@@ -501,24 +740,36 @@ const App: React.FC = () => {
       setGoodsReceiptNotes((prev) => [newReceipt, ...prev]);
       setMasterProductList(updatedProducts);
 
-      let alertMessage = 'Đã tạo Phiếu nhập kho thành công và cập nhật tồn kho.';
+      let alertMessage =
+        "Đã tạo Phiếu nhập kho thành công và cập nhật tồn kho.";
       if (fulfilledReqIds.length > 0) {
-        alertMessage += `\nHệ thống đã tự động cấp phát cho các phiếu yêu cầu: ${fulfilledReqIds.join(', ')}.`;
+        alertMessage += `\nHệ thống đã tự động cấp phát cho các phiếu yêu cầu: ${fulfilledReqIds.join(
+          ", "
+        )}.`;
       }
       alert(alertMessage);
-      handleNavigate('receipts');
+      handleNavigate("receipts");
     },
-    [currentUser, handleFulfillRequisition, handleNavigate, masterProductList, requisitionForms],
+    [
+      currentUser,
+      handleFulfillRequisition,
+      handleNavigate,
+      masterProductList,
+      requisitionForms,
+    ]
   );
 
   const content = useMemo(() => {
     switch (currentView) {
-      case 'shop':
+      case "shop":
         return (
           <>
             <div className="bg-white sm:bg-gray-50 pt-6 pb-2 sm:pb-4">
               <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+                <SearchBar
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                />
               </div>
             </div>
             <CategoryNav
@@ -545,23 +796,32 @@ const App: React.FC = () => {
             </div>
           </>
         );
-      case 'requisitions':
+      case "requisitions":
         return (
           <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <RequisitionListPage
               forms={requisitionForms}
               onFulfill={triggerFulfillRequisition}
               currentUser={currentUser!}
+              cartItems={cart}
+              allProducts={masterProductList}
+              onCartRemove={removeFromCart}
+              onCartUpdateItem={updateCartItem}
+              onCreateRequisition={handleNavigateToCreateRequisition}
             />
           </main>
         );
-      case 'receipts':
+      case "receipts":
         return (
           <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <ReceiptList receipts={goodsReceiptNotes} products={masterProductList} onNavigate={handleNavigate} />
+            <ReceiptList
+              receipts={goodsReceiptNotes}
+              products={masterProductList}
+              onNavigate={handleNavigate}
+            />
           </main>
         );
-      case 'create-requisition':
+      case "create-requisition":
         return (
           <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <CreateRequisitionPage
@@ -569,13 +829,13 @@ const App: React.FC = () => {
               allProducts={masterProductList}
               cartItems={cart}
               onSubmit={handleCreateRequisition}
-              onCancel={() => handleNavigate('shop')}
+              onCancel={() => handleNavigate("shop")}
               onUpdateItem={updateCartItem}
               onRemoveItem={removeFromCart}
             />
           </main>
         );
-      case 'admin':
+      case "admin":
         return (
           <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <AdminPage
@@ -593,7 +853,7 @@ const App: React.FC = () => {
             />
           </main>
         );
-      case 'create-receipt':
+      case "create-receipt":
         return (
           <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
             <CreateReceiptPage
@@ -601,7 +861,7 @@ const App: React.FC = () => {
               products={masterProductList}
               categories={categories}
               onSubmit={handleConfirmReceipt}
-              onCancel={() => handleNavigate('receipts')}
+              onCancel={() => handleNavigate("receipts")}
               onAddProduct={handleAddProduct}
             />
           </main>
@@ -655,6 +915,21 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 sm:pb-0">
+      <Toaster
+        containerStyle={{
+          top: 80,
+          right: 20,
+        }}
+        toastOptions={{
+          className: "",
+          style: {
+            padding: "0",
+            margin: "0",
+            background: "transparent",
+            boxShadow: "none",
+          },
+        }}
+      />
       <Header
         cartItemCount={cartItemCount}
         onCartClick={() => setIsCartOpen(true)}
@@ -664,22 +939,28 @@ const App: React.FC = () => {
         onLogout={handleLogout}
       />
       {showDesktopNav && (
-        <DesktopNav onNavigate={handleNavigate} currentView={currentView} user={currentUser} />
+        <DesktopNav
+          onNavigate={handleNavigate}
+          currentView={currentView}
+          user={currentUser}
+        />
       )}
-      <Suspense fallback={<div className="py-10 text-center text-gray-500">Đang tải nội dung...</div>}>
+      <Suspense
+        fallback={
+          <div className="py-10 text-center text-gray-500">
+            Đang tải nội dung...
+          </div>
+        }
+      >
         {content}
       </Suspense>
-      <Cart
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cartItems={cart}
-        onRemove={removeFromCart}
-        onUpdateItem={updateCartItem}
-        onCreateRequisition={handleNavigateToCreateRequisition}
-        allProducts={masterProductList}
-      />
+
       <Chatbot allProducts={masterProductList} />
-      <BottomNav onNavigate={handleNavigate} currentView={currentView} user={currentUser} />
+      <BottomNav
+        onNavigate={handleNavigate}
+        currentView={currentView}
+        user={currentUser}
+      />
     </div>
   );
 };
