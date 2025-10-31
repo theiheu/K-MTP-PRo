@@ -1,4 +1,3 @@
-
 export interface ChildComponent {
   variantId: number;
   quantity: number;
@@ -35,13 +34,13 @@ export interface CartItem {
   quantity: number;
 }
 
-export type Status = 'Đang chờ xử lý' | 'Đã hoàn thành';
+export type Status = "Đang chờ xử lý" | "Đã hoàn thành";
 
 export interface RequisitionForm {
   id: string;
   requesterName: string;
   zone: string;
-  purpose:string;
+  purpose: string;
   items: CartItem[];
   status: Status;
   createdAt: string;
@@ -50,7 +49,14 @@ export interface RequisitionForm {
   fulfillmentNotes?: string;
 }
 
-export type UserRole = 'requester' | 'manager';
+export type UserRole = "requester" | "manager";
+
+export interface Zone {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+}
 
 export interface User {
   id: string;
@@ -80,5 +86,5 @@ export interface GoodsReceiptNote {
   linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
 }
 
-export type AdminTab = 'products' | 'categories';
+export type AdminTab = "products" | "categories" | "zones";
 // --- END: Thêm mới cho Phiếu Nhập Kho ---

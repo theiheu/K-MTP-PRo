@@ -26,6 +26,7 @@ import {
   Variant,
   GoodsReceiptNote,
   AdminTab,
+  Zone,
 } from "./types";
 import { PRODUCTS, DEFAULT_CATEGORIES } from "./constants";
 import { calculateVariantStock } from "./utils/stockCalculator";
@@ -46,6 +47,7 @@ const REQUISITIONS_STORAGE_KEY = "chicken_farm_requisitions";
 const PRODUCTS_STORAGE_KEY = "chicken_farm_products";
 const CATEGORIES_STORAGE_KEY = "chicken_farm_categories";
 const RECEIPTS_STORAGE_KEY = "chicken_farm_receipts";
+const ZONES_STORAGE_KEY = "chicken_farm_zones";
 
 const PRODUCTS_PER_PAGE = 10;
 
@@ -120,6 +122,43 @@ const App: React.FC = () => {
     }
   });
 
+  const [zones, setZones] = useState<Zone[]>(() => {
+    try {
+      const savedZones = localStorage.getItem(ZONES_STORAGE_KEY);
+      return savedZones
+        ? JSON.parse(savedZones)
+        : [
+            {
+              id: "1",
+              name: "Khu 1",
+              description: "",
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "2",
+              name: "Khu 2",
+              description: "",
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "3",
+              name: "Khu 3",
+              description: "",
+              createdAt: new Date().toISOString(),
+            },
+            {
+              id: "4",
+              name: "Khu 4",
+              description: "",
+              createdAt: new Date().toISOString(),
+            },
+          ];
+    } catch (error) {
+      console.error("Không thể tải danh sách khu vực từ localStorage", error);
+      return [];
+    }
+  });
+
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -179,6 +218,15 @@ const App: React.FC = () => {
       console.error("Không thể lưu danh mục vào localStorage", error);
     }
   }, [categories]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ZONES_STORAGE_KEY, JSON.stringify(zones));
+      window.zones = zones;
+    } catch (error) {
+      console.error("Không thể lưu khu vực vào localStorage", error);
+    }
+  }, [zones]);
 
   useEffect(() => {
     setProductCurrentPage(1);
@@ -693,6 +741,43 @@ const App: React.FC = () => {
     []
   );
 
+  const handleAddZone = useCallback(
+    (zoneData: Omit<Zone, "id" | "createdAt">) => {
+      setZones((prev) => [
+        ...prev,
+        {
+          ...zoneData,
+          id: `ZONE-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    },
+    []
+  );
+
+  const handleUpdateZone = useCallback(
+    (id: string, zoneData: Omit<Zone, "id" | "createdAt">) => {
+      setZones((prev) =>
+        prev.map((zone) => (zone.id === id ? { ...zone, ...zoneData } : zone))
+      );
+    },
+    []
+  );
+
+  const handleDeleteZone = useCallback(
+    (id: string): boolean => {
+      // Kiểm tra xem khu vực có đang được sử dụng trong phiếu yêu cầu không
+      const isUsed = requisitionForms.some(
+        (form) => form.zone === zones.find((z) => z.id === id)?.name
+      );
+      if (isUsed) return false;
+
+      setZones((prev) => prev.filter((zone) => zone.id !== id));
+      return true;
+    },
+    [requisitionForms, zones]
+  );
+
   const handleLogin = useCallback((user: User) => {
     try {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
@@ -878,6 +963,7 @@ const App: React.FC = () => {
             <AdminPage
               products={masterProductList}
               categories={categories}
+              zones={zones}
               initialTab={adminInitialTab}
               onNavigate={handleNavigate}
               onAddProduct={handleAddProduct}
@@ -887,6 +973,9 @@ const App: React.FC = () => {
               onDeleteCategory={handleDeleteCategory}
               onUpdateCategory={handleUpdateCategory}
               onReorderCategories={handleReorderCategories}
+              onAddZone={handleAddZone}
+              onUpdateZone={handleUpdateZone}
+              onDeleteZone={handleDeleteZone}
             />
           </main>
         );

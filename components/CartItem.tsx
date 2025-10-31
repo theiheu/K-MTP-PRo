@@ -102,11 +102,19 @@ const CartItem: React.FC<CartItemProps> = ({
           className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 cursor-pointer hover:opacity-75 transition-opacity"
           onClick={() => {
             if (onImageClick) {
-              const images = [
-                ...(item.variant.images || []),
-                ...item.product.images,
-              ];
-              onImageClick(images, 0);
+              // Collect all available images
+              const variantImages = item.variant.images || [];
+              const productImages = item.product.images || [];
+              // Get current image to determine start index
+              const currentImage =
+                item.variant.images?.[0] || item.product.images[0];
+              // Combine all unique images
+              const allImages = Array.from(
+                new Set([...variantImages, ...productImages])
+              );
+              // Find the index of current image
+              const startIndex = Math.max(0, allImages.indexOf(currentImage));
+              onImageClick(allImages, startIndex);
             }
           }}
         >
