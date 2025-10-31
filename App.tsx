@@ -404,29 +404,66 @@ const App: React.FC = () => {
 
   const updateCartItem = useCallback(
     (variantId: number, quantity: number, oldVariantId?: number) => {
-      setCart((prevCart) =>
-        prevCart.map((item) => {
-          if (oldVariantId !== undefined && item.variant.id === oldVariantId) {
-            // Nếu đang thay đổi biến thể
-            const newVariant = item.product.variants.find(
-              (v) => v.id === variantId
-            );
-            if (!newVariant) return item;
-            return {
-              ...item,
-              variant: newVariant,
-              quantity,
-            };
-          } else if (!oldVariantId && item.variant.id === variantId) {
-            // Nếu chỉ cập nhật số lượng
+      setCart((prevCart) => {
+        // Check if new variant already exists in cart
+        const existingItemIndex = prevCart.findIndex(
+          (item) => item.variant.id === variantId
+        );
+
+        // If changing variant
+        if (oldVariantId) {
+          const oldItemIndex = prevCart.findIndex(
+            (item) => item.variant.id === oldVariantId
+          );
+
+          if (oldItemIndex === -1) return prevCart;
+
+          const oldItem = prevCart[oldItemIndex];
+          const newVariant = oldItem.product.variants.find(
+            (v) => v.id === variantId
+          );
+
+          if (!newVariant) return prevCart;
+
+          // If new variant already exists, remove old item and update quantity
+          if (existingItemIndex !== -1) {
+            return prevCart
+              .filter((_, index) => index !== oldItemIndex)
+              .map((item, index) => {
+                if (index === existingItemIndex) {
+                  return {
+                    ...item,
+                    quantity: item.quantity + quantity,
+                  };
+                }
+                return item;
+              });
+          }
+
+          // Otherwise, just update the variant
+          return prevCart.map((item, index) => {
+            if (index === oldItemIndex) {
+              return {
+                ...item,
+                variant: newVariant,
+                quantity,
+              };
+            }
+            return item;
+          });
+        }
+
+        // If just updating quantity
+        return prevCart.map((item) => {
+          if (item.variant.id === variantId) {
             return {
               ...item,
               quantity: Math.max(1, quantity),
             };
           }
           return item;
-        })
-      );
+        });
+      });
     },
     []
   );

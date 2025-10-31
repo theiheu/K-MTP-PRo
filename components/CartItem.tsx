@@ -48,10 +48,6 @@ const CartItem: React.FC<CartItemProps> = ({
     }
 
     let newQuantity = num < 0 ? 0 : num;
-
-    if (newQuantity > calculatedStock) {
-      newQuantity = calculatedStock;
-    }
     setInputValue(newQuantity);
   };
 
@@ -60,10 +56,6 @@ const CartItem: React.FC<CartItemProps> = ({
 
     if (finalQuantity < 1) {
       finalQuantity = 1;
-    }
-
-    if (finalQuantity > calculatedStock) {
-      finalQuantity = calculatedStock;
     }
 
     // Only call update if the value is actually different or invalid
@@ -79,9 +71,7 @@ const CartItem: React.FC<CartItemProps> = ({
   };
 
   const increment = () => {
-    if (item.quantity < calculatedStock) {
-      onUpdateItem(item.variant.id, item.quantity + 1);
-    }
+    onUpdateItem(item.variant.id, item.quantity + 1);
   };
 
   const decrement = () => {
@@ -141,10 +131,15 @@ const CartItem: React.FC<CartItemProps> = ({
                       key={variant.id}
                       onClick={() => handleVariantChange(variant)}
                       className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                        variant.id === item.variant.id
+                        calculateVariantStock(variant, allProducts) === 0
+                          ? "border-red-300 bg-red-50 text-red-500 cursor-not-allowed"
+                          : variant.id === item.variant.id
                           ? "border-yellow-600 bg-yellow-50 text-yellow-600"
                           : "border-gray-300 text-gray-600 hover:bg-gray-100"
                       }`}
+                      disabled={
+                        calculateVariantStock(variant, allProducts) === 0
+                      }
                     >
                       {Object.values(variant.attributes).join(" / ")}
                     </button>
@@ -152,9 +147,22 @@ const CartItem: React.FC<CartItemProps> = ({
                 </div>
               </div>
             )}
-            <p className="mt-1 text-sm text-gray-500">
-              Tồn kho: {calculatedStock} {item.variant.unit}
-            </p>
+            <div className="mt-1 text-sm flex items-center gap-2">
+              <p
+                className={
+                  calculatedStock === 0
+                    ? "text-red-500 font-medium"
+                    : "text-gray-500"
+                }
+              >
+                Tồn kho: {calculatedStock} {item.variant.unit}
+              </p>
+              {item.quantity > calculatedStock && (
+                <span className="text-red-500 font-medium">
+                  (Vượt {item.quantity - calculatedStock} {item.variant.unit})
+                </span>
+              )}
+            </div>
 
             {isComposite && (
               <div className="mt-2 text-xs text-gray-600 border-l-2 border-yellow-300 pl-2">
@@ -193,16 +201,18 @@ const CartItem: React.FC<CartItemProps> = ({
                   value={inputValue}
                   onChange={handleQuantityChange}
                   onBlur={handleBlur}
-                  className="w-12 text-center border-l border-r border-gray-300 focus:outline-none py-1"
+                  className={`w-12 text-center border-l border-r border-gray-300 focus:outline-none py-1 ${
+                    item.quantity > calculatedStock
+                      ? "text-red-500 font-medium"
+                      : ""
+                  }`}
                   min="1"
-                  max={calculatedStock}
                   aria-label={`Số lượng cho ${item.product.name}`}
                 />
                 <button
                   type="button"
                   onClick={increment}
                   className="px-2 py-1 text-gray-600 hover:bg-gray-100 rounded-r-md"
-                  disabled={item.quantity >= calculatedStock}
                 >
                   +
                 </button>
