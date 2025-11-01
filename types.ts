@@ -86,5 +86,34 @@ export interface GoodsReceiptNote {
   linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
 }
 
-export type AdminTab = "products" | "categories" | "zones";
-// --- END: Thêm mới cho Phiếu Nhập Kho ---
+export type AdminTab = "products" | "categories" | "zones" | "deliveries";
+
+// --- START: Thêm mới cho Phiếu Giao Nhận ---
+export type DeliveryStatus = "pending" | "verified" | "rejected";
+
+export interface DeliveryNote {
+  id: string;
+  items: DeliveryItem[];
+  receiptId: string; // Reference to the goods receipt note
+  shipperId: string; // ID of the shipper delivering the items
+  status: DeliveryStatus;
+  createdBy: string; // User who created the delivery note
+  createdAt: string; // Creation timestamp
+  verifiedBy?: string; // User who verified/rejected the delivery
+  verifiedAt?: string; // Verification/rejection timestamp
+  verificationNotes?: string; // Notes from verification/rejection
+}
+
+export interface DeliveryItem {
+  variantId: number;
+  productId: number;
+  quantity: number;
+  actualQuantity?: number; // Actual quantity after verification
+  qualityIssue?: boolean; // Whether there are quality issues
+  issueNotes?: string; // Notes about quality issues if any
+  // For display purposes
+  productName?: string;
+  variantAttributes?: { [key: string]: string };
+  unit?: string;
+}
+// --- END: Thêm mới cho Phiếu Giao Nhận ---

@@ -27,6 +27,7 @@ import {
   GoodsReceiptNote,
   AdminTab,
   Zone,
+  DeliveryNote,
 } from "./types";
 import { PRODUCTS, DEFAULT_CATEGORIES } from "./constants";
 import { calculateVariantStock } from "./utils/stockCalculator";
@@ -41,6 +42,10 @@ const CreateRequisitionPage = lazy(
 const AdminPage = lazy(() => import("./components/AdminPage"));
 const CreateReceiptPage = lazy(() => import("./components/CreateReceiptPage"));
 const ReceiptList = lazy(() => import("./components/ReceiptList"));
+const DeliveryNoteList = lazy(() => import("./components/DeliveryNoteList"));
+const CreateDeliveryNote = lazy(
+  () => import("./components/CreateDeliveryNote")
+);
 
 const USER_STORAGE_KEY = "chicken_farm_user";
 const REQUISITIONS_STORAGE_KEY = "chicken_farm_requisitions";
@@ -48,6 +53,7 @@ const PRODUCTS_STORAGE_KEY = "chicken_farm_products";
 const CATEGORIES_STORAGE_KEY = "chicken_farm_categories";
 const RECEIPTS_STORAGE_KEY = "chicken_farm_receipts";
 const ZONES_STORAGE_KEY = "chicken_farm_zones";
+const DELIVERY_NOTES_STORAGE_KEY = "chicken_farm_delivery_notes";
 
 const PRODUCTS_PER_PAGE = 10;
 
@@ -57,7 +63,9 @@ type ViewKey =
   | "receipts"
   | "create-requisition"
   | "admin"
-  | "create-receipt";
+  | "create-receipt"
+  | "deliveries"
+  | "create-delivery";
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -159,6 +167,16 @@ const App: React.FC = () => {
     }
   });
 
+  const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>(() => {
+    try {
+      const savedNotes = localStorage.getItem(DELIVERY_NOTES_STORAGE_KEY);
+      return savedNotes ? JSON.parse(savedNotes) : [];
+    } catch (error) {
+      console.error("Không thể tải phiếu giao hàng từ localStorage", error);
+      return [];
+    }
+  });
+
   useEffect(() => {
     try {
       const savedUser = localStorage.getItem(USER_STORAGE_KEY);
@@ -229,6 +247,17 @@ const App: React.FC = () => {
   }, [zones]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(
+        DELIVERY_NOTES_STORAGE_KEY,
+        JSON.stringify(deliveryNotes)
+      );
+    } catch (error) {
+      console.error("Không thể lưu phiếu giao hàng vào localStorage", error);
+    }
+  }, [deliveryNotes]);
+
+  useEffect(() => {
     setProductCurrentPage(1);
   }, [searchTerm, category]);
 
@@ -275,7 +304,15 @@ const App: React.FC = () => {
   );
 
   const showDesktopNav = useMemo(
-    () => ["shop", "requisitions", "receipts", "admin"].includes(currentView),
+    () =>
+      [
+        "shop",
+        "requisitions",
+        "receipts",
+        "admin",
+        "deliveries",
+        "create-delivery",
+      ].includes(currentView),
     [currentView]
   );
 
@@ -512,6 +549,66 @@ const App: React.FC = () => {
           return item;
         });
       });
+    },
+    []
+  );
+
+  // Delivery note handlers
+  const handleCreateDeliveryNote = useCallback(
+    (items: DeliveryNote["items"], receiptId: string, shipperId: string) => {
+      if (!currentUser) return;
+      const newNote: DeliveryNote = {
+        id: `DN-${Date.now()}`,
+        items,
+        status: "pending",
+        receiptId,
+        shipperId,
+        createdBy: currentUser.name,
+        createdAt: new Date().toISOString(),
+      };
+      setDeliveryNotes((prev) => [newNote, ...prev]);
+      handleNavigate("deliveries");
+      return newNote;
+    },
+    [currentUser, handleNavigate]
+  );
+
+  const handleVerifyDeliveryNote = useCallback(
+    (noteId: string, verifierName: string, verificationNotes: string = "") => {
+      setDeliveryNotes((prev) =>
+        prev.map((note) => {
+          if (note.id === noteId) {
+            return {
+              ...note,
+              status: "verified",
+              verifiedBy: verifierName,
+              verificationNotes,
+              verifiedAt: new Date().toISOString(),
+            };
+          }
+          return note;
+        })
+      );
+    },
+    []
+  );
+
+  const handleRejectDeliveryNote = useCallback(
+    (noteId: string, verifierName: string, rejectionReason: string) => {
+      setDeliveryNotes((prev) =>
+        prev.map((note) => {
+          if (note.id === noteId) {
+            return {
+              ...note,
+              status: "rejected",
+              verifiedBy: verifierName,
+              verificationNotes: rejectionReason,
+              verifiedAt: new Date().toISOString(),
+            };
+          }
+          return note;
+        })
+      );
     },
     []
   );
@@ -881,6 +978,55 @@ const App: React.FC = () => {
     ]
   );
 
+  // Pass delivery note handlers to child components
+  const deliveryHandlers = useMemo(
+    () => ({
+      createDeliveryNote: handleCreateDeliveryNote,
+      verifyDeliveryNote: handleVerifyDeliveryNote,
+      rejectDeliveryNote: handleRejectDeliveryNote,
+    }),
+    [
+      handleCreateDeliveryNote,
+      handleVerifyDeliveryNote,
+      handleRejectDeliveryNote,
+    ]
+  );
+
+  // For dependencies array
+  const contentDependencies = [
+    currentView,
+    searchTerm,
+    allCategoriesForNav,
+    category,
+    paginatedProducts,
+    addToCart,
+    filteredAndSortedProducts.length,
+    masterProductList,
+    totalPages,
+    productCurrentPage,
+    requisitionForms,
+    triggerFulfillRequisition,
+    currentUser,
+    goodsReceiptNotes,
+    handleNavigate,
+    cart,
+    handleCreateRequisition,
+    updateCartItem,
+    removeFromCart,
+    categories,
+    adminInitialTab,
+    handleAddProduct,
+    handleUpdateProduct,
+    handleDeleteProduct,
+    handleAddCategory,
+    handleDeleteCategory,
+    handleUpdateCategory,
+    handleReorderCategories,
+    handleConfirmReceipt,
+    deliveryNotes,
+    deliveryHandlers,
+  ];
+
   const content = useMemo(() => {
     switch (currentView) {
       case "shop":
@@ -992,40 +1138,36 @@ const App: React.FC = () => {
             />
           </main>
         );
+      case "deliveries":
+        return (
+          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <Suspense fallback={<div>Loading...</div>}>
+              <DeliveryNoteList
+                deliveryNotes={deliveryNotes}
+                products={masterProductList}
+                currentUser={currentUser!}
+                onNavigate={handleNavigate}
+                {...deliveryHandlers}
+              />
+            </Suspense>
+          </main>
+        );
+      case "create-delivery":
+        return (
+          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <CreateDeliveryNote
+              user={currentUser}
+              products={masterProductList}
+              receipts={goodsReceiptNotes}
+              onSubmit={handleCreateDeliveryNote}
+              onCancel={() => handleNavigate("deliveries")}
+            />
+          </main>
+        );
       default:
         return null;
     }
-  }, [
-    currentView,
-    searchTerm,
-    allCategoriesForNav,
-    category,
-    paginatedProducts,
-    addToCart,
-    filteredAndSortedProducts.length,
-    masterProductList,
-    totalPages,
-    productCurrentPage,
-    requisitionForms,
-    triggerFulfillRequisition,
-    currentUser,
-    goodsReceiptNotes,
-    handleNavigate,
-    cart,
-    handleCreateRequisition,
-    updateCartItem,
-    removeFromCart,
-    categories,
-    adminInitialTab,
-    handleAddProduct,
-    handleUpdateProduct,
-    handleDeleteProduct,
-    handleAddCategory,
-    handleDeleteCategory,
-    handleUpdateCategory,
-    handleReorderCategories,
-    handleConfirmReceipt,
-  ]);
+  }, contentDependencies);
 
   if (isInitializing) {
     return (
