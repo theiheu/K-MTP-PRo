@@ -1,5 +1,5 @@
-import React from 'react';
-import { DeliveryItem } from '../types';
+import React from "react";
+import { DeliveryItem } from "../types";
 
 interface QualityChecksProps {
   item: DeliveryItem;
@@ -7,23 +7,26 @@ interface QualityChecksProps {
 }
 
 const defaultChecklist = [
-  'Kiểm tra bao bì',
-  'Kiểm tra số lượng',
-  'Kiểm tra chất lượng bên ngoài',
-  'Kiểm tra thông số kỹ thuật',
-  'Kiểm tra tài liệu kèm theo'
+  "Kiểm tra bao bì",
+  "Kiểm tra số lượng",
+  "Kiểm tra chất lượng bên ngoài",
+  "Kiểm tra thông số kỹ thuật",
+  "Kiểm tra tài liệu kèm theo",
 ];
 
-export const QualityChecks: React.FC<QualityChecksProps> = ({ item, onChange }) => {
+export const QualityChecks: React.FC<QualityChecksProps> = ({
+  item,
+  onChange,
+}) => {
   const handleChecklistChange = (index: number, checked: boolean) => {
     const qualityChecks = {
       ...item.qualityChecks,
-      [`check_${index}`]: checked
+      [`check_${index}`]: checked,
     };
     onChange({ qualityChecks });
   };
 
-  const handleConditionChange = (condition: 'good' | 'damaged' | 'partial') => {
+  const handleConditionChange = (condition: "good" | "damaged" | "partial") => {
     onChange({ condition });
   };
 
@@ -34,14 +37,14 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({ item, onChange }) 
   return (
     <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
       <h4 className="font-medium text-gray-900">Kiểm tra chất lượng</h4>
-      
+
       <div className="space-y-2">
         <div className="flex gap-4">
           <label className="flex items-center">
             <input
               type="radio"
-              checked={item.condition === 'good'}
-              onChange={() => handleConditionChange('good')}
+              checked={item.condition === "good"}
+              onChange={() => handleConditionChange("good")}
               className="mr-2 text-green-600"
             />
             <span className="text-sm">Tốt</span>
@@ -49,8 +52,8 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({ item, onChange }) 
           <label className="flex items-center">
             <input
               type="radio"
-              checked={item.condition === 'damaged'}
-              onChange={() => handleConditionChange('damaged')}
+              checked={item.condition === "damaged"}
+              onChange={() => handleConditionChange("damaged")}
               className="mr-2 text-red-600"
             />
             <span className="text-sm">Hư hỏng</span>
@@ -58,18 +61,18 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({ item, onChange }) 
           <label className="flex items-center">
             <input
               type="radio"
-              checked={item.condition === 'partial'}
-              onChange={() => handleConditionChange('partial')}
+              checked={item.condition === "partial"}
+              onChange={() => handleConditionChange("partial")}
               className="mr-2 text-yellow-600"
             />
             <span className="text-sm">Một phần</span>
           </label>
         </div>
 
-        {(item.condition === 'damaged' || item.condition === 'partial') && (
+        {(item.condition === "damaged" || item.condition === "partial") && (
           <div className="ml-4 space-y-2">
             <textarea
-              value={item.damageDescription || ''}
+              value={item.damageDescription || ""}
               onChange={(e) => onChange({ damageDescription: e.target.value })}
               placeholder="Mô tả chi tiết hư hỏng..."
               className="w-full text-sm rounded-md border-gray-300"
@@ -90,23 +93,29 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({ item, onChange }) 
         <div className="border-t pt-2 mt-2">
           <p className="text-sm font-medium mb-2">Danh sách kiểm tra:</p>
           <div className="space-y-1">
-            {defaultChecklist.map((item, index) => (
+            {defaultChecklist.map((check, index) => (
               <label key={index} className="flex items-center">
                 <input
                   type="checkbox"
-                  checked={item.qualityChecks?.['visualInspection'] || false}
-                  onChange={(e) => handleChecklistChange(index, e.target.checked)}
+                  checked={item.qualityChecks?.[`check_${index}`] || false}
+                  onChange={(e) =>
+                    handleChecklistChange(index, e.target.checked)
+                  }
                   className="mr-2 rounded text-yellow-600"
                 />
-                <span className="text-sm">{item}</span>
+                <span className="text-sm">{check}</span>
               </label>
             ))}
           </div>
         </div>
 
         <textarea
-          value={item.qualityChecks?.notes || ''}
-          onChange={(e) => onChange({ qualityChecks: { ...item.qualityChecks, notes: e.target.value } })}
+          value={item.qualityChecks?.notes || ""}
+          onChange={(e) =>
+            onChange({
+              qualityChecks: { ...item.qualityChecks, notes: e.target.value },
+            })
+          }
           placeholder="Ghi chú thêm về chất lượng..."
           className="w-full text-sm rounded-md border-gray-300 mt-2"
           rows={2}

@@ -1,6 +1,6 @@
-import React from 'react';
-import { DeliveryNote, DeliveryVerification } from '../types';
-import { ItemCheck } from '../types/verification';
+import React from "react";
+import { DeliveryNote, DeliveryVerification } from "../types";
+import { ItemCheck } from "../types/verification";
 
 interface VerificationDetailsProps {
   delivery: DeliveryNote;
@@ -9,31 +9,35 @@ interface VerificationDetailsProps {
 
 export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
   delivery,
-  verification
+  verification,
 }) => {
   const renderTimeline = () => {
     const events = [
       {
         date: new Date(delivery.createdAt),
-        title: 'Tạo phiếu',
+        title: "Tạo phiếu",
         person: delivery.createdBy,
-        type: 'create'
+        type: "create",
       },
-      ...(delivery.history || []).map(h => ({
+      ...(delivery.history || []).map((h) => ({
         date: new Date(h.timestamp),
         title: h.action,
         person: h.user,
         notes: h.notes,
-        type: 'history',
-        metadata: h.metadata
+        type: "history",
+        metadata: h.metadata,
       })),
-      ...(verification ? [{
-        date: new Date(verification.verifiedAt),
-        title: 'Xác nhận',
-        person: verification.verifiedBy,
-        notes: verification.notes,
-        type: 'verify'
-      }] : [])
+      ...(verification
+        ? [
+            {
+              date: new Date(verification.verifiedAt),
+              title: "Xác nhận",
+              person: verification.verifiedBy,
+              notes: verification.notes,
+              type: "verify",
+            },
+          ]
+        : []),
     ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
     return (
@@ -52,11 +56,11 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
                   <div>
                     <span
                       className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
-                        event.type === 'create'
-                          ? 'bg-blue-500'
-                          : event.type === 'verify'
-                          ? 'bg-green-500'
-                          : 'bg-gray-500'
+                        event.type === "create"
+                          ? "bg-blue-500"
+                          : event.type === "verify"
+                          ? "bg-green-500"
+                          : "bg-gray-500"
                       }`}
                     >
                       <svg
@@ -65,13 +69,13 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
                         viewBox="0 0 20 20"
                         fill="currentColor"
                       >
-                        {event.type === 'create' ? (
+                        {event.type === "create" ? (
                           <path
                             fillRule="evenodd"
                             d="M10 3a1 1 0 00-1 1v4H5a1 1 0 100 2h4v4a1 1 0 102 0v-4h4a1 1 0 100-2h-4V4a1 1 0 00-1-1z"
                             clipRule="evenodd"
                           />
-                        ) : event.type === 'verify' ? (
+                        ) : event.type === "verify" ? (
                           <path
                             fillRule="evenodd"
                             d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -90,7 +94,7 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
                   <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
                     <div>
                       <p className="text-sm text-gray-500">
-                        {event.title}{' '}
+                        {event.title}{" "}
                         <span className="font-medium text-gray-900">
                           {event.person}
                         </span>
@@ -102,9 +106,9 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
                       )}
                       {event.metadata && (
                         <div className="mt-1 text-sm text-gray-500">
-                          {event.metadata.type === 'quantity_change' && (
+                          {event.metadata.type === "quantity_change" && (
                             <span>
-                              Thay đổi số lượng: {event.metadata.oldValue} →{' '}
+                              Thay đổi số lượng: {event.metadata.oldValue} →{" "}
                               {event.metadata.newValue}
                             </span>
                           )}
@@ -113,7 +117,7 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
                     </div>
                     <div className="text-right text-sm whitespace-nowrap text-gray-500">
                       <time dateTime={event.date.toISOString()}>
-                        {event.date.toLocaleString('vi-VN')}
+                        {event.date.toLocaleString("vi-VN")}
                       </time>
                     </div>
                   </div>
@@ -131,53 +135,60 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
       <div className="mt-6 border-t border-gray-200 pt-6">
         <h3 className="text-lg font-medium text-gray-900">Chi tiết kiểm tra</h3>
         <div className="mt-4 space-y-6">
-          {Object.entries(verification.itemChecks).map(([itemId, check]: [string, ItemCheck]) => {
-            const [productId, variantId] = itemId.split('-');
-            const item = delivery.items.find(
-              i => i.productId.toString() === productId && i.variantId.toString() === variantId
-            );
-            if (!item) return null;
+          {Object.entries(verification.itemChecks).map(
+            ([itemId, check]: [string, ItemCheck]) => {
+              const [productId, variantId] = itemId.split("-");
+              const item = delivery.items.find(
+                (i) =>
+                  i.productId.toString() === productId &&
+                  i.variantId.toString() === variantId
+              );
+              if (!item) return null;
 
-            return (
-              <div
-                key={itemId}
-                className="bg-white shadow overflow-hidden sm:rounded-lg"
-              >
-                <div className="px-4 py-5 sm:px-6">
-                  <h4 className="text-sm font-medium text-gray-900">
-                    {item.productName}
-                    {item.variantAttributes && ` - ${Object.values(item.variantAttributes).join(' / ')}`}
-                  </h4>
-                  <div className="mt-2 text-sm text-gray-500">
-                    <p>
-                      Số lượng giao: {item.quantity} {item.unit}
-                    </p>
-                    <p>
-                      Số lượng thực tế: {check.actualQuantity} {item.unit}
+              return (
+                <div
+                  key={itemId}
+                  className="bg-white shadow overflow-hidden sm:rounded-lg"
+                >
+                  <div className="px-4 py-5 sm:px-6">
+                    <h4 className="text-sm font-medium text-gray-900">
+                      {item.productName}
+                      {item.variantAttributes &&
+                        ` - ${Object.values(item.variantAttributes).join(
+                          " / "
+                        )}`}
+                    </h4>
+                    <div className="mt-2 text-sm text-gray-500">
+                      <p>
+                        Số lượng giao: {item.quantity} {item.unit}
+                      </p>
+                      <p>
+                        Số lượng thực tế: {check.actualQuantity} {item.unit}
+                      </p>
+                    </div>
+                    {check.hasIssue && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Có vấn đề
+                        </span>
+                        {check.issueNote && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {check.issueNote}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
+                    <p className="text-xs text-gray-500">
+                      Kiểm tra bởi {check.checkedBy} lúc{" "}
+                      {new Date(check.checkedAt).toLocaleString("vi-VN")}
                     </p>
                   </div>
-                  {check.hasIssue && (
-                    <div className="mt-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Có vấn đề
-                      </span>
-                      {check.issueNote && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {check.issueNote}
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
-                <div className="border-t border-gray-200 px-4 py-5 sm:px-6">
-                  <p className="text-xs text-gray-500">
-                    Kiểm tra bởi {check.checkedBy} lúc{' '}
-                    {new Date(check.checkedAt).toLocaleString('vi-VN')}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+              );
+            }
+          )}
         </div>
       </div>
     );

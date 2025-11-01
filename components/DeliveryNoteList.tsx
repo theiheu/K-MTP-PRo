@@ -5,9 +5,9 @@ import {
   Product,
   User,
   DeliveryHistory,
-  DeliveryVerification
+  DeliveryVerification,
 } from "../types";
-import { VerificationDetails } from './VerificationDetails';
+import { VerificationDetails } from "./VerificationDetails";
 
 interface DeliveryNoteListProps {
   deliveryNotes: DeliveryNote[];
@@ -196,8 +196,8 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
   // History tracking
   const addHistoryEntry = useCallback(
     (
-      delivery: DeliveryNote, 
-      action: string, 
+      delivery: DeliveryNote,
+      action: string,
       notes?: string,
       metadata?: {
         oldValue?: any;
@@ -210,22 +210,26 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
         action,
         user: currentUser.name,
         notes,
-        metadata
+        metadata,
       };
       delivery.history = [...(delivery.history || []), historyEntry];
       delivery.lastModified = new Date().toISOString();
     },
     [currentUser.name]
   );
-  
+
   // Process start time tracking
-  const [stopProcessingTimer, setStopProcessingTimer] = useState<(() => void) | null>(null);
+  const [stopProcessingTimer, setStopProcessingTimer] = useState<
+    (() => void) | null
+  >(null);
 
   const startProcessingTimer = useCallback((delivery: DeliveryNote) => {
     const startTime = new Date();
     const stopTimer = () => {
       const endTime = new Date();
-      const duration = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60)); // in minutes
+      const duration = Math.round(
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+      ); // in minutes
       if (delivery.processingDuration) {
         delivery.processingDuration += duration;
       } else {
@@ -273,7 +277,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
         actualQuantity: item.quantity,
         hasIssue: false,
         checkedBy: currentUser.name,
-        checkedAt: new Date().toISOString()
+        checkedAt: new Date().toISOString(),
       };
     });
 
@@ -292,26 +296,26 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
 
   const handleVerify = () => {
     if (!currentDelivery) return;
-    
+
     // Show quality rating modal
     setShowQualityRating(true);
   };
 
   const completeVerification = () => {
     if (!currentDelivery) return;
-    
+
     // Add quality info
     currentDelivery.quality = {
       ...qualityRating,
       reviewedBy: currentUser.name,
-      reviewedAt: new Date().toISOString()
+      reviewedAt: new Date().toISOString(),
     };
 
     // Stop processing timer and record duration
     stopProcessingTimer();
 
     verifyDeliveryNote(currentDelivery.id, currentUser.name);
-    
+
     // Reset states
     setCurrentDelivery(null);
     setShowQualityRating(false);
@@ -762,7 +766,10 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
       {showQualityRating && (
         <div className="fixed z-10 inset-0 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div
+              className="fixed inset-0 transition-opacity"
+              aria-hidden="true"
+            >
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
@@ -779,18 +786,23 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                       {[1, 2, 3, 4, 5].map((rating) => (
                         <button
                           key={rating}
-                          onClick={() => setQualityRating(prev => ({ ...prev, rating: rating as 1 | 2 | 3 | 4 | 5 }))}
+                          onClick={() =>
+                            setQualityRating((prev) => ({
+                              ...prev,
+                              rating: rating as 1 | 2 | 3 | 4 | 5,
+                            }))
+                          }
                           className={`p-2 rounded-full ${
                             qualityRating.rating === rating
-                              ? 'bg-yellow-100 ring-2 ring-yellow-500'
-                              : 'hover:bg-gray-100'
+                              ? "bg-yellow-100 ring-2 ring-yellow-500"
+                              : "hover:bg-gray-100"
                           }`}
                         >
                           <svg
                             className={`w-6 h-6 ${
                               qualityRating.rating >= rating
-                                ? 'text-yellow-500'
-                                : 'text-gray-300'
+                                ? "text-yellow-500"
+                                : "text-gray-300"
                             }`}
                             fill="currentColor"
                             viewBox="0 0 20 20"
@@ -806,11 +818,11 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                       Nhận xét
                     </label>
                     <textarea
-                      value={qualityRating.comments || ''}
+                      value={qualityRating.comments || ""}
                       onChange={(e) =>
-                        setQualityRating(prev => ({
+                        setQualityRating((prev) => ({
                           ...prev,
-                          comments: e.target.value
+                          comments: e.target.value,
                         }))
                       }
                       rows={3}
@@ -845,15 +857,22 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
       {showHistory && (
         <div className="fixed z-10 inset-0 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
+            <div
+              className="fixed inset-0 transition-opacity"
+              aria-hidden="true"
+            >
               <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
             </div>
             <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
               <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
-                {deliveryNotes.find(d => d.id === showHistory)?.verification && (
+                {deliveryNotes.find((d) => d.id === showHistory)
+                  ?.verification && (
                   <VerificationDetails
-                    delivery={deliveryNotes.find(d => d.id === showHistory)!}
-                    verification={deliveryNotes.find(d => d.id === showHistory)!.verification!}
+                    delivery={deliveryNotes.find((d) => d.id === showHistory)!}
+                    verification={
+                      deliveryNotes.find((d) => d.id === showHistory)!
+                        .verification!
+                    }
                   />
                 )}
               </div>
