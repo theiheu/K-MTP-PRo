@@ -91,6 +91,62 @@ export type AdminTab = "products" | "categories" | "zones" | "deliveries";
 // --- START: Thêm mới cho Phiếu Giao Nhận ---
 export type DeliveryStatus = "pending" | "verified" | "rejected";
 
+export interface DeliveryFilter {
+  status?: DeliveryStatus | "all";
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  shipperId?: string;
+  hasIssues?: boolean;
+  priority?: "low" | "medium" | "high" | "all";
+  tags?: string[];
+  search?: string;
+  batchId?: string;
+}
+
+export interface DeliverySortOptions {
+  field: "createdAt" | "expectedDeliveryDate" | "priority" | "status";
+  direction: "asc" | "desc";
+}
+
+export interface DeliveryHistory {
+  timestamp: string;
+  action: string;
+  user: string;
+  notes?: string;
+  metadata?: {
+    oldValue?: any;
+    newValue?: any;
+    type?: string;
+  };
+}
+
+export interface DeliveryVerification {
+  verifiedBy: string;
+  verifiedAt: string;
+  notes?: string;
+  itemChecks: {
+    [itemId: string]: {
+      actualQuantity: number;
+      hasIssue: boolean;
+      issueNote?: string;
+      checkedBy: string;
+      checkedAt: string;
+    };
+  };
+}
+
+export interface DeliveryStats {
+  totalCount: number;
+  pendingCount: number;
+  verifiedCount: number;
+  rejectedCount;
+  withIssuesCount: number;
+  completionRate: number;
+  averageVerificationTime: number; // in minutes
+}
+
 export interface DeliveryNote {
   id: string;
   items: DeliveryItem[];
@@ -102,6 +158,22 @@ export interface DeliveryNote {
   verifiedBy?: string; // User who verified/rejected the delivery
   verifiedAt?: string; // Verification/rejection timestamp
   verificationNotes?: string; // Notes from verification/rejection
+  history: DeliveryHistory[]; // Track changes and actions
+  hasIssues?: boolean; // Flag for deliveries with quality issues
+  rejectionReason?: string; // Reason for rejection if status is rejected
+  tags?: string[]; // Custom tags for better organization
+  priority?: "low" | "medium" | "high"; // Priority level
+  expectedDeliveryDate?: string; // Expected delivery date
+  lastModified?: string; // Last modification timestamp
+  verification?: DeliveryVerification; // Detailed verification info
+  batchId?: string; // For grouping related deliveries
+  processingDuration?: number; // Time taken to process in minutes
+  quality?: {
+    rating: 1 | 2 | 3 | 4 | 5;
+    comments?: string;
+    reviewedBy?: string;
+    reviewedAt?: string;
+  };
 }
 
 export interface DeliveryItem {
@@ -115,5 +187,51 @@ export interface DeliveryItem {
   productName?: string;
   variantAttributes?: { [key: string]: string };
   unit?: string;
+  // Additional tracking fields
+  expectedDeliveryDate?: string;
+  receivedDate?: string;
+  condition?: "good" | "damaged" | "partial";
+  damageDescription?: string;
+  replacementNeeded?: boolean;
+  qualityChecks?: {
+    visualInspection: boolean;
+    measurementCheck?: boolean;
+    functionalTest?: boolean;
+    notes?: string;
+  };
+  trackingInfo?: {
+    location?: string;
+    status?: string;
+    lastUpdate?: string;
+  };
 }
+// Configuration types
+export interface DeliveryConfig {
+  autoVerification: {
+    enabled: boolean;
+    conditions: {
+      maxQuantityDiff: number;
+      requirePhotos: boolean;
+      qualityCheckRequired: boolean;
+    };
+  };
+  notifications: {
+    email: boolean;
+    inApp: boolean;
+    slack?: boolean;
+    recipients?: string[];
+  };
+  qualityControl: {
+    requirePhotos: boolean;
+    checklistItems: string[];
+    minimumInspectionTime: number;
+  };
+  display: {
+    defaultSort: DeliverySortOptions;
+    defaultFilter: DeliveryFilter;
+    columnsToShow: string[];
+    enableBatchOperations: boolean;
+  };
+}
+
 // --- END: Thêm mới cho Phiếu Giao Nhận ---
