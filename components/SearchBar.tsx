@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface SearchBarProps {
   searchTerm: string;
@@ -13,6 +13,21 @@ const SearchIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, placeholder = "Tìm kiếm theo tên hoặc mô tả vật tư..." }) => {
+  const [value, setValue] = useState(searchTerm);
+
+  useEffect(() => {
+    setValue(searchTerm);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      if (value !== searchTerm) {
+        onSearchChange(value);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [value, searchTerm, onSearchChange]);
+
   return (
     <div className="w-full">
       <label htmlFor="search" className="sr-only">Tìm kiếm</label>
@@ -26,8 +41,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, place
           id="search"
           className="block w-full rounded-md border-0 py-3 pl-10 pr-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-500 sm:text-sm sm:leading-6"
           placeholder={placeholder}
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
         />
       </div>
     </div>

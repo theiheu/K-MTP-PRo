@@ -267,6 +267,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 alt={`${product.name} - view ${index + 1}`}
                 className="w-full h-full object-center object-cover"
                 loading={index === 0 ? "eager" : "lazy"}
+                decoding="async"
+                fetchPriority={index === 0 ? ("high" as any) : ("auto" as any)}
                 draggable="false"
               />
             </div>

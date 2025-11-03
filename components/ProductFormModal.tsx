@@ -25,6 +25,22 @@ const ArrowUpTrayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
     </svg>
 );
+const DocumentDuplicateIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+    </svg>
+);
+const EyeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+    </svg>
+);
+const InformationCircleIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+    </svg>
+);
 
 // --- Child Components ---
 
@@ -32,10 +48,12 @@ const ComponentEditor: React.FC<{
     components: ChildComponent[];
     currentVariantId: number;
     productVariants: Variant[];
+    allProducts: Product[];
     onChange: (components: ChildComponent[]) => void;
     onClose: () => void;
-}> = ({ components, currentVariantId, productVariants, onChange, onClose }) => {
+}> = ({ components, currentVariantId, productVariants, allProducts, onChange, onClose }) => {
     const [localComponents, setLocalComponents] = useState<ChildComponent[]>(() => JSON.parse(JSON.stringify(components || [])));
+    const [showPreview, setShowPreview] = useState(false);
 
     const availableVariants = productVariants.filter(v => v.id !== currentVariantId && (!v.components || v.components.length === 0));
 
@@ -50,67 +68,168 @@ const ComponentEditor: React.FC<{
     const handleComponentChange = (index: number, field: keyof ChildComponent, value: string | number) => {
         const newComps = [...localComponents];
         const component = { ...newComps[index] };
-        
+
         if (field === 'variantId') {
             component.variantId = Number(value);
         } else if (field === 'quantity') {
             component.quantity = Math.max(1, Number(value) || 1);
         }
-        
+
         newComps[index] = component;
         setLocalComponents(newComps);
     };
 
     const handleSave = () => {
         const validComponents = localComponents.filter(c => c.variantId && c.quantity > 0);
+
+        // Kiểm tra duplicate
+        const variantIds = validComponents.map(c => c.variantId);
+        const hasDuplicates = variantIds.length !== new Set(variantIds).size;
+
+        if (hasDuplicates) {
+            alert('Không thể thêm cùng một biến thể nhiều lần!');
+            return;
+        }
+
         onChange(validComponents);
         onClose();
     };
+
+    // Tính toán preview tồn kho
+    const previewStock = useMemo(() => {
+        if (localComponents.length === 0) return null;
+
+        const validComps = localComponents.filter(c => c.variantId > 0);
+        if (validComps.length === 0) return null;
+
+        const minStock = Math.min(...validComps.map(comp => {
+            const variant = productVariants.find(v => v.id === comp.variantId);
+            if (!variant) return 0;
+            const variantStock = calculateVariantStock(variant, allProducts);
+            return Math.floor(variantStock / comp.quantity);
+        }));
+
+        return minStock;
+    }, [localComponents, productVariants, allProducts]);
 
     return (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity z-[51]" aria-labelledby="component-editor-title" role="dialog" aria-modal="true">
             <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
                 <div className="flex min-h-full items-center justify-center p-4 text-center">
-                    <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-xl">
+                    <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl">
                         <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                            <h3 className="text-lg font-semibold leading-6 text-gray-900" id="component-editor-title">Sửa Thành phần</h3>
-                            <div className="mt-4 space-y-3 max-h-80 overflow-y-auto pr-2">
-                                {localComponents.map((comp, index) => (
-                                    <div key={index} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center p-2 rounded-md bg-gray-50">
-                                        <select
-                                            value={comp.variantId}
-                                            onChange={(e) => handleComponentChange(index, 'variantId', e.target.value)}
-                                            className="sm:col-span-2 block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm"
-                                        >
-                                            <option value={0}>-- Chọn biến thể thành phần --</option>
-                                            {availableVariants.map(v => (
-                                                <option key={v.id} value={v.id}>
-                                                    {Object.values(v.attributes).join(', ') || 'Mặc định'}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="number"
-                                                placeholder="SL"
-                                                value={comp.quantity}
-                                                min="1"
-                                                onChange={(e) => handleComponentChange(index, 'quantity', e.target.value)}
-                                                className="block w-full text-center rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm"
-                                            />
-                                            <button type="button" onClick={() => handleRemoveComponent(index)} className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100">
-                                                <TrashIcon className="w-5 h-5"/>
-                                            </button>
+                            <div className="flex justify-between items-start mb-4">
+                                <div>
+                                    <h3 className="text-lg font-semibold leading-6 text-gray-900" id="component-editor-title">Quản lý Thành phần</h3>
+                                    <p className="mt-1 text-sm text-gray-500">Cấu hình các thành phần để tạo bộ sản phẩm</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPreview(!showPreview)}
+                                    className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                                >
+                                    <EyeIcon className="w-4 h-4" />
+                                    {showPreview ? 'Ẩn' : 'Xem'} Preview
+                                </button>
+                            </div>
+
+                            {showPreview && previewStock !== null && (
+                                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <InformationCircleIcon className="w-5 h-5 text-blue-600" />
+                                        <div>
+                                            <p className="text-sm font-medium text-blue-900">Tồn kho dự kiến</p>
+                                            <p className="text-lg font-bold text-blue-700">{previewStock} bộ</p>
                                         </div>
                                     </div>
-                                ))}
-                                {localComponents.length === 0 && <p className="text-sm text-center text-gray-500 py-4">Chưa có thành phần nào.</p>}
+                                </div>
+                            )}
+
+                            <div className="mt-4 space-y-3 max-h-96 overflow-y-auto pr-2">
+                                {localComponents.map((comp, index) => {
+                                    const selectedVariant = productVariants.find(v => v.id === comp.variantId);
+                                    const variantStock = selectedVariant ? calculateVariantStock(selectedVariant, allProducts) : 0;
+                                    const maxSets = selectedVariant ? Math.floor(variantStock / comp.quantity) : 0;
+
+                                    return (
+                                        <div key={index} className="p-3 rounded-md bg-gray-50 border border-gray-200">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-start">
+                                                <div className="sm:col-span-2">
+                                                    <label className="block text-xs text-gray-600 mb-1">Biến thể</label>
+                                                    <select
+                                                        value={comp.variantId}
+                                                        onChange={(e) => handleComponentChange(index, 'variantId', e.target.value)}
+                                                        className="block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                                                    >
+                                                        <option value={0}>-- Chọn biến thể --</option>
+                                                        {availableVariants.map(v => (
+                                                            <option key={v.id} value={v.id}>
+                                                                {Object.values(v.attributes).join(', ') || 'Mặc định'} (Tồn: {calculateVariantStock(v, allProducts)})
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex items-end gap-2">
+                                                    <div className="flex-1">
+                                                        <label className="block text-xs text-gray-600 mb-1">Số lượng</label>
+                                                        <input
+                                                            type="number"
+                                                            placeholder="SL"
+                                                            value={comp.quantity}
+                                                            min="1"
+                                                            onChange={(e) => handleComponentChange(index, 'quantity', e.target.value)}
+                                                            className="block w-full text-center rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveComponent(index)}
+                                                        className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100"
+                                                        title="Xóa thành phần"
+                                                    >
+                                                        <TrashIcon className="w-5 h-5"/>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {selectedVariant && (
+                                                <div className="mt-2 text-xs text-gray-600 flex items-center justify-between">
+                                                    <span>Tồn kho: <span className="font-semibold">{variantStock}</span></span>
+                                                    <span>Có thể tạo: <span className="font-semibold text-green-600">{maxSets} bộ</span></span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                                {localComponents.length === 0 && (
+                                    <div className="text-center py-8">
+                                        <p className="text-sm text-gray-500">Chưa có thành phần nào.</p>
+                                        <p className="text-xs text-gray-400 mt-1">Nhấn nút bên dưới để thêm thành phần</p>
+                                    </div>
+                                )}
                             </div>
-                            <button type="button" onClick={handleAddComponent} className="mt-4 w-full text-sm font-medium text-yellow-600 rounded-md ring-1 ring-inset ring-yellow-300 hover:bg-yellow-50 py-2">+ Thêm Thành phần</button>
+                            <button
+                                type="button"
+                                onClick={handleAddComponent}
+                                className="mt-4 w-full text-sm font-medium text-yellow-600 rounded-md ring-1 ring-inset ring-yellow-300 hover:bg-yellow-50 py-2 transition-colors"
+                            >
+                                + Thêm Thành phần
+                            </button>
                         </div>
-                        <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                            <button type="button" onClick={handleSave} className="inline-flex w-full justify-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700 sm:ml-3 sm:w-auto">Lưu</button>
-                            <button type="button" onClick={onClose} className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">Hủy</button>
+                        <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 gap-2">
+                            <button
+                                type="button"
+                                onClick={handleSave}
+                                className="inline-flex w-full justify-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700 sm:w-auto transition-colors"
+                            >
+                                Lưu thay đổi
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto transition-colors"
+                            >
+                                Hủy
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -129,6 +248,7 @@ const VariantRowContent: React.FC<{
     openCamera: (type: 'variant', index: number) => void;
     triggerFileUpload: (type: 'variant', index: number) => void;
     handleImageDelete: (type: 'variant', imageIndex: number, variantIndex: number) => void;
+    onDuplicateVariant?: (index: number) => void;
     currentProductId?: number;
 }> = ({
     variant,
@@ -140,6 +260,7 @@ const VariantRowContent: React.FC<{
     openCamera,
     triggerFileUpload,
     handleImageDelete,
+    onDuplicateVariant,
     currentProductId,
 }) => {
     const isComposite = (variant.components && variant.components.length > 0) || false;
@@ -162,36 +283,113 @@ const VariantRowContent: React.FC<{
     return (
         <>
             <td className="px-2 py-2 whitespace-nowrap font-medium text-gray-800">
-                {Object.values(variant.attributes).join(' / ') || 'Mặc định'}
+                <div className="flex items-center gap-2">
+                    <span>{Object.values(variant.attributes).join(' / ') || 'Mặc định'}</span>
+                    {isComposite && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                            Bộ
+                        </span>
+                    )}
+                </div>
             </td>
             <td className="px-2 py-2">
                 {isComposite ? (
-                    <input type="number" value={calculatedStock} readOnly className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm bg-gray-100 cursor-not-allowed" />
+                    <div className="relative">
+                        <input
+                            type="number"
+                            value={calculatedStock}
+                            readOnly
+                            className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm bg-gray-100 cursor-not-allowed"
+                            title="Tồn kho tự động tính từ thành phần"
+                        />
+                    </div>
                 ) : (
-                    <input type="number" value={variant.stock} onChange={e => handleVariantChange(index, 'stock', e.target.value)} className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm" />
+                    <input
+                        type="number"
+                        value={variant.stock}
+                        onChange={e => handleVariantChange(index, 'stock', e.target.value)}
+                        className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                        min="0"
+                    />
                 )}
             </td>
             <td className="px-2 py-2">
-                <input type="number" value={variant.price || ''} onChange={e => handleVariantChange(index, 'price', e.target.value)} className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm" />
+                <input
+                    type="number"
+                    value={variant.price || ''}
+                    onChange={e => handleVariantChange(index, 'price', e.target.value)}
+                    className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                    min="0"
+                    placeholder="0"
+                />
             </td>
             <td className="px-2 py-2">
-                <input type="text" placeholder="Cái, Bộ,..." value={variant.unit || ''} onChange={e => handleVariantChange(index, 'unit', e.target.value)} className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm" />
+                <input
+                    type="text"
+                    placeholder="Cái, Bộ,..."
+                    value={variant.unit || ''}
+                    onChange={e => handleVariantChange(index, 'unit', e.target.value)}
+                    className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                />
             </td>
             <td className="px-2 py-2">
-                <button type="button" onClick={() => setEditingVariantIndex(index)} className="text-yellow-600 hover:text-yellow-800 text-sm font-medium">
-                    Sửa ({variant.components?.length || 0})
+                <button
+                    type="button"
+                    onClick={() => setEditingVariantIndex(index)}
+                    className="inline-flex items-center gap-1 text-yellow-600 hover:text-yellow-800 text-sm font-medium hover:bg-yellow-50 px-2 py-1 rounded transition-colors"
+                    title="Quản lý thành phần"
+                >
+                    <span>Sửa</span>
+                    {variant.components && variant.components.length > 0 && (
+                        <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-yellow-600 rounded-full">
+                            {variant.components.length}
+                        </span>
+                    )}
                 </button>
             </td>
             <td className="px-2 py-2">
-                <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => openCamera('variant', index)} title="Chụp ảnh" className="text-gray-500 p-1 hover:bg-gray-100 rounded-full"><CameraIcon className="w-5 h-5" /></button>
-                    <button type="button" onClick={() => triggerFileUpload('variant', index)} title="Tải ảnh lên" className="text-gray-500 p-1 hover:bg-gray-100 rounded-full"><ArrowUpTrayIcon className="w-5 h-5" /></button>
+                <div className="flex items-center gap-1 mb-1">
+                    <button
+                        type="button"
+                        onClick={() => openCamera('variant', index)}
+                        title="Chụp ảnh"
+                        className="text-gray-500 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <CameraIcon className="w-5 h-5" />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => triggerFileUpload('variant', index)}
+                        title="Tải ảnh lên"
+                        className="text-gray-500 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                        <ArrowUpTrayIcon className="w-5 h-5" />
+                    </button>
+                    {onDuplicateVariant && (
+                        <button
+                            type="button"
+                            onClick={() => onDuplicateVariant(index)}
+                            title="Sao chép biến thể"
+                            className="text-gray-500 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                        >
+                            <DocumentDuplicateIcon className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
-                <div className="flex gap-1 mt-1 flex-wrap w-24">
+                <div className="flex gap-1 flex-wrap max-w-[120px]">
                     {variant.images?.map((img, imgIdx) => (
-                        <div key={imgIdx} className="relative group w-8 h-8 rounded">
-                            <ImageWithPlaceholder src={img} alt={`Variant ${index} img ${imgIdx}`} className="w-full h-full rounded object-cover" />
-                            <button type="button" onClick={() => handleImageDelete('variant', imgIdx, index)} className="absolute top-0 right-0 -m-1 p-0.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div key={imgIdx} className="relative group w-10 h-10 rounded border border-gray-200">
+                            <ImageWithPlaceholder
+                                src={img}
+                                alt={`Variant ${index} img ${imgIdx}`}
+                                className="w-full h-full rounded object-cover"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => handleImageDelete('variant', imgIdx, index)}
+                                className="absolute -top-1 -right-1 p-0.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                title="Xóa ảnh"
+                            >
                                 <XMarkIcon className="w-3 h-3" />
                             </button>
                         </div>
@@ -241,7 +439,7 @@ const processImage = (file: File): Promise<string> => new Promise((resolve, reje
             if (!ctx) {
                 return reject(new Error("Không thể lấy context của canvas."));
             }
-            
+
             // Cải thiện chất lượng resize ảnh
             ctx.imageSmoothingQuality = 'high';
             ctx.drawImage(img, 0, 0, width, height);
@@ -288,6 +486,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
   const [options, setOptions] = useState<{ name: string; values: string[] }[]>([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [optionValueStrings, setOptionValueStrings] = useState<string[]>([]);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -304,7 +503,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
             setDescription(product.description);
             setCategory(product.category);
             setGeneralImages(product.images);
-            
+
             const productOptions = product.options.map(optName => {
                 const values = [...new Set(product.variants.map(v => v.attributes[optName]).filter(Boolean))];
                 return { name: optName, values };
@@ -322,6 +521,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
             setOptionValueStrings([]);
             setVariants([{ id: Date.now(), attributes: {}, stock: 0, price: 0, images: [], unit: 'Cái', components: [] }]);
         }
+        setErrors({});
     } else {
         setShowCamera(false);
     }
@@ -331,7 +531,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
     if (!isOpen) return;
 
     const validOptions = options.filter(opt => opt.name.trim() !== '' && opt.values.length > 0 && opt.values.some(v => v.trim() !== ''));
-    
+
     if (validOptions.length === 0) {
         if (variants.length === 0 || Object.keys(variants[0].attributes).length > 0 || variants.length > 1) {
             const defaultVariant = variants.find(v => Object.keys(v.attributes).length === 0) || { id: Date.now(), attributes: {}, stock: 0, price: 0, images: [], unit: 'Cái', components: [] };
@@ -339,7 +539,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
         }
         return;
     }
-    
+
     const optionsForCombinations = validOptions.map(opt => ({
       ...opt,
       values: opt.values.filter(Boolean)
@@ -365,7 +565,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
     setVariants(newVariants);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionValueStrings, isOpen]);
-  
+
   const videoCallbackRef = useCallback((node: HTMLVideoElement | null) => {
     videoRef.current = node; // Keep the mutable ref updated for other functions to use
 
@@ -412,7 +612,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
         }));
     }
   };
-  
+
   const handleOptionValuesChange = (index: number, valuesStr: string) => {
     const newOptionValueStrings = [...optionValueStrings];
     newOptionValueStrings[index] = valuesStr;
@@ -437,18 +637,18 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
     setVariants(prevVariants => {
         const newVariants = [...prevVariants];
         const variant = { ...newVariants[index] };
-        
+
         if (field === 'stock' || field === 'price') {
             (variant as any)[field] = Number(value);
         } else {
             (variant as any)[field] = value;
         }
-        
+
         newVariants[index] = variant;
         return newVariants;
     });
   }, []);
-  
+
   const openCamera = (type: 'general' | 'variant', index?: number) => {
       setImageTarget({ type, index });
       setShowCamera(true);
@@ -462,7 +662,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
         canvas.height = video.videoHeight;
         canvas.getContext('2d')?.drawImage(video, 0, 0);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-        
+
         if (imageTarget.type === 'general') {
             setGeneralImages(prev => [...prev, dataUrl]);
         } else if (imageTarget.type === 'variant' && typeof imageTarget.index === 'number') {
@@ -475,7 +675,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
         setShowCamera(false);
     }
   };
-  
+
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files) return;
@@ -517,15 +717,55 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
     }
   };
 
+  const handleDuplicateVariant = (index: number) => {
+    const variantToDuplicate = variants[index];
+    const newVariant: Variant = {
+        ...JSON.parse(JSON.stringify(variantToDuplicate)),
+        id: Date.now(),
+        stock: 0, // Reset stock for duplicated variant
+    };
+    setVariants(prev => [...prev, newVariant]);
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: { [key: string]: string } = {};
+
+    if (!name.trim()) {
+        newErrors.name = 'Tên vật tư không được để trống';
+    }
+
+    if (generalImages.length === 0) {
+        newErrors.images = 'Vui lòng thêm ít nhất một hình ảnh';
+    }
+
+    if (variants.length === 0) {
+        newErrors.variants = 'Phải có ít nhất một biến thể';
+    }
+
+    // Validate variants
+    const hasInvalidVariant = variants.some(v => {
+        const isComposite = v.components && v.components.length > 0;
+        return !isComposite && (v.stock < 0 || v.price === undefined || v.price < 0);
+    });
+
+    if (hasInvalidVariant) {
+        newErrors.variants = 'Các biến thể phải có tồn kho và giá hợp lệ';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (generalImages.length === 0) {
-        alert("Vui lòng thêm ít nhất một hình ảnh chung.");
+
+    if (!validateForm()) {
         return;
     }
+
     const finalData = {
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim(),
         category,
         images: generalImages,
         options: options.map(opt => opt.name).filter(Boolean),
@@ -536,7 +776,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
   };
 
   if (!isOpen) return null;
-  
+
   return (
     <>
     <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple style={{ display: 'none' }} />
@@ -556,14 +796,62 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                     </button>
                 </div>
                 {/* Form Content */}
+                {/* Error Summary */}
+                {Object.keys(errors).length > 0 && (
+                    <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <InformationCircleIcon className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="text-sm font-medium text-red-800">Vui lòng kiểm tra lại:</h4>
+                                <ul className="mt-2 text-sm text-red-700 list-disc list-inside space-y-1">
+                                    {Object.values(errors).map((error, idx) => (
+                                        <li key={idx}>{error}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="mt-6 grid grid-cols-1 gap-y-6 sm:grid-cols-6 sm:gap-x-6">
                     <div className="sm:col-span-4">
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">Tên vật tư</label>
-                        <input type="text" name="name" id="name" value={name} onChange={(e) => setName(e.target.value)} required className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 px-3 py-2 sm:text-sm" />
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                            Tên vật tư <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            name="name"
+                            id="name"
+                            value={name}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                if (errors.name) {
+                                    setErrors(prev => {
+                                        const newErrors = {...prev};
+                                        delete newErrors.name;
+                                        return newErrors;
+                                    });
+                                }
+                            }}
+                            required
+                            className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 sm:text-sm ${
+                                errors.name
+                                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+                                    : 'border-gray-300 focus:border-yellow-500 focus:ring-yellow-500'
+                            }`}
+                            placeholder="Nhập tên vật tư..."
+                        />
+                        {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                     </div>
                      <div className="sm:col-span-2">
                         <label htmlFor="category" className="block text-sm font-medium text-gray-700">Danh mục</label>
-                        <select id="category" name="category" value={category} onChange={(e) => setCategory(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 px-3 py-2 sm:text-sm">
+                        <select
+                            id="category"
+                            name="category"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 px-3 py-2 sm:text-sm"
+                        >
                             {categories.map(cat => <option key={cat.name} value={cat.name}>{cat.name}</option>)}
                         </select>
                     </div>
@@ -573,27 +861,58 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                     </div>
 
                     <div className="sm:col-span-6">
-                        <label className="block text-sm font-medium text-gray-700">Hình ảnh chung</label>
+                        <label className="block text-sm font-medium text-gray-700">
+                            Hình ảnh chung <span className="text-red-500">*</span>
+                        </label>
                         <div className="mt-2 flex items-center gap-4">
-                            <div className="flex gap-2 flex-wrap p-2 border border-dashed rounded-md min-h-[6rem] flex-grow">
+                            <div className={`flex gap-2 flex-wrap p-2 border border-dashed rounded-md min-h-[6rem] flex-grow ${
+                                errors.images ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                            }`}>
+                                {generalImages.length === 0 && (
+                                    <div className="flex items-center justify-center w-full text-gray-400 text-sm">
+                                        Chưa có ảnh nào
+                                    </div>
+                                )}
                                 {generalImages.map((img, index) => (
-                                    <div key={index} className="relative group w-20 h-20 rounded-md overflow-hidden">
+                                    <div key={index} className="relative group w-20 h-20 rounded-md overflow-hidden border border-gray-200">
                                         <ImageWithPlaceholder src={img} alt={`General image ${index + 1}`} className="w-full h-full object-cover" />
-                                        <button type="button" onClick={() => handleImageDelete('general', index)} className="absolute top-0 right-0 m-0.5 p-0.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handleImageDelete('general', index);
+                                                if (errors.images && generalImages.length > 1) {
+                                                    setErrors(prev => {
+                                                        const newErrors = {...prev};
+                                                        delete newErrors.images;
+                                                        return newErrors;
+                                                    });
+                                                }
+                                            }}
+                                            className="absolute top-0 right-0 m-0.5 p-0.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
                                             <XMarkIcon className="w-4 h-4" />
                                         </button>
                                     </div>
                                 ))}
                             </div>
                             <div className="flex flex-col gap-2">
-                                <button type="button" onClick={() => openCamera('general')} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                <button
+                                    type="button"
+                                    onClick={() => openCamera('general')}
+                                    className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
+                                >
                                     <CameraIcon className="w-5 h-5 text-gray-500" /> Chụp
                                 </button>
-                                <button type="button" onClick={() => triggerFileUpload('general')} className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                <button
+                                    type="button"
+                                    onClick={() => triggerFileUpload('general')}
+                                    className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
+                                >
                                     <ArrowUpTrayIcon className="w-5 h-5 text-gray-500" /> Tải lên
                                 </button>
                             </div>
                         </div>
+                        {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
                     </div>
 
                     <div className="sm:col-span-6">
@@ -615,23 +934,27 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                             <button type="button" onClick={addOption} className="w-full text-sm font-medium text-yellow-600 rounded-md ring-1 ring-inset ring-yellow-300 hover:bg-yellow-50 py-2">+ Thêm Thuộc tính</button>
                         </div>
                     </div>
-                    
+
                     <div className="sm:col-span-6">
-                         <div className="overflow-x-auto max-h-64">
+                        <div className="flex justify-between items-center mb-2">
+                            <h4 className="text-sm font-medium text-gray-700">Quản lý Biến thể</h4>
+                            <span className="text-xs text-gray-500">{variants.length} biến thể</span>
+                        </div>
+                         <div className="overflow-x-auto max-h-96 border border-gray-200 rounded-lg">
                             <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                <thead className="bg-gray-50 sticky top-0">
+                                <thead className="bg-gray-50 sticky top-0 z-10">
                                     <tr>
-                                        <th className="px-2 py-2 text-left font-medium text-gray-500">Biến thể</th>
-                                        <th className="px-2 py-2 text-left font-medium text-gray-500">Tồn kho</th>
-                                        <th className="px-2 py-2 text-left font-medium text-gray-500">Giá</th>
-                                        <th className="px-2 py-2 text-left font-medium text-gray-500">Đơn vị</th>
-                                        <th className="px-2 py-2 text-left font-medium text-gray-500">Thành phần</th>
-                                        <th className="px-2 py-2 text-left font-medium text-gray-500">Ảnh</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Biến thể</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Tồn kho</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Giá</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Đơn vị</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Thành phần</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Ảnh & Hành động</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {variants.map((variant, index) => (
-                                        <tr key={variant.id}>
+                                        <tr key={variant.id} className="hover:bg-gray-50 transition-colors">
                                             <VariantRowContent
                                                 variant={variant}
                                                 index={index}
@@ -642,6 +965,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                                                 openCamera={openCamera}
                                                 triggerFileUpload={triggerFileUpload}
                                                 handleImageDelete={handleImageDelete}
+                                                onDuplicateVariant={handleDuplicateVariant}
                                                 currentProductId={product?.id}
                                             />
                                         </tr>
@@ -649,6 +973,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                                 </tbody>
                             </table>
                         </div>
+                        {errors.variants && <p className="mt-2 text-sm text-red-600">{errors.variants}</p>}
                     </div>
 
                 </div>
@@ -682,6 +1007,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
             components={variants[editingVariantIndex]?.components || []}
             currentVariantId={variants[editingVariantIndex].id}
             productVariants={variants}
+            allProducts={allProducts}
             onChange={(newComponents) => handleVariantChange(editingVariantIndex, 'components', newComponents)}
             onClose={() => setEditingVariantIndex(null)}
         />

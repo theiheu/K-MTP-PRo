@@ -19,11 +19,13 @@ const ProductList: React.FC<ProductListProps> = ({ products, allProducts, onAddT
     );
   }
   return (
-    <div className="grid grid-cols-1 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-x-6 xl:gap-x-8">
+    <ul className="grid grid-cols-1 gap-y-8 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-x-6 xl:gap-x-8" role="list" aria-label="Danh sách vật tư">
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} allProducts={allProducts} onAddToCart={onAddToCart} />
+        <li key={product.id} className="contents">
+          <ProductCard product={product} allProducts={allProducts} onAddToCart={onAddToCart} />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 };
 

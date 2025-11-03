@@ -1,16 +1,16 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Product } from "../types";
 
+// Degrade gracefully if key is missing
 if (!import.meta.env.VITE_GEMINI_API_KEY) {
-  console.error(
-    "VITE_GEMINI_API_KEY environment variable not set. AI features will be disabled."
-  );
-  throw new Error(
-    "VITE_GEMINI_API_KEY environment variable is required for AI features."
+  console.warn(
+    "VITE_GEMINI_API_KEY is not set. AI features will be disabled gracefully."
   );
 }
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
+const ai = import.meta.env.VITE_GEMINI_API_KEY
+  ? new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY })
+  : null as unknown as GoogleGenAI;
 
 const recommendationSchema = {
   type: Type.OBJECT,
@@ -78,14 +78,19 @@ export const getAIRecommendations = async (
   Dựa trên phân tích của bạn, xác định các vật tư phù hợp nhất và trả về ID của chúng. Ưu tiên các mặt hàng còn trong kho.`;
 
   try {
-    const response = await ai.models.generateContent({
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
+
+    const response = await ai!.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
         responseSchema: recommendationSchema,
       },
+      signal: controller.signal as unknown as AbortSignal,
     });
+    clearTimeout(timeout);
 
     const jsonResponse = JSON.parse(response.text);
     const recommendedIds: number[] = jsonResponse.product_ids || [];

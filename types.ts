@@ -141,7 +141,7 @@ export interface DeliveryStats {
   totalCount: number;
   pendingCount: number;
   verifiedCount: number;
-  rejectedCount;
+  rejectedCount: number;
   withIssuesCount: number;
   completionRate: number;
   averageVerificationTime: number; // in minutes
@@ -158,7 +158,7 @@ export interface DeliveryNote {
   verifiedBy?: string; // User who verified/rejected the delivery
   verifiedAt?: string; // Verification/rejection timestamp
   verificationNotes?: string; // Notes from verification/rejection
-  history: DeliveryHistory[]; // Track changes and actions
+  history?: DeliveryHistory[]; // Track changes and actions
   hasIssues?: boolean; // Flag for deliveries with quality issues
   rejectionReason?: string; // Reason for rejection if status is rejected
   tags?: string[]; // Custom tags for better organization

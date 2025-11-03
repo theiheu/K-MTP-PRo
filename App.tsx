@@ -10,7 +10,7 @@ import { Toaster, toast } from "react-hot-toast";
 import Header from "./components/Header";
 import ProductList from "./components/ProductList";
 import Cart from "./components/Cart";
-import Chatbot from "./components/Chatbot";
+const Chatbot = lazy(() => import("./components/Chatbot"));
 import BottomNav from "./components/BottomNav";
 import DesktopNav from "./components/DesktopNav";
 import LoginPage from "./components/LoginPage";
@@ -183,6 +183,12 @@ const App: React.FC = () => {
       if (savedUser) {
         setCurrentUser(JSON.parse(savedUser));
       }
+      // Initialize search from URL (?q=)
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("q");
+      if (q) {
+        setSearchTerm(q);
+      }
     } catch (error) {
       console.error(
         "Không thể đọc thông tin người dùng từ localStorage",
@@ -260,6 +266,20 @@ const App: React.FC = () => {
   useEffect(() => {
     setProductCurrentPage(1);
   }, [searchTerm, category]);
+
+  // Sync search to URL (?q=) without reloading
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (searchTerm) {
+      params.set("q", searchTerm);
+    } else {
+      params.delete("q");
+    }
+    const newUrl = `${window.location.pathname}${
+      params.toString() ? `?${params.toString()}` : ""
+    }${window.location.hash}`;
+    window.history.replaceState(null, "", newUrl);
+  }, [searchTerm]);
 
   const filteredAndSortedProducts = useMemo(() => {
     let tempProducts = masterProductList;
