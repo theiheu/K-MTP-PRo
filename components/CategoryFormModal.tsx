@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Category } from '../types';
+import { processImage, validateImageFile } from '../utils/imageUtils';
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -42,11 +43,38 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ isOpen, onClose, 
         }
     }, [isOpen, category]);
 
-    const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleIconChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            setIconFile(file);
-            setIconPreview(URL.createObjectURL(file));
+
+            // Validate file
+            const validation = validateImageFile(file);
+            if (!validation.valid) {
+                alert(validation.error);
+                e.target.value = '';
+                return;
+            }
+
+            try {
+                // Show loading
+                const loadingToast = document.createElement('div');
+                loadingToast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+                loadingToast.textContent = 'Đang xử lý ảnh...';
+                document.body.appendChild(loadingToast);
+
+                // Process image (including HEIC conversion)
+                const base64Image = await processImage(file, 256, 256, 0.9);
+
+                // Remove loading
+                document.body.removeChild(loadingToast);
+
+                setIconFile(file);
+                setIconPreview(base64Image);
+            } catch (error) {
+                console.error('Error processing icon:', error);
+                alert('Không thể xử lý ảnh. Vui lòng thử file khác.');
+                e.target.value = '';
+            }
         }
     };
 
@@ -132,7 +160,7 @@ const CategoryFormModal: React.FC<CategoryFormModalProps> = ({ isOpen, onClose, 
                                 </div>
                                 <label htmlFor="icon-upload" className="cursor-pointer rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
                                     <span>{isEditing ? 'Thay đổi Icon' : 'Tải lên Icon'}</span>
-                                    <input id="icon-upload" name="icon-upload" type="file" className="sr-only" accept="image/svg+xml,image/png,image/jpeg" onChange={handleIconChange}/>
+                                    <input id="icon-upload" name="icon-upload" type="file" className="sr-only" accept="image/svg+xml,image/png,image/jpeg,image/webp,.heic,.heif" onChange={handleIconChange}/>
                                 </label>
                             </div>
                           </div>

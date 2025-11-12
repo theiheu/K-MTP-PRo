@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { Product, Category, Variant, ChildComponent } from '../types';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import { calculateVariantStock } from '../utils/stockCalculator';
+import { processImage, validateImageFile } from '../utils/imageUtils';
 
 // --- Icon Components ---
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -402,57 +403,6 @@ const VariantRowContent: React.FC<{
 
 
 // --- Helper Functions ---
-const processImage = (file: File): Promise<string> => new Promise((resolve, reject) => {
-    const MAX_WIDTH = 1024;
-    const MAX_HEIGHT = 1024;
-    const QUALITY = 0.8; // Giảm chất lượng một chút để tối ưu kích thước file
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-        if (!event.target?.result) {
-            return reject(new Error("Không thể đọc tệp."));
-        }
-        const img = new Image();
-        img.src = event.target.result as string;
-        img.onload = () => {
-            let { width, height } = img;
-
-            // Chỉ thay đổi kích thước nếu ảnh lớn hơn kích thước tối đa
-            if (width > MAX_WIDTH || height > MAX_HEIGHT) {
-                if (width > height) {
-                    if (width > MAX_WIDTH) {
-                        height = Math.round((height * MAX_WIDTH) / width);
-                        width = MAX_WIDTH;
-                    }
-                } else {
-                    if (height > MAX_HEIGHT) {
-                        width = Math.round((width * MAX_HEIGHT) / height);
-                        height = MAX_HEIGHT;
-                    }
-                }
-            }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                return reject(new Error("Không thể lấy context của canvas."));
-            }
-
-            // Cải thiện chất lượng resize ảnh
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(img, 0, 0, width, height);
-
-            // Xuất ảnh dưới dạng JPEG với chất lượng đã được tối ưu
-            resolve(canvas.toDataURL('image/jpeg', QUALITY));
-        };
-        img.onerror = (error) => reject(error);
-    };
-    reader.onerror = (error) => reject(error);
-    reader.readAsDataURL(file);
-});
-
 const generateCombinations = (options: { name: string; values: string[] }[]): { [key: string]: string }[] => {
     if (options.length === 0) return [{}];
     const combinations: { [key: string]: string }[] = [];
@@ -495,9 +445,30 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
   const [imageTarget, setImageTarget] = useState<{ type: 'general' | 'variant'; index?: number }>({ type: 'general' });
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
 
+  // Track previous state to prevent unnecessary resets
+  const prevIsOpenRef = useRef(isOpen);
+  const prevProductIdRef = useRef(product?.id);
+  const isInitializedRef = useRef(false);
 
   useEffect(() => {
-    if (isOpen) {
+    // Only reset when modal is newly opened or product changes
+    const isNewlyOpened = isOpen && !prevIsOpenRef.current;
+    const isProductChanged = product?.id !== prevProductIdRef.current;
+
+    // Debug logging
+    if (isOpen && isInitializedRef.current && !isNewlyOpened && !isProductChanged) {
+        console.log('⚠️ ProductFormModal: Skipping reset - already initialized');
+        return;
+    }
+
+    if (isOpen && (isNewlyOpened || isProductChanged)) {
+        console.log('✅ ProductFormModal: Initializing form', {
+            isNewlyOpened,
+            isProductChanged,
+            productId: product?.id,
+            productName: product?.name
+        });
+
         if (product) {
             setName(product.name);
             setDescription(product.description);
@@ -522,13 +493,21 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
             setVariants([{ id: Date.now(), attributes: {}, stock: 0, price: 0, images: [], unit: 'Cái', components: [] }]);
         }
         setErrors({});
-    } else {
-        setShowCamera(false);
+        isInitializedRef.current = true;
     }
+
+    if (!isOpen) {
+        setShowCamera(false);
+        isInitializedRef.current = false;
+    }
+
+    // Update refs
+    prevIsOpenRef.current = isOpen;
+    prevProductIdRef.current = product?.id;
   }, [isOpen, product, categories]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isInitializedRef.current) return;
 
     const validOptions = options.filter(opt => opt.name.trim() !== '' && opt.values.length > 0 && opt.values.some(v => v.trim() !== ''));
 
@@ -681,8 +660,35 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
     if (!files) return;
 
     try {
-        const base64Promises = [...files].map(file => processImage(file));
+        // Validate all files first
+        const fileArray = [...files];
+        const invalidFiles: string[] = [];
+
+        fileArray.forEach(file => {
+            const validation = validateImageFile(file);
+            if (!validation.valid) {
+                invalidFiles.push(`${file.name}: ${validation.error}`);
+            }
+        });
+
+        if (invalidFiles.length > 0) {
+            alert('Một số file không hợp lệ:\n\n' + invalidFiles.join('\n'));
+            event.target.value = ''; // Reset input
+            return;
+        }
+
+        // Show loading indicator
+        const loadingToast = document.createElement('div');
+        loadingToast.className = 'fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded-md shadow-lg z-50';
+        loadingToast.textContent = `Đang xử lý ${fileArray.length} ảnh...`;
+        document.body.appendChild(loadingToast);
+
+        // Process images (including HEIC conversion)
+        const base64Promises = fileArray.map(file => processImage(file));
         const base64Images = await Promise.all(base64Promises);
+
+        // Remove loading indicator
+        document.body.removeChild(loadingToast);
 
         if (imageTarget.type === 'general') {
             setGeneralImages(prev => [...prev, ...base64Images]);
@@ -779,7 +785,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
 
   return (
     <>
-    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" multiple style={{ display: 'none' }} />
+    <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*,.heic,.heif" multiple style={{ display: 'none' }} />
     <div className="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
         <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
