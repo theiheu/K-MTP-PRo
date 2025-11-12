@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { RequisitionForm, UserRole } from '../types';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
+import ConfirmationModal from './ConfirmationModal';
 
 interface RequisitionCardProps {
   form: RequisitionForm;
   onInitiateFulfillment: (form: RequisitionForm) => void;
   userRole: UserRole;
   onImageClick: (images: string[], startIndex: number) => void;
+  onEdit: (form: RequisitionForm) => void;
+  onDelete: (formId: string) => void;
 }
 
 const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -20,13 +23,14 @@ const statusStyles = {
   'Đã hoàn thành': 'bg-green-100 text-green-800',
 };
 
-const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfillment, userRole, onImageClick }) => {
+const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfillment, userRole, onImageClick, onEdit, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleFulfillClick = () => {
     onInitiateFulfillment(form);
   };
-  
+
   const uniqueCategories = [...new Set(form.items.map(item => item.product.category))];
 
   return (
@@ -46,7 +50,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
             </p>
           </div>
         </div>
-        
+
         <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
             <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Người yêu cầu:</span> {form.requesterName}</p>
             <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Mục đích:</span> {form.purpose}</p>
@@ -70,7 +74,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
             )}
         </div>
       </div>
-      
+
       {isExpanded && (
         <div className="px-4 sm:px-6 pb-4 border-t border-gray-200 bg-gray-50">
           <h4 className="text-base font-medium text-gray-900 pt-4 pb-2">Danh sách vật tư ({form.items.length})</h4>
@@ -79,7 +83,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
               const variantAttributes = Object.entries(item.variant.attributes)
                 .map(([, value]) => value)
                 .join(' / ');
-              
+
               const variantImages = item.variant.images;
               // Use variant images if available, otherwise fall back to general product images
               const galleryImages = (variantImages && variantImages.length > 0) ? variantImages : item.product.images;
@@ -94,7 +98,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
                         onImageClick(galleryImages, 0);
                     }}
                   >
-                    <ImageWithPlaceholder 
+                    <ImageWithPlaceholder
                         src={displayImage}
                         alt={`${item.product.name}${variantAttributes ? ` - ${variantAttributes}` : ''}`}
                         className="h-full w-full object-cover transition-transform duration-200 hover:scale-105"
@@ -127,7 +131,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
           </ul>
         </div>
       )}
-      
+
       <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -136,15 +140,43 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
             {isExpanded ? 'Ẩn chi tiết' : `Xem Chi Tiết (${form.items.length} mục)`}
             <ChevronDownIcon className={`w-5 h-5 ml-2 text-gray-500 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
           </button>
-          {form.status === 'Đang chờ xử lý' && userRole === 'manager' && (
-            <button
-              onClick={handleFulfillClick}
-              className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700"
-            >
-              Xác nhận Cung cấp
-            </button>
+          {userRole === 'manager' && (
+            <>
+              <button
+                onClick={() => onEdit(form)}
+                className="w-full sm:w-auto inline-flex justify-center rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                Chỉnh sửa
+              </button>
+              {form.status === 'Đang chờ xử lý' && (
+                <button
+                  onClick={handleFulfillClick}
+                  className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent bg-green-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-green-700"
+                >
+                  Xác nhận Cung cấp
+                </button>
+              )}
+              <button
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700"
+              >
+                Xoá
+              </button>
+            </>
           )}
       </div>
+      {isDeleteModalOpen && (
+        <ConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          onConfirm={() => {
+            onDelete(form.id);
+            setIsDeleteModalOpen(false);
+          }}
+          title="Xác nhận xoá phiếu yêu cầu"
+          message={`Bạn có chắc chắn muốn xoá phiếu yêu cầu này không? ID: ${form.id}. Hành động này không thể hoàn tác.`}
+        />
+      )}
     </div>
   );
 };

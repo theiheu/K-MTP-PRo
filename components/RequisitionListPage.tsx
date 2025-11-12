@@ -4,7 +4,9 @@ import RequisitionCard from "./RequisitionCard";
 import FulfillRequisitionModal from "./FulfillRequisitionModal";
 import ImageGalleryModal from "./ImageGalleryModal";
 import Pagination from "./Pagination";
+import EditRequisitionPage from './EditRequisitionPage';
 import Cart from "./Cart";
+import SearchBar from "./SearchBar";
 
 interface RequisitionListPageProps {
   forms: RequisitionForm[];
@@ -18,6 +20,8 @@ interface RequisitionListPageProps {
   onCartRemove: (variantId: number) => void;
   onCartUpdateItem: (variantId: number, quantity: number) => void;
   onCreateRequisition: () => void;
+  onUpdateRequisition: (form: RequisitionForm) => void;
+  onDeleteRequisition: (formId: string) => void;
 }
 
 type StatusFilter = "Tất cả" | "Đang chờ xử lý" | "Đã hoàn thành";
@@ -34,6 +38,8 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   onCartRemove,
   onCartUpdateItem,
   onCreateRequisition,
+  onUpdateRequisition,
+  onDeleteRequisition,
 }) => {
   const [formToFulfill, setFormToFulfill] = useState<RequisitionForm | null>(
     null
@@ -44,20 +50,40 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   const [dateFilterOption, setDateFilterOption] =
     useState<DateFilterOption>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [editingRequisition, setEditingRequisition] = useState<RequisitionForm | null>(null);
+
+  const handleEdit = (form: RequisitionForm) => {
+    setEditingRequisition(form);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRequisition(null);
+  };
+
+  const handleUpdateRequisition = (updatedForm: RequisitionForm) => {
+    onUpdateRequisition(updatedForm);
+    setEditingRequisition(null);
+  };
 
   useEffect(() => {
+    if (dateFilterOption === "custom") return;
+
     const toYyyyMmDd = (d: Date) => d.toISOString().split("T")[0];
     const today = new Date();
+
+    let newStartDate = "";
+    let newEndDate = "";
 
     switch (dateFilterOption) {
       case "today": {
         const todayStr = toYyyyMmDd(today);
-        setStartDate(todayStr);
-        setEndDate(todayStr);
+        newStartDate = todayStr;
+        newEndDate = todayStr;
         break;
       }
       case "thisWeek": {
@@ -66,8 +92,8 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
         );
         const lastDay = new Date(firstDay);
         lastDay.setDate(lastDay.getDate() + 6);
-        setStartDate(toYyyyMmDd(firstDay));
-        setEndDate(toYyyyMmDd(lastDay));
+        newStartDate = toYyyyMmDd(firstDay);
+        newEndDate = toYyyyMmDd(lastDay);
         break;
       }
       case "thisMonth": {
@@ -81,22 +107,22 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
           today.getMonth() + 1,
           0
         );
-        setStartDate(toYyyyMmDd(firstDayOfMonth));
-        setEndDate(toYyyyMmDd(lastDayOfMonth));
+        newStartDate = toYyyyMmDd(firstDayOfMonth);
+        newEndDate = toYyyyMmDd(lastDayOfMonth);
         break;
       }
       case "all":
-        setStartDate("");
-        setEndDate("");
-        break;
-      case "custom":
         break;
     }
+
+    setStartDate(newStartDate);
+    setEndDate(newEndDate);
+
   }, [dateFilterOption]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, startDate, endDate, dateFilterOption]);
+  }, [statusFilter, startDate, endDate, dateFilterOption, searchTerm]);
 
   const handleInitiateFulfillment = (form: RequisitionForm) => {
     setFormToFulfill(form);
@@ -124,10 +150,12 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
       : forms.filter((form) => form.requesterName === currentUser.name);
 
   const finalFilteredForms = userFilteredForms.filter((form) => {
+    // Status filter
     if (statusFilter !== "Tất cả" && form.status !== statusFilter) {
       return false;
     }
 
+    // Date filter
     if (startDate || endDate) {
       const formDate = new Date(form.createdAt);
       if (startDate) {
@@ -139,6 +167,18 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
         if (formDate > end) return false;
+      }
+    }
+
+    // Search term filter
+    if (searchTerm) {
+      const lowercasedTerm = searchTerm.toLowerCase();
+      const matches =
+        form.id.toLowerCase().includes(lowercasedTerm) ||
+        form.requesterName.toLowerCase().includes(lowercasedTerm) ||
+        form.purpose.toLowerCase().includes(lowercasedTerm);
+      if (!matches) {
+        return false;
       }
     }
 
@@ -197,6 +237,18 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
     );
   };
 
+  if (editingRequisition) {
+    return (
+      <EditRequisitionPage
+        user={currentUser}
+        requisition={editingRequisition}
+        allProducts={allProducts}
+        onSubmit={handleUpdateRequisition}
+        onCancel={handleCancelEdit}
+      />
+    );
+  }
+
   return (
     <div>
       <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-6">
@@ -216,6 +268,9 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
       )}
 
       <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+        <div className="mb-4">
+          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Tìm theo ID, người yêu cầu, mục đích..." />
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
           <div className="lg:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -309,6 +364,8 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
                 onInitiateFulfillment={handleInitiateFulfillment}
                 userRole={currentUser.role}
                 onImageClick={handleOpenGallery}
+                onEdit={handleEdit}
+                onDelete={onDeleteRequisition}
               />
             ))}
             <div className="mt-8">

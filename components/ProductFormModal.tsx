@@ -155,7 +155,7 @@ const ComponentEditor: React.FC<{
                                     return (
                                         <div key={index} className="p-3 rounded-md bg-gray-50 border border-gray-200">
                                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-start">
-                                                <div className="sm:col-span-2">
+                                                <div className="sm:col-span-6">
                                                     <label className="block text-xs text-gray-600 mb-1">Biến thể</label>
                                                     <select
                                                         value={comp.variantId}
@@ -820,7 +820,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                 )}
 
                 <div className="mt-6 grid grid-cols-1 gap-y-6 sm:grid-cols-6 sm:gap-x-6">
-                    <div className="sm:col-span-4">
+                    <div className="sm:col-span-6">
                         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                             Tên vật tư <span className="text-red-500">*</span>
                         </label>

@@ -7,6 +7,7 @@ interface ProductCardProps {
   product: Product;
   allProducts: Product[];
   onAddToCart: (product: Product, variant: Variant, quantity: number) => void;
+  onImageClick: (images: string[], startIndex: number) => void;
 }
 
 const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -58,6 +59,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
   product,
   allProducts,
   onAddToCart,
+  onImageClick,
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -248,6 +250,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={() => onImageClick(imagesToShow, currentImageIndex)}
       >
         <div
           className="flex h-full will-change-transform"

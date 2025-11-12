@@ -165,6 +165,24 @@ export const productsService = {
 
     if (error) throw error;
   },
+
+  async delete(formId: string): Promise<void> {
+    // First, delete associated items to be safe, in case cascading delete isn't set up.
+    const { error: itemsError } = await supabase
+      .from('requisition_items')
+      .delete()
+      .eq('requisition_id', formId);
+
+    if (itemsError) throw itemsError;
+
+    // Then, delete the form itself
+    const { error: formError } = await supabase
+      .from('requisition_forms')
+      .delete()
+      .eq('id', formId);
+
+    if (formError) throw formError;
+  },
 };
 
 // =====================================================
@@ -383,6 +401,46 @@ export const requisitionsService = {
       createdAt: newForm.created_at,
       items: form.items,
     };
+  },
+
+  async update(form: RequisitionForm): Promise<void> {
+    // 1. Update the main form details, including the creation date
+    const { error: formError } = await supabase
+      .from('requisition_forms')
+      .update({
+        requester_name: form.requesterName,
+        zone: form.zone,
+        purpose: form.purpose,
+        status: form.status,
+        created_at: form.createdAt, // Allow admin to change creation date
+      })
+      .eq('id', form.id);
+
+    if (formError) throw formError;
+
+    // 2. Delete all old items to prevent conflicts
+    const { error: deleteError } = await supabase
+      .from('requisition_items')
+      .delete()
+      .eq('requisition_id', form.id);
+
+    if (deleteError) throw deleteError;
+
+    // 3. Insert the new list of items
+    if (form.items.length > 0) {
+      const itemsToInsert = form.items.map((item) => ({
+        requisition_id: form.id,
+        product_id: item.product.id.toString(),
+        variant_id: item.variant.id.toString(),
+        quantity: item.quantity,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('requisition_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+    }
   },
 
   async fulfill(

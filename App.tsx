@@ -30,8 +30,10 @@ import {
   DeliveryNote,
 } from "./types";
 import { PRODUCTS, DEFAULT_CATEGORIES } from "./constants";
+import { categoryIcons } from "./assets/icons/categories";
 import { calculateVariantStock } from "./utils/stockCalculator";
 import { cloneProductList } from "./utils/productUtils";
+import ImageGalleryModal from "./components/ImageGalleryModal";
 
 const RequisitionListPage = lazy(
   () => import("./components/RequisitionListPage")
@@ -87,10 +89,20 @@ const App: React.FC = () => {
       const parsed = savedCategories
         ? JSON.parse(savedCategories)
         : DEFAULT_CATEGORIES;
-      return parsed.filter((c: Category) => c.name !== "Tất cả");
+
+      const updatedCategories = parsed
+        .filter((c: Category) => c.name !== "Tất cả")
+        .map((c: Category) => ({
+          ...c,
+          icon: categoryIcons[c.name] || c.icon, // Use imported icon
+        }));
+
+      return updatedCategories;
     } catch (error) {
       console.error("Không thể tải danh mục từ localStorage", error);
-      return DEFAULT_CATEGORIES.filter((c) => c.name !== "Tất cả");
+      return DEFAULT_CATEGORIES
+        .filter((c) => c.name !== "Tất cả")
+        .map((c) => ({ ...c, icon: categoryIcons[c.name] || c.icon }));
     }
   });
 
@@ -166,6 +178,10 @@ const App: React.FC = () => {
       return [];
     }
   });
+
+    const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
   const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>(() => {
     try {
@@ -322,6 +338,12 @@ const App: React.FC = () => {
     () => cart.reduce((total, item) => total + item.quantity, 0),
     [cart]
   );
+
+  const handleOpenGallery = useCallback((images: string[], startIndex: number) => {
+    setGalleryImages(images);
+    setGalleryStartIndex(startIndex);
+    setIsGalleryOpen(true);
+  }, []);
 
   const showDesktopNav = useMemo(
     () =>
@@ -776,6 +798,20 @@ const App: React.FC = () => {
     [handleFulfillRequisition, masterProductList]
   );
 
+  const handleUpdateRequisition = useCallback((updatedForm: RequisitionForm) => {
+    setRequisitionForms(prevForms =>
+      prevForms.map(form =>
+        form.id === updatedForm.id ? updatedForm : form
+      )
+    );
+    toast.success('Phiếu yêu cầu đã được cập nhật thành công!');
+  }, []);
+
+  const handleDeleteRequisition = useCallback((formId: string) => {
+    setRequisitionForms(prevForms => prevForms.filter(form => form.id !== formId));
+    toast.success('Phiếu yêu cầu đã được xoá thành công!');
+  }, []);
+
   const handleAddProduct = useCallback(
     (productData: Omit<Product, "id">) =>
       setMasterProductList((prev) => [
@@ -1045,6 +1081,7 @@ const App: React.FC = () => {
     handleConfirmReceipt,
     deliveryNotes,
     deliveryHandlers,
+    handleUpdateRequisition,
   ];
 
   const content = useMemo(() => {
@@ -1071,6 +1108,7 @@ const App: React.FC = () => {
                 onAddToCart={addToCart}
                 totalProducts={filteredAndSortedProducts.length}
                 allProducts={masterProductList}
+                onImageClick={handleOpenGallery}
               />
               {totalPages > 1 && (
                 <div className="mt-8">
@@ -1096,6 +1134,8 @@ const App: React.FC = () => {
               onCartRemove={removeFromCart}
               onCartUpdateItem={updateCartItem}
               onCreateRequisition={handleNavigateToCreateRequisition}
+              onUpdateRequisition={handleUpdateRequisition}
+              onDeleteRequisition={handleDeleteRequisition}
             />
           </main>
         );
@@ -1248,6 +1288,13 @@ const App: React.FC = () => {
         onNavigate={handleNavigate}
         currentView={currentView}
         user={currentUser}
+      />
+
+      <ImageGalleryModal
+        isOpen={isGalleryOpen}
+        onClose={() => setIsGalleryOpen(false)}
+        images={galleryImages}
+        startIndex={galleryStartIndex}
       />
     </div>
   );

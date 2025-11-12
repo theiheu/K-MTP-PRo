@@ -13,6 +13,7 @@ interface CartItemProps {
     oldVariantId?: number
   ) => void;
   onImageClick?: (images: string[], startIndex: number) => void;
+  onReplace?: (variantId: number) => void;
 }
 
 const CartItem: React.FC<CartItemProps> = ({
@@ -21,16 +22,20 @@ const CartItem: React.FC<CartItemProps> = ({
   onRemove,
   onUpdateItem,
   onImageClick,
+  onReplace,
 }) => {
   const [inputValue, setInputValue] = useState<number | "">(item.quantity);
+  const [selectedOptions, setSelectedOptions] = useState<{ [key: string]: string; }>(item.variant.attributes);
 
   useEffect(() => {
     // Sync local state if the parent's state changes
     if (item.quantity !== inputValue) {
       setInputValue(item.quantity);
     }
+    // Also sync selected options if the variant changes from parent
+    setSelectedOptions(item.variant.attributes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item.quantity]);
+  }, [item.quantity, item.variant]);
 
   const calculatedStock = useMemo(() => {
     return calculateVariantStock(item.variant, allProducts);
@@ -80,12 +85,19 @@ const CartItem: React.FC<CartItemProps> = ({
     }
   };
 
-  const handleVariantChange = (variant: Variant) => {
-    if (variant.id === item.variant.id) {
-      return;
-    }
+  const handleOptionSelect = (optionName: string, value: string) => {
+    const newOptions = { ...selectedOptions, [optionName]: value };
 
-    onUpdateItem(variant.id, item.quantity, item.variant.id);
+    const newVariant = item.product.variants.find(variant =>
+      item.product.options.every(optName =>
+        variant.attributes[optName] === newOptions[optName]
+      )
+    );
+
+    if (newVariant && newVariant.id !== item.variant.id) {
+      setSelectedOptions(newOptions);
+      onUpdateItem(newVariant.id, item.quantity, item.variant.id);
+    }
   };
 
   const variantAttributes = Object.entries(item.variant.attributes)
@@ -130,29 +142,40 @@ const CartItem: React.FC<CartItemProps> = ({
             <div className="flex justify-between text-base font-medium text-gray-900">
               <h3>{item.product.name}</h3>
             </div>
-            {item.product.variants.length > 1 && (
-              <div className="mt-1 space-y-2">
-                <div className="text-sm text-gray-500">Biến thể:</div>
-                <div className="flex flex-wrap gap-2">
-                  {item.product.variants.map((variant) => (
-                    <button
-                      key={variant.id}
-                      onClick={() => handleVariantChange(variant)}
-                      className={`px-3 py-1 text-sm rounded-full border transition-colors ${
-                        calculateVariantStock(variant, allProducts) === 0
-                          ? "border-red-300 bg-red-50 text-red-500 cursor-not-allowed"
-                          : variant.id === item.variant.id
-                          ? "border-yellow-600 bg-yellow-50 text-yellow-600"
-                          : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                      }`}
-                      disabled={
-                        calculateVariantStock(variant, allProducts) === 0
-                      }
-                    >
-                      {Object.values(variant.attributes).join(" / ")}
-                    </button>
-                  ))}
-                </div>
+            {item.product.options.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {item.product.options.map((optionName) => {
+                  const availableValues = [
+                    ...new Set(
+                      item.product.variants
+                        .map((v) => v.attributes[optionName])
+                        .filter(Boolean)
+                    ),
+                  ] as string[];
+                  return (
+                    <div key={optionName}>
+                      <h4 className="text-xs font-medium text-gray-600">
+                        {optionName}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        {availableValues.map((value) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => handleOptionSelect(optionName, value)}
+                            className={`px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
+                              selectedOptions[optionName] === value
+                                ? "bg-yellow-500 text-white border-transparent"
+                                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
             <div className="mt-1 text-sm flex items-center gap-2">
@@ -227,7 +250,16 @@ const CartItem: React.FC<CartItemProps> = ({
               </div>
             </div>
 
-            <div className="flex">
+            <div className="flex items-center gap-4">
+              {onReplace && (
+                <button
+                  type="button"
+                  onClick={() => onReplace(item.variant.id)}
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
+                  Thay thế
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => onRemove(item.variant.id)}
