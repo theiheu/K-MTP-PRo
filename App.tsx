@@ -184,7 +184,7 @@ const App: React.FC = () => {
     try {
       await createRequisition(details, cart);
       useCartStore.getState().clearCart();
-      toast.success('Đã tạo phiếu yêu cầu thành công!');
+      toast.success(details.isCompleted ? 'Đã tạo và hoàn thành phiếu yêu cầu!' : 'Đã tạo phiếu yêu cầu thành công!');
       navigate('/requisitions');
     } catch (e: any) {
       alert(e.message || 'Lỗi');
@@ -374,6 +374,7 @@ const App: React.FC = () => {
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <CreateRequisitionPage zones={zones}
                 user={user}
+                users={users}
                 allProducts={products}
                 cartItems={cart}
                 onSubmit={handleCreateRequisition}

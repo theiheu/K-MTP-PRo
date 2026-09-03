@@ -8,10 +8,12 @@ interface CreateRequisitionPageProps {
   cartItems: CartItemType[];
   allProducts: Product[];
   zones: { id: string, name: string }[];
+  users: User[];
   onSubmit: (details: {
     requesterName: string;
     zone: string;
     purpose: string;
+    isCompleted?: boolean;
   }) => void;
   onCancel: () => void;
   onUpdateItem: (variantId: string, quantity: number) => void;
@@ -20,6 +22,7 @@ interface CreateRequisitionPageProps {
 
 const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({ zones,
   user,
+  users,
   cartItems,
   allProducts,
   onSubmit,
@@ -31,6 +34,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({ zones,
   const [zone, setZone] = useState(user.zone || (zones && zones.length > 0 ? zones[0].name : ""));
   const [purpose, setPurpose] = useState("");
   const [itemToRemove, setItemToRemove] = useState<CartItemType | null>(null);
+  const [isCompleted, setIsCompleted] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +54,7 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({ zones,
       setError("Không thể tạo phiếu yêu cầu trống");
       return;
     }
-    onSubmit({ requesterName, zone, purpose });
+    onSubmit({ requesterName, zone, purpose, isCompleted });
   };
 
   const handleRequestRemove = (variantId: string) => {
@@ -125,24 +129,53 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({ zones,
               >
                 Tên người yêu cầu
               </label>
-              <div className="mt-2">
-                <input
-                  type="text"
-                  name="requesterName"
-                  id="requesterName"
-                  value={requesterName}
-                  onChange={
-                    isManager
-                      ? (e) => setRequesterName(e.target.value)
-                      : undefined
-                  }
-                  readOnly={!isManager}
-                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6 ${
-                    !isManager ? "bg-gray-100 cursor-not-allowed" : ""
-                  }`}
-                  placeholder={isManager ? "Nhập tên người yêu cầu" : ""}
-                  required
-                />
+              <div className="mt-2 space-y-2">
+                {!isManager ? (
+                  <input
+                    type="text"
+                    value={user.name}
+                    readOnly
+                    className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 sm:text-sm sm:leading-6 bg-gray-100 cursor-not-allowed"
+                  />
+                ) : (
+                  <>
+                    <select
+                      value={users.some(u => u.name === requesterName) ? requesterName : 'OTHER'}
+                      onChange={(e) => {
+                        if (e.target.value !== 'OTHER') {
+                          setRequesterName(e.target.value);
+                          // Auto update zone based on user if found
+                          const selectedUser = users.find(u => u.name === e.target.value);
+                          if (selectedUser?.zone) {
+                            setZone(selectedUser.zone);
+                          }
+                        } else {
+                          setRequesterName(''); // Clear for manual input
+                        }
+                      }}
+                      className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6"
+                    >
+                      <option value="" disabled>Chọn người yêu cầu...</option>
+                      {users.map((u) => (
+                        <option key={u.id} value={u.name}>
+                          {u.name} {u.zone ? `(${u.zone})` : ''}
+                        </option>
+                      ))}
+                      <option value="OTHER">-- Nhập tên khác... --</option>
+                    </select>
+
+                    {(!users.some(u => u.name === requesterName) || requesterName === '') && (
+                      <input
+                        type="text"
+                        value={requesterName}
+                        onChange={(e) => setRequesterName(e.target.value)}
+                        placeholder="Nhập tên người yêu cầu"
+                        required
+                        className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6 mt-2"
+                      />
+                    )}
+                  </>
+                )}
               </div>
             </div>
             <div>
@@ -188,6 +221,21 @@ const CreateRequisitionPage: React.FC<CreateRequisitionPageProps> = ({ zones,
                 ></textarea>
               </div>
             </div>
+            {isManager && (
+              <div className="flex items-center">
+                <input
+                  id="isCompleted"
+                  name="isCompleted"
+                  type="checkbox"
+                  checked={isCompleted}
+                  onChange={(e) => setIsCompleted(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-600"
+                />
+                <label htmlFor="isCompleted" className="ml-2 block text-sm text-gray-900 font-medium">
+                  Hoàn thành phiếu ngay (Đã xuất và giao hàng)
+                </label>
+              </div>
+            )}
             <div className="border-t pt-6 space-y-3">
               <button
                 type="submit"

@@ -504,6 +504,12 @@ export const requisitionsService = {
         zone: form.zone,
         purpose: form.purpose,
         status: form.status,
+        fulfilled_by: form.fulfilledBy,
+        fulfilled_at: form.fulfilledAt,
+        fulfillment_notes: form.fulfillmentNotes,
+        received_by: form.receivedBy,
+        received_at: form.receivedAt,
+        receive_notes: form.receiveNotes,
       })
       .select()
       .single();
@@ -531,6 +537,12 @@ export const requisitionsService = {
       purpose: newForm.purpose,
       status: newForm.status,
       createdAt: newForm.created_at,
+      fulfilledBy: newForm.fulfilled_by,
+      fulfilledAt: newForm.fulfilled_at,
+      fulfillmentNotes: newForm.fulfillment_notes,
+      receivedBy: newForm.received_by,
+      receivedAt: newForm.received_at,
+      receiveNotes: newForm.receive_notes,
       items: form.items,
     };
   },

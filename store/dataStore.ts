@@ -284,15 +284,90 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   // --- Requisitions ---
-  createRequisition: async (details, cart) => {
+  createRequisition: async (details: any, cart: any[]) => {
     set({ isActionLoading: true });
     try {
-      const newForm = await requisitionsService.create({
-        ...details,
-        items: cart,
-        status: "Đang chờ xử lý"
-      });
-      set(s => ({ requisitions: [newForm, ...s.requisitions] }));
+      if (details.isCompleted) {
+        // Validate stock
+        const state = get();
+        const workingProducts = cloneProductList(state.products);
+        let stockSufficient = true;
+        const stockErrors: string[] = [];
+        
+        for (const item of cart) {
+          const currentStock = calculateVariantStock(item.variant, workingProducts);
+          if (currentStock < item.quantity) {
+            const variantName = Object.values(item.variant.attributes || {}).join(" / ") || "";
+            stockErrors.push(`- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`);
+            stockSufficient = false;
+          }
+        }
+        
+        if (!stockSufficient) {
+          throw new Error("Không thể tạo phiếu hoàn thành:\n" + stockErrors.join("\n"));
+        }
+
+        // Direct complete creation
+        const { useAuthStore } = await import('./authStore');
+        const currentUser = useAuthStore.getState().user;
+        const managerName = currentUser?.name || 'Quản trị viên';
+        const now = new Date().toISOString();
+
+        const newForm = await requisitionsService.create({
+          ...details,
+          items: cart,
+          status: "Đã hoàn thành",
+          fulfilledBy: managerName,
+          fulfilledAt: now,
+          fulfillmentNotes: 'Cấp phát trực tiếp',
+          receivedBy: details.requesterName,
+          receivedAt: now,
+          receiveNotes: 'Đã nhận đủ'
+        });
+
+        // Deduct stock
+        for (const item of cart) {
+          const pIndex = workingProducts.findIndex((p: any) => p.id === item.product.id);
+          if (pIndex === -1) continue;
+          const isComposite = item.variant.components && item.variant.components.length > 0;
+          
+          const deductVariant = async (vId: string, quantityToDeduct: number, pIdx: number, vIdx: number) => {
+            const batches = await productsService.getBatchesForVariant(vId);
+            let remainingToDeduct = quantityToDeduct;
+            for (const batch of batches) {
+              if (remainingToDeduct <= 0) break;
+              const deductAmount = Math.min(batch.stock, remainingToDeduct);
+              await productsService.updateBatchStock(batch.id, batch.stock - deductAmount);
+              remainingToDeduct -= deductAmount;
+            }
+            const newStock = workingProducts[pIdx].variants[vIdx].stock - quantityToDeduct;
+            workingProducts[pIdx].variants[vIdx].stock = newStock;
+          };
+
+          if (isComposite) {
+            for (const component of item.variant.components!) {
+              const cvIndex = workingProducts[pIndex].variants.findIndex((v: any) => v.id === component.variantId);
+              if (cvIndex !== -1) {
+                await deductVariant(component.variantId, item.quantity * component.quantity, pIndex, cvIndex);
+              }
+            }
+          } else {
+            const vIndex = workingProducts[pIndex].variants.findIndex((v: any) => v.id === item.variant.id);
+            if (vIndex !== -1) {
+              await deductVariant(item.variant.id, item.quantity, pIndex, vIndex);
+            }
+          }
+        }
+
+        set(s => ({ products: workingProducts, requisitions: [newForm, ...s.requisitions] }));
+      } else {
+        const newForm = await requisitionsService.create({
+          ...details,
+          items: cart,
+          status: "Đang chờ xử lý"
+        });
+        set(s => ({ requisitions: [newForm, ...s.requisitions] }));
+      }
     } finally { set({ isActionLoading: false }); }
   },
 
