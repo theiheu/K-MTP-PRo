@@ -34,6 +34,7 @@ const InventoryAuditSection: React.FC = () => {
   const [listStatusFilter, setListStatusFilter] = useState("Tất cả");
   const [listStartDate, setListStartDate] = useState("");
   const [listEndDate, setListEndDate] = useState("");
+  const [showListFilters, setShowListFilters] = useState(false);
   const LIST_ITEMS_PER_PAGE = 10;
 
   // Reset pagination when search or filters change
@@ -662,16 +663,34 @@ const InventoryAuditSection: React.FC = () => {
 
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
         <div className="flex flex-col lg:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Tìm kiếm</label>
-            <input
-              type="text"
-              placeholder="Tên đợt, người tạo..."
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-              value={listSearchTerm}
-              onChange={(e) => setListSearchTerm(e.target.value)}
-            />
+          <div className="flex gap-2 w-full lg:flex-1">
+            <div className="flex-1 min-w-0">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Tìm kiếm</label>
+              <input
+                type="text"
+                placeholder="Tên đợt, người tạo..."
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                value={listSearchTerm}
+                onChange={(e) => setListSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="lg:hidden flex items-end">
+                <button
+                    onClick={() => setShowListFilters(true)}
+                    className={`flex-shrink-0 px-3 py-2 border rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors h-[38px] ${
+                        showListFilters || listStatusFilter !== 'Tất cả' || listStartDate || listEndDate
+                            ? 'bg-amber-50 border-amber-200 text-amber-700'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Lọc {(listStatusFilter !== 'Tất cả' || listStartDate || listEndDate) && <span className="flex h-2 w-2 rounded-full bg-red-500 ml-0.5"></span>}
+                </button>
+            </div>
           </div>
+          <div className="hidden lg:flex lg:flex-row gap-4">
           <div className="w-full lg:w-48">
             <label className="block text-sm font-semibold text-gray-700 mb-1">Trạng thái</label>
             <select
@@ -703,8 +722,83 @@ const InventoryAuditSection: React.FC = () => {
               min={listStartDate || undefined}
             />
           </div>
+          </div>
         </div>
       </div>
+
+      {/* Mobile Filter Bottom Sheet */}
+      {showListFilters && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center lg:hidden">
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowListFilters(false)}></div>
+            <div className="bg-white w-full max-w-md rounded-t-3xl p-6 shadow-2xl relative z-10 animate-slide-up">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">Lọc danh sách</h3>
+                    <button onClick={() => setShowListFilters(false)} className="text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                
+                <div className="space-y-6 overflow-y-auto max-h-[70vh] pb-4">
+                    <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
+                        <select
+                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors"
+                            value={listStatusFilter}
+                            onChange={(e) => setListStatusFilter(e.target.value)}
+                        >
+                            <option value="Tất cả">Tất cả</option>
+                            <option value="Đang kiểm kê">Đang kiểm kê</option>
+                            <option value="Đã hoàn thành">Đã hoàn thành</option>
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Từ ngày</label>
+                            <input
+                                type="date"
+                                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors"
+                                value={listStartDate}
+                                onChange={(e) => setListStartDate(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Đến ngày</label>
+                            <input
+                                type="date"
+                                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors"
+                                value={listEndDate}
+                                onChange={(e) => setListEndDate(e.target.value)}
+                                min={listStartDate || undefined}
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="pt-4 flex gap-3">
+                        <button
+                            onClick={() => { 
+                                setListStatusFilter("Tất cả");
+                                setListStartDate("");
+                                setListEndDate("");
+                            }}
+                            className="flex-1 py-3 px-4 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                        >
+                            Xóa lọc
+                        </button>
+                        <button
+                            onClick={() => setShowListFilters(false)}
+                            className="flex-1 py-3 px-4 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 transition-colors shadow-sm"
+                        >
+                            Áp dụng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
+      
       {isCreating && (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
