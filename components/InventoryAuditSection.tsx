@@ -421,45 +421,45 @@ const InventoryAuditSection: React.FC = () => {
                 return (
                   <tr 
                     key={item.id} 
-                    className={`${!isAudited ? 'bg-amber-50/30' : ''} cursor-pointer hover:bg-gray-50 transition-colors`}
+                    className="hover:bg-gray-50/50 transition-colors border-b border-gray-50"
                     onClick={() => {
                       if (selectedAudit.status === 'Đang kiểm kê') {
                         openEditModal(item);
                       }
                     }}
                   >
-                    <td className="px-4 py-3 text-sm text-gray-900 font-medium min-w-[250px]">
+                    <td className="px-4 py-3 text-sm min-w-[250px]">
                       <div className="flex items-center gap-3">
                         <div className="flex-shrink-0 h-10 w-10">
-                           <ImageWithPlaceholder src={imageUrl || ''} alt={item.productName || 'Product'} className="w-full h-full object-cover rounded-md shadow-sm" />
+                           <ImageWithPlaceholder src={imageUrl || ''} alt={item.productName || 'Product'} className="w-full h-full object-cover rounded border border-gray-100" />
                         </div>
                         <div className="flex flex-col whitespace-normal">
-                          <span>{item.productName}</span>
+                          <span className="text-gray-800 font-semibold">{item.productName}</span>
                           <span className="text-gray-500 font-normal text-xs mt-0.5">
-                            {item.variantAttributes && Object.keys(item.variantAttributes).length > 0 
-                              ? Object.entries(item.variantAttributes).map(([k, v]) => `${k}: ${v}`).join(', ') 
-                              : 'Mặc định'}
+                            Mã SP: {variant?.sku || item.variantId.substring(0,6)}
                           </span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-500">{item.systemQuantity}</td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-4 py-3 text-sm text-center text-gray-500">{item.systemQuantity}</td>
+                    <td className="px-4 py-3 text-sm text-center">
                       {selectedAudit.status === 'Đang kiểm kê' ? (
-                        <input 
-                          type="number"
-                          className={`w-24 text-right border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 sm:text-sm ${!isAudited ? 'bg-yellow-50 border-yellow-300' : ''}`}
-                          defaultValue={isAudited ? item.actualQuantity! : ''}
-                          placeholder={item.systemQuantity.toString()}
-                          onClick={(e) => e.stopPropagation()}
-                          onBlur={(e) => handleUpdateItem(item.id, e.target.value, item.reason || '')}
-                        />
+                        <div className="flex justify-center">
+                            <input 
+                              type="number"
+                              className="w-24 text-center border-0 rounded-md py-1.5 focus:ring-1 focus:ring-amber-400 sm:text-sm font-medium bg-yellow-50 text-gray-800 transition-colors"
+                              defaultValue={isAudited ? item.actualQuantity! : ''}
+                              placeholder={item.systemQuantity.toString()}
+                              onClick={(e) => e.stopPropagation()}
+                              onBlur={(e) => handleUpdateItem(item.id, e.target.value, item.reason || '')}
+                            />
+                        </div>
                       ) : (
                         <span>{isAudited ? item.actualQuantity : '-'}</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-left">
-                      <span className={diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-gray-400'}>
+                    <td className="px-4 py-3 text-sm text-center">
+                      <span className={diff > 0 ? 'text-green-600 font-medium' : diff < 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>
                         {diff > 0 ? `+${diff}` : diff}
                       </span>
                     </td>
@@ -467,14 +467,14 @@ const InventoryAuditSection: React.FC = () => {
                       {selectedAudit.status === 'Đang kiểm kê' ? (
                         <input 
                           type="text"
-                          className="w-full border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 sm:text-sm"
+                          className="w-full border-0 bg-gray-50 text-gray-600 placeholder:text-gray-300 rounded-md py-1.5 focus:ring-1 focus:ring-gray-200 sm:text-sm focus:bg-white transition-colors"
                           defaultValue={item.reason || ''}
                           placeholder="Lý do chênh lệch..."
                           onClick={(e) => e.stopPropagation()}
                           onBlur={(e) => handleUpdateItem(item.id, isAudited ? item.actualQuantity!.toString() : '', e.target.value)}
                         />
                       ) : (
-                        <span>{item.reason}</span>
+                        <span className="text-gray-500">{item.reason}</span>
                       )}
                     </td>
                   </tr>
