@@ -58,8 +58,8 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
         </td>
         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{new Date(req.createdAt).toLocaleDateString('vi-VN')}</td>
         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{req.fulfilledBy || '-'}</td>
-        <td className="px-4 py-3 whitespace-nowrap text-center">
-          <div className="flex items-center justify-center gap-2">
+        <td className="px-4 py-3 whitespace-nowrap text-right">
+          <div className="flex items-center justify-end gap-2">
             {currentUser.role === 'manager' && req.status === 'Đang chờ xử lý' && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleInitiateFulfillment(req); }}
@@ -76,7 +76,7 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                 Nhận
               </button>
             )}
-            {(currentUser.role === 'manager' || currentUser.name === req.requesterName) && req.status === 'Đang chờ xử lý' && (
+            {(currentUser.role === 'manager' || (currentUser.name === req.requesterName && req.status === 'Đang chờ xử lý')) && (
               <>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleEdit(req); }}
@@ -545,7 +545,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
                     <SortableHeader label="Trạng thái" sortKey="status" currentSort={sortConfig} onRequestSort={requestSort} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
                     <SortableHeader label="Ngày tạo" sortKey="createdAt" currentSort={sortConfig} onRequestSort={requestSort} />
                     <SortableHeader label="Người duyệt" sortKey="receivedBy" currentSort={sortConfig} onRequestSort={requestSort} />
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
