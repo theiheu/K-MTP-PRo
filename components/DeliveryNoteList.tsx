@@ -12,7 +12,6 @@ import { format } from "date-fns";
 import { useSortableData } from '../hooks/useSortableData';
 import SortableHeader from './SortableHeader';
 import Pagination from "./Pagination";
-import SearchBar from "./SearchBar";
 
 interface DeliveryNoteListProps {
   deliveryNotes: DeliveryNote[];
@@ -424,90 +423,48 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-4 bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-200">
-            <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:items-center">
-                <div className="flex gap-2 w-full lg:flex-1">
-                    <div className="flex-1 min-w-0">
-                        <SearchBar
-                            searchTerm={searchTerm}
-                            onSearchChange={setSearchTerm}
-                            placeholder="Tìm theo mã phiếu, người giao..."
-                        />
-                    </div>
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        className={`lg:hidden flex-shrink-0 px-3 py-2 border rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors ${
-                            showFilters || statusFilter !== 'all' || dateRange.start !== new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0] || dateRange.end !== new Date().toISOString().split("T")[0]
-                                ? 'bg-amber-50 border-amber-200 text-amber-700'
-                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                        </svg>
-                        Lọc {(statusFilter !== 'all' || dateRange.start !== new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0] || dateRange.end !== new Date().toISOString().split("T")[0]) && <span className="flex h-2 w-2 rounded-full bg-red-500 ml-0.5"></span>}
-                    </button>
+        <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+                <div className="flex-1">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Tìm kiếm</label>
+                    <input
+                        type="text"
+                        placeholder="Tìm theo mã phiếu, người giao..."
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
-
-                {/* Desktop Inline Filters */}
-                <div className="hidden lg:flex lg:flex-row gap-4 items-center">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-800 whitespace-nowrap">Trạng thái:</span>
-                        <div className="flex items-center gap-2">
-                            {[
-                                { value: "all", label: "Tất cả" },
-                                { value: "pending", label: "Chờ kiểm tra" },
-                                { value: "verified", label: "Đã xác nhận" },
-                                { value: "rejected", label: "Đã từ chối" }
-                            ].map(option => (
-                                <button
-                                    key={option.value}
-                                    onClick={() => setStatusFilter(option.value as any)}
-                                    className={`flex-shrink-0 whitespace-nowrap px-3 py-1.5 text-sm font-medium rounded-full transition-colors duration-200 ${
-                                        statusFilter === option.value
-                                            ? "bg-amber-600 text-white shadow"
-                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                    }`}
-                                >
-                                    {option.label}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 border-l pl-4 border-gray-200">
-                        <span className="text-sm font-medium text-gray-800 whitespace-nowrap">Từ ngày:</span>
-                        <input
-                            type="date"
-                            value={dateRange.start}
-                            onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
-                            className="block w-40 rounded-full border-gray-300 shadow-sm px-4 py-1.5 border focus:border-amber-500 focus:ring-amber-500 sm:text-sm text-gray-700"
-                        />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-800 whitespace-nowrap">Đến ngày:</span>
-                        <input
-                            type="date"
-                            value={dateRange.end}
-                            onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
-                            className="block w-40 rounded-full border-gray-300 shadow-sm px-4 py-1.5 border focus:border-amber-500 focus:ring-amber-500 sm:text-sm text-gray-700"
-                        />
-                    </div>
-                    {(searchTerm || statusFilter !== 'all' || dateRange.start !== new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0] || dateRange.end !== new Date().toISOString().split("T")[0]) && (
-                        <button
-                            onClick={() => { 
-                                setSearchTerm(''); 
-                                setStatusFilter('all'); 
-                                setDateRange({
-                                    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0],
-                                    end: new Date().toISOString().split("T")[0],
-                                });
-                            }}
-                            className="inline-flex items-center justify-center rounded-full bg-gray-100 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-200 transition-colors"
-                        >
-                            Xóa lọc
-                        </button>
-                    )}
+                <div className="w-full lg:w-48">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Trạng thái</label>
+                    <select
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value as any)}
+                    >
+                        <option value="all">Tất cả</option>
+                        <option value="pending">Chờ kiểm tra</option>
+                        <option value="verified">Đã xác nhận</option>
+                        <option value="rejected">Đã từ chối</option>
+                    </select>
+                </div>
+                <div className="w-full lg:w-48">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Từ ngày</label>
+                    <input
+                        type="date"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-700 bg-white"
+                        value={dateRange.start}
+                        onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
+                    />
+                </div>
+                <div className="w-full lg:w-48">
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Đến ngày</label>
+                    <input
+                        type="date"
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-700 bg-white"
+                        value={dateRange.end}
+                        onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
+                    />
                 </div>
             </div>
         </div>
