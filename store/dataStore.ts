@@ -452,11 +452,28 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const receipt = get().receipts.find(r => r.id === id);
       if (!receipt) return;
-      // Revert stock locally
+      
+      const state = get();
+      let workingProducts = cloneProductList(state.products);
+
+      // Revert stock locally and remotely
       for (const item of receipt.items) {
-        await get().updateProductStock(item.productId, item.variantId, -item.quantity);
+        const pIndex = workingProducts.findIndex(p => p.id === item.productId);
+        if (pIndex !== -1) {
+          const vIndex = workingProducts[pIndex].variants.findIndex(v => v.id === item.variantId);
+          if (vIndex !== -1) {
+            workingProducts[pIndex].variants[vIndex].stock -= item.quantity;
+            await productsService.createOrUpdateBatch(item.variantId, -item.quantity, item.batchCode, item.expiryDate);
+          }
+        }
       }
-      set(s => ({ receipts: s.receipts.filter(r => r.id !== id) }));
+      
+      await receiptsService.delete(id);
+      
+      set(s => ({ 
+        products: workingProducts,
+        receipts: s.receipts.filter(r => r.id !== id) 
+      }));
       toast.success('Đã xoá phiếu nhập kho');
     } catch (error: any) {
       toast.error('Lỗi khi xoá phiếu nhập kho: ' + error.message);
@@ -464,7 +481,52 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   updateReceipt: async (id, updates) => {
-    toast.error('Tính năng sửa phiếu nhập kho đang được phát triển');
+    set({ isActionLoading: true });
+    try {
+      const existing = get().receipts.find(r => r.id === id);
+      if (!existing) return;
+      
+      let workingProducts = cloneProductList(get().products);
+      
+      // If items changed, revert old and apply new
+      if (updates.items && JSON.stringify(updates.items) !== JSON.stringify(existing.items)) {
+        // Revert old
+        for (const item of existing.items) {
+          const pIndex = workingProducts.findIndex(p => p.id === item.productId);
+          if (pIndex !== -1) {
+            const vIndex = workingProducts[pIndex].variants.findIndex(v => v.id === item.variantId);
+            if (vIndex !== -1) {
+              workingProducts[pIndex].variants[vIndex].stock -= item.quantity;
+              await productsService.createOrUpdateBatch(item.variantId, -item.quantity, item.batchCode, item.expiryDate);
+            }
+          }
+        }
+        
+        // Apply new
+        for (const item of updates.items) {
+          const pIndex = workingProducts.findIndex(p => p.id === item.productId);
+          if (pIndex !== -1) {
+            const vIndex = workingProducts[pIndex].variants.findIndex(v => v.id === item.variantId);
+            if (vIndex !== -1) {
+              workingProducts[pIndex].variants[vIndex].stock += item.quantity;
+              await productsService.createOrUpdateBatch(item.variantId, item.quantity, item.batchCode, item.expiryDate);
+            }
+          }
+        }
+      }
+      
+      await receiptsService.update(id, updates);
+      
+      set(s => ({ 
+        products: workingProducts,
+        receipts: s.receipts.map(r => r.id === id ? { ...r, ...updates } : r) 
+      }));
+      toast.success('Đã cập nhật phiếu nhập kho');
+    } catch (error: any) {
+      toast.error('Lỗi khi cập nhật phiếu nhập kho: ' + error.message);
+    } finally {
+      set({ isActionLoading: false });
+    }
   },
 
   // --- Deliveries ---

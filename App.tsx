@@ -26,7 +26,7 @@ const CreateReceiptPage = lazy(() => import('./components/CreateReceiptPage'));
 const ReceiptList = lazy(() => import('./components/ReceiptList'));
 const DeliveryNoteList = lazy(() => import('./components/DeliveryNoteList'));
 const CreateDeliveryNote = lazy(() => import('./components/CreateDeliveryNote'));
-
+const EditReceiptModal = lazy(() => import('./components/EditReceiptModal'));
 const PRODUCTS_PER_PAGE = 12;
 
 type ViewKey = 'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt' | 'deliveries' | 'create-delivery';
@@ -58,6 +58,7 @@ const App: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('Tất cả');
+  const [editingReceipt, setEditingReceipt] = useState<any>(null);
   const [productCurrentPage, setProductCurrentPage] = useState(1);
   const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('products');
   
@@ -242,8 +243,8 @@ const App: React.FC = () => {
   }, [deleteReceipt]);
 
   const handleEditReceipt = useCallback(async (receipt: any) => {
-    await updateReceipt(receipt.id, {}); // Shows alert for now
-  }, [updateReceipt]);
+    setEditingReceipt(receipt);
+  }, []);
 
   const handleCreateDeliveryNoteWrapper = useCallback(async (items: any, receiptId: string, shipperId: string) => {
     try {
@@ -460,6 +461,15 @@ const App: React.FC = () => {
         <BottomNav onNavigate={handleNavigate} currentView={currentView} user={user} />
       </div>
       <ImageGalleryModal isOpen={isGalleryOpen} onClose={() => setIsGalleryOpen(false)} images={galleryImages} startIndex={galleryStartIndex} />
+      {editingReceipt && (
+        <EditReceiptModal
+          receipt={editingReceipt}
+          products={products}
+          isOpen={true}
+          onClose={() => setEditingReceipt(null)}
+          onSave={updateReceipt}
+        />
+      )}
 
       {isCartOpen && (
         <div className="relative z-50">
