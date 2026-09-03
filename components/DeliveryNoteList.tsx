@@ -360,7 +360,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col min-h-[calc(100vh-12rem)] space-y-6">
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:space-x-4">
@@ -858,7 +858,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
               </tbody>
             </table>
           </div>
-          <div className="mt-4">
+          <div className="mt-auto pt-4 pb-4">
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}

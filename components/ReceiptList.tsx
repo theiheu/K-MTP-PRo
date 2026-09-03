@@ -205,7 +205,7 @@ const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, products, onNavigat
     );
 
     return (
-        <div>
+        <div className="flex flex-col min-h-[calc(100vh-12rem)]">
             <div className="mb-4">
                 <h2 className="text-2xl font-semibold text-gray-800">Lịch sử Nhập Kho</h2>
             </div>
@@ -379,7 +379,7 @@ const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, products, onNavigat
                         </tbody>
                       </table>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-auto pt-4 pb-4">
                         <Pagination 
                             currentPage={currentPage} 
                             totalPages={totalPages} 

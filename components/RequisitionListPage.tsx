@@ -364,7 +364,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   }
 
   return (
-    <div>
+    <div className="flex flex-col min-h-[calc(100vh-12rem)]">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
           Phiếu Yêu Cầu
@@ -564,7 +564,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
                 </tbody>
               </table>
             </div>
-            <div className="mt-8">
+            <div className="mt-auto pt-8 pb-4">
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}

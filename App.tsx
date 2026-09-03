@@ -319,7 +319,7 @@ const App: React.FC = () => {
               </div>
               
               <CategoryNav categories={allCategoriesForNav} activeCategory={category} onSelectCategory={setCategory} />
-              <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col min-h-[calc(100vh-24rem)]">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Danh sách vật tư</h2>
                 <ProductList
                   products={paginatedProducts}
@@ -329,7 +329,7 @@ const App: React.FC = () => {
                   onImageClick={handleOpenGallery}
                 />
                 {totalPages > 1 && (
-                  <div className="mt-8">
+                  <div className="mt-auto pt-8 pb-4">
                     <Pagination currentPage={productCurrentPage} totalPages={totalPages} onPageChange={setProductCurrentPage} />
                   </div>
                 )}
