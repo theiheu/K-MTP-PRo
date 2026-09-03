@@ -104,8 +104,8 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 text-xs text-gray-500">
                     <tr>
-                      <th className="px-4 py-2 font-medium">STT</th>
-                      <th className="px-4 py-2 font-medium text-center">Hình ảnh</th>
+                      <th className="px-4 py-2 font-medium text-center w-12">STT</th>
+                      <th className="px-4 py-2 font-medium text-center w-20">Hình ảnh</th>
                       <th className="px-4 py-2 font-medium">Tên vật tư</th>
                       <th className="px-4 py-2 font-medium">Phân loại</th>
                       <th className="px-4 py-2 font-medium text-right">Số lượng</th>
@@ -120,7 +120,7 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                       const stock = variant?.stock || 0;
                       return (
                         <tr key={idx}>
-                          <td className="px-4 py-2 text-xs text-gray-400">{idx + 1}</td>
+                          <td className="px-4 py-2 text-xs text-gray-400 text-center">{idx + 1}</td>
                           <td className="px-4 py-2 text-center">
                             {product?.images && product.images.length > 0 ? (
                               <img
