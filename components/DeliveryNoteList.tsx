@@ -603,7 +603,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
           <p className="text-gray-500">Không tìm thấy phiếu giao hàng nào</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 flex flex-col flex-1">
           <div className="overflow-x-auto bg-white rounded-lg shadow ring-1 ring-black ring-opacity-5">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">

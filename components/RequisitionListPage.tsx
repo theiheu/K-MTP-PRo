@@ -530,7 +530,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-6 flex flex-col flex-1">
         {sortedForms.length > 0 ? (
           <>
             <div className="overflow-x-auto bg-white rounded-lg shadow ring-1 ring-black ring-opacity-5">
