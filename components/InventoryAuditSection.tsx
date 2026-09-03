@@ -31,7 +31,7 @@ const InventoryAuditSection: React.FC = () => {
 
   const [listCurrentPage, setListCurrentPage] = useState(1);
   const [listSearchTerm, setListSearchTerm] = useState("");
-  const [listStatusFilter, setListStatusFilter] = useState("T?t c?");
+  const [listStatusFilter, setListStatusFilter] = useState("Tất cả");
   const [listStartDate, setListStartDate] = useState("");
   const [listEndDate, setListEndDate] = useState("");
   const LIST_ITEMS_PER_PAGE = 10;
@@ -636,7 +636,7 @@ const InventoryAuditSection: React.FC = () => {
     return inventoryAudits.filter(audit => {
       const matchesSearch = audit.title.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
                             audit.createdBy.toLowerCase().includes(listSearchTerm.toLowerCase());
-      const matchesStatus = listStatusFilter === "T?t c?" || audit.status === listStatusFilter;
+      const matchesStatus = listStatusFilter === "Tất cả" || audit.status === listStatusFilter;
       const matchesStart = listStartDate ? new Date(audit.createdAt) >= new Date(listStartDate) : true;
       const matchesEnd = listEndDate ? new Date(audit.createdAt) <= new Date(listEndDate + "T23:59:59") : true;
       return matchesSearch && matchesStatus && matchesStart && matchesEnd;
@@ -659,6 +659,52 @@ const InventoryAuditSection: React.FC = () => {
         </button>
       </div>
 
+
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
+        <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Tìm kiếm</label>
+            <input
+              type="text"
+              placeholder="Tên đợt, người tạo..."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+              value={listSearchTerm}
+              onChange={(e) => setListSearchTerm(e.target.value)}
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Trạng thái</label>
+            <select
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 bg-white"
+              value={listStatusFilter}
+              onChange={(e) => setListStatusFilter(e.target.value)}
+            >
+              <option value="Tất cả">Tất cả</option>
+              <option value="�ang ki?m k�">Đang kiểm kê</option>
+              <option value="�� ho�n th�nh">Đã hoàn thành</option>
+            </select>
+          </div>
+          <div className="w-full lg:w-48">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Từ ngày</label>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-600"
+              value={listStartDate}
+              onChange={(e) => setListStartDate(e.target.value)}
+            />
+          </div>
+          <div className="w-full lg:w-48">
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Đến ngày</label>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-600"
+              value={listEndDate}
+              onChange={(e) => setListEndDate(e.target.value)}
+              min={listStartDate || undefined}
+            />
+          </div>
+        </div>
+      </div>
       {isCreating && (
         <form onSubmit={handleCreate} className="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
           <h3 className="text-lg font-medium mb-4">Tạo Phiếu Kiểm Kê Mới</h3>
