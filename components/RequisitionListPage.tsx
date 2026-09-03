@@ -59,7 +59,7 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{new Date(req.createdAt).toLocaleDateString('vi-VN')}</td>
         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{req.fulfilledBy || '-'}</td>
         <td className="px-4 py-3 whitespace-nowrap text-right">
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex items-center justify-end gap-2 w-full">
             {currentUser.role === 'manager' && req.status === 'Đang chờ xử lý' && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleInitiateFulfillment(req); }}
@@ -364,7 +364,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-12rem)]">
+    <div className="flex flex-col flex-1">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
           Phiếu Yêu Cầu

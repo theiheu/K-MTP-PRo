@@ -92,7 +92,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-12rem)] bg-white shadow rounded-lg p-6">
+    <div className="flex flex-col flex-1 bg-white shadow rounded-lg p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <h2 className="text-lg font-medium text-gray-900">Quản lý Tài khoản</h2>

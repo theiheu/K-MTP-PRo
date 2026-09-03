@@ -629,7 +629,7 @@ const InventoryAuditSection: React.FC = () => {
   const paginatedAudits = inventoryAudits.slice((listCurrentPage - 1) * LIST_ITEMS_PER_PAGE, listCurrentPage * LIST_ITEMS_PER_PAGE);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-12rem)] bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
+    <div className="flex flex-col flex-1 bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <h2 className="text-xl font-bold text-gray-900">Danh sách Phiếu Kiểm kê</h2>
         <button 

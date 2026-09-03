@@ -205,7 +205,7 @@ const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, products, onNavigat
     );
 
     return (
-        <div className="flex flex-col min-h-[calc(100vh-12rem)]">
+        <div className="flex flex-col flex-1">
             <div className="mb-4">
                 <h2 className="text-2xl font-semibold text-gray-800">Lịch sử Nhập Kho</h2>
             </div>

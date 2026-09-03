@@ -270,7 +270,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-16 sm:pb-0">
+    <div className="min-h-screen bg-gray-50 pb-16 sm:pb-0 flex flex-col">
       <Toaster containerStyle={{ top: 80, right: 20 }} />
       
       {isActionLoading && (
@@ -338,7 +338,7 @@ const App: React.FC = () => {
           } />
           
           <Route path="/requisitions" element={
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <RequisitionListPage
                 forms={requisitions}
                 zones={zones}
@@ -357,7 +357,7 @@ const App: React.FC = () => {
           } />
           
           <Route path="/receipts" element={
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <ReceiptList 
                 receipts={receipts} 
                 products={products} 
@@ -370,7 +370,7 @@ const App: React.FC = () => {
           } />
           
           <Route path="/requisitions/create" element={
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <CreateRequisitionPage zones={zones}
                 user={user}
                 allProducts={products}
@@ -385,7 +385,7 @@ const App: React.FC = () => {
           
           <Route path="/admin" element={
             !["manager", "auditor"].includes(user?.role || "") ? <Navigate to="/" replace /> :
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <AdminPage
                 products={products}
                 categories={categories}
@@ -412,7 +412,7 @@ const App: React.FC = () => {
           
           <Route path="/receipts/create" element={
             user?.role !== "manager" ? <Navigate to="/" replace /> :
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <CreateReceiptPage
                 user={user}
                 products={products}
@@ -426,7 +426,7 @@ const App: React.FC = () => {
           
           <Route path="/deliveries" element={
             !["manager", "auditor"].includes(user?.role || "") ? <Navigate to="/" replace /> :
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <DeliveryNoteList 
                 deliveryNotes={deliveries} 
                 products={products} 
@@ -442,7 +442,7 @@ const App: React.FC = () => {
           
           <Route path="/deliveries/create" element={
             user?.role !== "manager" ? <Navigate to="/" replace /> :
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <CreateDeliveryNote
                 user={user}
                 products={products}
