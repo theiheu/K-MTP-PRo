@@ -706,30 +706,50 @@ const InventoryAuditSection: React.FC = () => {
         </div>
       </div>
       {isCreating && (
-        <form onSubmit={handleCreate} className="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <h3 className="text-lg font-medium mb-4">Tạo Phiếu Kiểm Kê Mới</h3>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Tên đợt kiểm kê</label>
-              <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="VD: Kiểm kê định kỳ tháng 9" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Lọc theo danh mục (Tùy chọn)</label>
-              <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 sm:text-sm">
-                <option value="">Tất cả danh mục</option>
-                {categories.map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Ghi chú</label>
-              <input type="text" value={notes} onChange={e => setNotes(e.target.value)} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 sm:text-sm" />
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-900 bg-opacity-50 transition-opacity" aria-hidden="true" onClick={() => setIsCreating(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full">
+              <form onSubmit={handleCreate}>
+                <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                  <div className="sm:flex sm:items-start">
+                    <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                      <h3 className="text-lg leading-6 font-medium text-gray-900 border-b pb-3 mb-4" id="modal-title">
+                        Tạo Phiếu Kiểm Kê Mới
+                      </h3>
+                      <div className="space-y-5">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Tên đợt kiểm kê <span className="text-red-500">*</span></label>
+                          <input type="text" required value={title} onChange={e => setTitle(e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="VD: Kiểm kê định kỳ tháng 9" />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Lọc theo danh mục (Tùy chọn)</label>
+                          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm">
+                            <option value="">Tất cả danh mục</option>
+                            {categories.map((c, i) => <option key={i} value={c.name}>{c.name}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Ghi chú</label>
+                          <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="Ghi chú thêm về đợt kiểm kê này..." />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200">
+                  <button type="submit" disabled={isSubmitting} className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-amber-600 text-base font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50">
+                    {isSubmitting ? "Đang tạo..." : "Tạo phiếu"}
+                  </button>
+                  <button type="button" onClick={() => setIsCreating(false)} className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Hủy
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-          <div className="mt-4 flex gap-3">
-            <button type="submit" disabled={isSubmitting} className="bg-amber-600 text-white px-4 py-2 rounded-md font-medium hover:bg-amber-700 disabled:opacity-50">Tạo phiếu</button>
-            <button type="button" onClick={() => setIsCreating(false)} className="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-md font-medium hover:bg-gray-50">Hủy</button>
-          </div>
-        </form>
+        </div>
       )}
 
       <div className="overflow-x-auto border border-gray-200 sm:rounded-lg">
