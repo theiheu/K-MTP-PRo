@@ -251,6 +251,21 @@ const InventoryAuditSection: React.FC = () => {
   const totalPages = Math.ceil(sortedAuditItems.length / ITEMS_PER_PAGE) || 1;
   const paginatedItems = sortedAuditItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
+  const filteredAudits = useMemo(() => {
+    return inventoryAudits.filter(audit => {
+      const matchesSearch = audit.title.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
+                            audit.createdBy.toLowerCase().includes(listSearchTerm.toLowerCase());
+      const matchesStatus = listStatusFilter === "Tất cả" || audit.status === listStatusFilter;
+      const matchesStart = listStartDate ? new Date(audit.createdAt) >= new Date(listStartDate) : true;
+      const matchesEnd = listEndDate ? new Date(audit.createdAt) <= new Date(listEndDate + "T23:59:59") : true;
+      return matchesSearch && matchesStatus && matchesStart && matchesEnd;
+    });
+  }, [inventoryAudits, listSearchTerm, listStatusFilter, listStartDate, listEndDate]);
+
+  const { items: sortedAudits, requestSort: requestListSort, sortConfig: listSortConfig } = useSortableData(filteredAudits, { key: "createdAt", direction: "desc" });
+  const totalListPages = Math.ceil(sortedAudits.length / LIST_ITEMS_PER_PAGE) || 1;
+  const paginatedAudits = sortedAudits.slice((listCurrentPage - 1) * LIST_ITEMS_PER_PAGE, listCurrentPage * LIST_ITEMS_PER_PAGE);
+
   if (selectedAudit) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
@@ -633,20 +648,7 @@ const InventoryAuditSection: React.FC = () => {
     );
   }
 
-  const filteredAudits = useMemo(() => {
-    return inventoryAudits.filter(audit => {
-      const matchesSearch = audit.title.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
-                            audit.createdBy.toLowerCase().includes(listSearchTerm.toLowerCase());
-      const matchesStatus = listStatusFilter === "Tất cả" || audit.status === listStatusFilter;
-      const matchesStart = listStartDate ? new Date(audit.createdAt) >= new Date(listStartDate) : true;
-      const matchesEnd = listEndDate ? new Date(audit.createdAt) <= new Date(listEndDate + "T23:59:59") : true;
-      return matchesSearch && matchesStatus && matchesStart && matchesEnd;
-    });
-  }, [inventoryAudits, listSearchTerm, listStatusFilter, listStartDate, listEndDate]);
 
-  const { items: sortedAudits, requestSort: requestListSort, sortConfig: listSortConfig } = useSortableData(filteredAudits, { key: "createdAt", direction: "desc" });
-  const totalListPages = Math.ceil(sortedAudits.length / LIST_ITEMS_PER_PAGE) || 1;
-  const paginatedAudits = sortedAudits.slice((listCurrentPage - 1) * LIST_ITEMS_PER_PAGE, listCurrentPage * LIST_ITEMS_PER_PAGE);
 
   return (
     <div className="flex flex-col flex-1 bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
