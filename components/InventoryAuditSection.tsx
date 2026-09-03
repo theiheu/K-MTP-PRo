@@ -386,11 +386,11 @@ const InventoryAuditSection: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <SortableHeader label="S?n ph?m" sortKey="productName" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
-                <SortableHeader label="T?n h? th?ng" sortKey="systemQuantity" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
-                <SortableHeader label="T?n th?c t?" sortKey="actualQuantity" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ch�nh l?ch</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ghi ch� (L� do)</th>
+                <SortableHeader label="Sản phẩm" sortKey="productName" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <SortableHeader label="Tồn hệ thống" sortKey="systemQuantity" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <SortableHeader label="Tồn thực tế" sortKey="actualQuantity" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chênh lệch</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ghi chú (Lý do)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -690,11 +690,11 @@ const InventoryAuditSection: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <SortableHeader label="T�n d?t" sortKey="title" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
-              <SortableHeader label="Ng�y t?o" sortKey="createdAt" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
-              <SortableHeader label="Tr?ng th�i" sortKey="status" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
-              <SortableHeader label="Ngu?i t?o" sortKey="createdBy" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
-              <th className="relative px-6 py-3"><span className="sr-only">H�nh d?ng</span></th>
+              <SortableHeader label="Tên đợt" sortKey="title" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <SortableHeader label="Ngày tạo" sortKey="createdAt" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <SortableHeader label="Trạng thái" sortKey="status" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <SortableHeader label="Người tạo" sortKey="createdBy" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <th className="relative px-6 py-3"><span className="sr-only">Hành động</span></th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
