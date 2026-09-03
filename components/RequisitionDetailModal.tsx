@@ -9,7 +9,7 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const statusStyles = {
-  'Đang chờ xử lý': 'bg-yellow-100 text-yellow-800',
+  'Đang chờ xử lý': 'bg-amber-100 text-amber-800',
   'Đã hoàn thành': 'bg-green-100 text-green-800',
 };
 

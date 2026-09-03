@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { Product, Variant } from "../types";
+import { Product, Variant, CartItem } from "../types";
 import ImageWithPlaceholder from "./ImageWithPlaceholder";
+import PrintableQRCode from "./PrintableQRCode";
+import StockLedgerModal from "./StockLedgerModal";
 import { calculateVariantStock } from "../utils/stockCalculator";
 
 interface ProductCardProps {
@@ -8,6 +10,7 @@ interface ProductCardProps {
   allProducts: Product[];
   onAddToCart: (product: Product, variant: Variant, quantity: number) => void;
   onImageClick: (images: string[], startIndex: number) => void;
+  disableSwipe?: boolean;
 }
 
 const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -60,10 +63,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
   allProducts,
   onAddToCart,
   onImageClick,
+  disableSwipe = false,
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isPrintingQR, setIsPrintingQR] = useState(false);
+  const [isLedgerOpen, setIsLedgerOpen] = useState(false);
+
   const [selectedOptions, setSelectedOptions] = useState<{
     [key: string]: string;
   }>({});
@@ -213,22 +220,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (imagesToShow.length <= 1) return;
+    if (disableSwipe || imagesToShow.length <= 1) return;
     setIsDragging(true);
     touchStartX.current = e.targetTouches[0].clientX;
     setDragOffset(0);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || imagesToShow.length <= 1) return;
-    e.preventDefault();
+    if (disableSwipe || !isDragging || imagesToShow.length <= 1) return;
     const currentX = e.targetTouches[0].clientX;
     const deltaX = currentX - touchStartX.current;
+    
+    if (Math.abs(deltaX) > 10) {
+      e.stopPropagation();
+    }
+    
     setDragOffset(deltaX);
   };
 
   const handleTouchEnd = () => {
-    if (!isDragging || imagesToShow.length <= 1) return;
+    if (disableSwipe || !isDragging || imagesToShow.length <= 1) return;
     const swipeThreshold = imageContainerRef.current
       ? imageContainerRef.current.offsetWidth / 4
       : 50;
@@ -244,6 +255,40 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <div className="group relative flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-lg transition-shadow duration-300">
+      {currentVariant && (
+        <div className="absolute top-2 right-2 z-20 flex flex-col gap-2">
+          <button
+            onClick={() => setIsLedgerOpen(true)}
+            className="bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-700 p-1.5 rounded-full shadow-sm transition-all focus:outline-none"
+            title="Xem Thẻ kho (Lịch sử giao dịch)"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+            </svg>
+          </button>
+          <button
+            onClick={() => {
+              setIsPrintingQR(true);
+              setTimeout(() => {
+                window.print();
+                setIsPrintingQR(false);
+              }, 100);
+            }}
+            className="bg-white bg-opacity-80 hover:bg-opacity-100 text-gray-700 p-1.5 rounded-full shadow-sm transition-all focus:outline-none"
+            title="In tem QR Code"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {isPrintingQR && currentVariant && (
+        <PrintableQRCode product={product} variant={currentVariant} />
+      )}
+
       <div
         ref={imageContainerRef}
         className="relative aspect-[4/3] bg-gray-200 overflow-hidden cursor-grab active:cursor-grabbing"
@@ -342,7 +387,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                         onClick={() => handleOptionSelect(optionName, value)}
                         className={`px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
                           selectedOptions[optionName] === value
-                            ? "bg-yellow-500 text-white border-transparent"
+                            ? "bg-amber-500 text-white border-transparent"
                             : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                         }`}
                       >
@@ -360,8 +405,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         <div className="mt-4 pt-4 border-t border-gray-100 space-y-3">
           <div className="flex justify-between items-center">
-            <p className="text-sm font-medium text-gray-700">
-              Tồn kho:{" "}
+            <div className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <span>Tồn kho:</span>
               <span
                 className={`font-bold ${
                   calculatedStock > 0 ? "text-gray-900" : "text-red-600"
@@ -369,7 +414,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
               >
                 {calculatedStock.toLocaleString("vi-VN")} {currentVariant?.unit}
               </span>
-            </p>
+              {calculatedStock === 0 ? (
+                <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
+                  Hết hàng
+                </span>
+              ) : calculatedStock <= 10 ? (
+                <span className="inline-flex items-center rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700 ring-1 ring-inset ring-orange-600/10">
+                  Sắp hết
+                </span>
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                  Còn hàng
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center border border-gray-300 rounded-md">
@@ -406,7 +464,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <button
               onClick={handleAddToCartClick}
               disabled={!currentVariant || calculatedStock === 0}
-              className="flex-1 flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="flex-1 flex items-center justify-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               <PlusIcon className="w-5 h-5 mr-1" />
               Yêu cầu
@@ -414,8 +472,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         </div>
       </div>
+      
+      {currentVariant && (
+        <StockLedgerModal
+          isOpen={isLedgerOpen}
+          onClose={() => setIsLedgerOpen(false)}
+          product={product}
+          variant={currentVariant}
+        />
+      )}
     </div>
   );
 };
 
 export default React.memo(ProductCard);
+

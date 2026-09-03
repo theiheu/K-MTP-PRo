@@ -7,11 +7,11 @@ import ImageGalleryModal from "./ImageGalleryModal";
 interface CartProps {
   cartItems: CartItemType[];
   allProducts: Product[];
-  onRemove: (variantId: number) => void;
+  onRemove: (variantId: string) => void;
   onUpdateItem: (
-    variantId: number,
+    variantId: string,
     quantity: number,
-    oldVariantId?: number
+    oldVariantId?: string
   ) => void;
   onCreateRequisition: () => void;
 }
@@ -28,7 +28,7 @@ const Cart: React.FC<CartProps> = ({
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
-  const handleRequestRemove = (variantId: number) => {
+  const handleRequestRemove = (variantId: string) => {
     const item = cartItems.find((i) => i.variant.id === variantId);
     if (item) {
       setItemToRemove(item);
@@ -50,14 +50,8 @@ const Cart: React.FC<CartProps> = ({
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-4 py-6 sm:px-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-lg font-medium text-gray-900">
-              Phiếu Yêu Cầu Tạm Thời
-            </h2>
-          </div>
-
+      <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="py-2">
           <div className="flow-root">
             {cartItems.length > 0 ? (
               <ul role="list" className="-my-6 divide-y divide-gray-200">
@@ -83,7 +77,7 @@ const Cart: React.FC<CartProps> = ({
             <div className="mt-8">
               <button
                 onClick={onCreateRequisition}
-                className="w-full flex items-center justify-center rounded-md border border-transparent bg-yellow-500 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-yellow-600"
+                className="w-full flex items-center justify-center rounded-md border border-transparent bg-amber-500 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-amber-600"
               >
                 Tạo Phiếu Yêu cầu
               </button>
@@ -113,3 +107,4 @@ const Cart: React.FC<CartProps> = ({
 };
 
 export default Cart;
+

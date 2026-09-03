@@ -125,7 +125,7 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({ product, on
                 onClick={() => handleOptionSelect(optionName, value)}
                 className={`flex items-center justify-center rounded-md border py-2 px-3 text-sm font-medium uppercase focus:outline-none sm:flex-1 transition-colors ${
                   selectedOptions[optionName] === value 
-                  ? 'bg-yellow-500 text-white border-transparent shadow-sm' 
+                  ? 'bg-amber-500 text-white border-transparent shadow-sm' 
                   : 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50'
                 }`}
               >
@@ -142,10 +142,10 @@ const VariantSelectorModal: React.FC<VariantSelectorModalProps> = ({ product, on
     <div className="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
       <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
       <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-        <div className="flex min-h-full items-end justify-center p-0 text-center sm:items-center sm:p-4">
+        <div className="flex min-h-full items-center justify-center p-0 text-center sm:p-4">
           <div className="relative transform overflow-hidden rounded-t-lg sm:rounded-lg bg-white text-left shadow-xl transition-all w-full sm:my-8 sm:w-full sm:max-w-lg">
             <div className="absolute top-0 right-0 pt-4 pr-4 z-10">
-                <button type="button" className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2" onClick={onClose}>
+                <button type="button" className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2" onClick={onClose}>
                     <span className="sr-only">Đóng</span>
                     <XMarkIcon className="h-6 w-6" />
                 </button>
@@ -220,7 +220,7 @@ currentImageIndex === index ? 'bg-white' : 'bg-white/50'}`} />
                     type="button"
                     onClick={handleAddToCart}
                     disabled={!currentVariant || currentVariant.stock === 0}
-                    className="mt-6 flex w-full items-center justify-center rounded-md border border-transparent bg-yellow-500 py-3 px-8 text-base font-medium text-white hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    className="mt-6 flex w-full items-center justify-center rounded-md border border-transparent bg-amber-500 py-3 px-8 text-base font-medium text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                     {currentVariant?.stock === 0 ? 'Hết hàng' : 'Thêm vào Phiếu yêu cầu'}
                 </button>

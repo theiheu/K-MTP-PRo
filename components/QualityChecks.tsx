@@ -63,7 +63,7 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({
               type="radio"
               checked={item.condition === "partial"}
               onChange={() => handleConditionChange("partial")}
-              className="mr-2 text-yellow-600"
+              className="mr-2 text-amber-600"
             />
             <span className="text-sm">Một phần</span>
           </label>
@@ -83,7 +83,7 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({
                 type="checkbox"
                 checked={item.replacementNeeded}
                 onChange={(e) => handleReplacementChange(e.target.checked)}
-                className="mr-2 rounded text-yellow-600"
+                className="mr-2 rounded text-amber-600"
               />
               Yêu cầu thay thế
             </label>
@@ -101,7 +101,7 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({
                   onChange={(e) =>
                     handleChecklistChange(index, e.target.checked)
                   }
-                  className="mr-2 rounded text-yellow-600"
+                  className="mr-2 rounded text-amber-600"
                 />
                 <span className="text-sm">{check}</span>
               </label>
@@ -124,3 +124,4 @@ export const QualityChecks: React.FC<QualityChecksProps> = ({
     </div>
   );
 };
+

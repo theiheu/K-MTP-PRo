@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { RequisitionForm, UserRole } from '../types';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import ConfirmationModal from './ConfirmationModal';
+import { printPhieuXuatKho } from '../utils/printUtils';
 
 interface RequisitionCardProps {
   form: RequisitionForm;
@@ -10,6 +11,7 @@ interface RequisitionCardProps {
   onImageClick: (images: string[], startIndex: number) => void;
   onEdit: (form: RequisitionForm) => void;
   onDelete: (formId: string) => void;
+  onConfirmReceipt?: (formId: string) => void;
 }
 
 const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -19,11 +21,12 @@ const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const statusStyles = {
-  'Đang chờ xử lý': 'bg-yellow-100 text-yellow-800',
+  'Đang chờ xử lý': 'bg-amber-100 text-amber-800',
   'Đã hoàn thành': 'bg-green-100 text-green-800',
+  'Đã nhận hàng': 'bg-blue-100 text-blue-800',
 };
 
-const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfillment, userRole, onImageClick, onEdit, onDelete }) => {
+const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfillment, userRole, onImageClick, onEdit, onDelete, onConfirmReceipt }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -38,7 +41,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
       <div className="p-4 sm:p-6 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-yellow-600 truncate" title={form.id}>{form.id}</p>
+            <p className="text-sm font-medium text-amber-600 truncate" title={form.id}>Phiếu YC #{form.id.substring(0, 8).toUpperCase()}</p>
             <p className="text-xl font-semibold text-gray-900 mt-1">Khu vực: {form.zone}</p>
           </div>
           <div className="flex flex-row-reverse justify-between items-center sm:flex-col sm:items-end sm:justify-start gap-2 mt-2 sm:mt-0 flex-shrink-0">
@@ -124,6 +127,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
                   </div>
                   <div className="text-right flex-shrink-0">
                       <p className="font-medium text-gray-900">SL: {item.quantity} {item.variant.unit}</p>
+                      <p className={`text-sm mt-1 font-medium ${stock < item.quantity ? 'text-red-600' : 'text-green-600'}`}>Tồn kho: {stock}</p>
                   </div>
                 </li>
               );
@@ -133,6 +137,13 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
       )}
 
       <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
+          <button
+            onClick={() => printPhieuXuatKho(form)}
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            title="In Phiếu ra file PDF hoặc Máy in"
+          >
+            🖨️ In Phiếu
+          </button>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
@@ -163,6 +174,14 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
                 Xoá
               </button>
             </>
+          )}
+          {userRole === 'requester' && form.status === 'Đã hoàn thành' && onConfirmReceipt && (
+            <button
+              onClick={() => onConfirmReceipt(form.id)}
+              className="w-full sm:w-auto inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+            >
+              Xác nhận đã nhận hàng
+            </button>
           )}
       </div>
       {isDeleteModalOpen && (

@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { GoodsReceiptNote, Product } from '../types';
+import { printPhieuNhapKho } from '../utils/printUtils';
 
 interface ReceiptCardProps {
   receipt: GoodsReceiptNote;
@@ -37,7 +38,7 @@ const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt, allProducts }) => {
       <div className="p-4 sm:p-6 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-blue-600 truncate" title={receipt.id}>{receipt.id}</p>
+            <p className="text-sm font-medium text-blue-600 truncate" title={receipt.id}>Phiếu Nhập #{receipt.id.substring(0, 8).toUpperCase()}</p>
             <p className="text-xl font-semibold text-gray-900 mt-1">
               Nhà cung cấp: <span className="font-normal">{receipt.supplier || 'Không rõ'}</span>
             </p>
@@ -80,7 +81,14 @@ const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt, allProducts }) => {
         </div>
       )}
       
-      <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex justify-end">
+      <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={() => printPhieuNhapKho(receipt, allProducts)}
+            className="w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            title="In Phiếu ra file PDF hoặc Máy in"
+          >
+            🖨️ In Phiếu
+          </button>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"

@@ -27,53 +27,53 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
         <div className="flex justify-center items-center space-x-4 h-12">
           <button
             onClick={() => onNavigate("shop")}
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               currentView === "shop"
-                ? "bg-yellow-100 text-yellow-800"
-                : "text-gray-500 hover:bg-gray-100"
+                ? "bg-amber-100 text-amber-800"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             Kho vật tư
           </button>
           <button
             onClick={() => onNavigate("requisitions")}
-            className={`px-3 py-2 rounded-md text-sm font-medium ${
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               currentView === "requisitions"
-                ? "bg-yellow-100 text-yellow-800"
-                : "text-gray-500 hover:bg-gray-100"
+                ? "bg-amber-100 text-amber-800"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             Phiếu yêu cầu
           </button>
-          {user.role === "manager" && (
+          {["manager", "auditor"].includes(user.role) && (
             <>
               <button
                 onClick={() => onNavigate("receipts")}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   ["receipts", "create-receipt"].includes(currentView)
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "text-gray-500 hover:bg-gray-100"
+                    ? "bg-amber-100 text-amber-800"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
                 Nhập Kho
               </button>
               <button
                 onClick={() => onNavigate("deliveries")}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   ["deliveries", "create-delivery"].includes(currentView)
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "text-gray-500 hover:bg-gray-100"
+                    ? "bg-amber-100 text-amber-800"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
                 Giao Hàng
               </button>
-              <div className="h-6 border-l border-gray-300"></div>
+              <div className="h-6 border-l border-gray-300 mx-2"></div>
               <button
                 onClick={() => onNavigate("admin", "products")}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                   currentView === "admin"
-                    ? "bg-yellow-100 text-yellow-800"
-                    : "text-gray-500 hover:bg-gray-100"
+                    ? "bg-amber-100 text-amber-800"
+                    : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
                 Quản lý
@@ -87,3 +87,4 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
 };
 
 export default DesktopNav;
+

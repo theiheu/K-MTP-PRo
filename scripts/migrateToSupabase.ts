@@ -49,7 +49,7 @@ export async function migrateLocalStorageToSupabase() {
     }
 
     // 2. Migrate Zones
-    console.log('[object Object]
+    console.log('📦 Migrating zones...');
     const zonesData = localStorage.getItem(STORAGE_KEYS.ZONES);
     if (zonesData) {
       const zones = JSON.parse(zonesData);

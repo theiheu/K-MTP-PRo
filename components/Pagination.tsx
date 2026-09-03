@@ -79,7 +79,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
                             aria-current={currentPage === page ? 'page' : undefined}
                             className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                                 currentPage === page
-                                ? 'z-10 bg-yellow-100 text-yellow-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600'
+                                ? 'z-10 bg-amber-100 text-amber-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600'
                                 : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
                             } rounded-md`}
                         >
@@ -105,3 +105,4 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
 };
 
 export default Pagination;
+

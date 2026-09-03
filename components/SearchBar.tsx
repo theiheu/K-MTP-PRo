@@ -32,14 +32,14 @@ const SearchBar: React.FC<SearchBarProps> = ({ searchTerm, onSearchChange, place
     <div className="w-full">
       <label htmlFor="search" className="sr-only">Tìm kiếm</label>
       <div className="relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-5">
           <SearchIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
         </div>
         <input
           type="search"
           name="search"
           id="search"
-          className="block w-full rounded-md border-0 py-3 pl-10 pr-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-500 sm:text-sm sm:leading-6"
+          className="block w-full rounded-full border-0 py-3.5 pl-12 pr-4 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-amber-500 sm:text-sm sm:leading-6 shadow-sm transition-shadow hover:shadow-md"
           placeholder={placeholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}

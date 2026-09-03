@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "CHOKIDAR_USEPOLLING=1 CHOKIDAR_INTERVAL=100 bunx vite",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
@@ -15,11 +15,22 @@
     "heic2any": "^0.0.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "react-is": "^19.2.8",
+    "react-router-dom": "^7.18.3",
+    "recharts": "^3.10.1",
+    "web-vitals": "^6.2.1",
+    "xlsx": "^0.18.5",
+    "xlsx-js-style": "^1.2.0",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
     "@vitejs/plugin-react": "^5.0.0",
+    "baseline-browser-mapping": "^2.11.20",
+    "dotenv": "^17.4.2",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

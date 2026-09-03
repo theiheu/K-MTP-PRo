@@ -27,18 +27,20 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, o
                     key={category.name}
                     onClick={() => onSelectCategory(category.name)}
                     aria-pressed={activeCategory === category.name}
-                    className={`flex flex-col items-center justify-center p-2 rounded-lg w-24 h-20 transition-colors duration-200 ease-in-out ${
+                    className={`flex flex-col items-center justify-center p-2 rounded-2xl min-w-[5rem] h-20 transition-all duration-300 ease-in-out border-2 ${
                       activeCategory === category.name
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-sm'
+                        : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   >
-                    {category.name === 'Tất cả' ? (
-                      <AllIcon className="w-6 h-6 mb-1" />
-                    ) : (
-                      <img src={category.icon} alt={category.name} className="w-6 h-6 mb-1 object-contain" />
-                    )}
-                    <span className="text-xs font-medium text-center">{category.name}</span>
+                    <div className={`p-2 rounded-xl mb-1 ${activeCategory === category.name ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                        {category.name === 'Tất cả' ? (
+                        <AllIcon className="w-5 h-5" />
+                        ) : (
+                        <img src={category.icon} alt={category.name} className="w-5 h-5 object-contain" />
+                        )}
+                    </div>
+                    <span className="text-[10px] sm:text-xs font-semibold text-center leading-tight line-clamp-2">{category.name}</span>
                   </button>
                 );
               })}

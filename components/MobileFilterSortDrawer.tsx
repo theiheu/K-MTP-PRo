@@ -61,7 +61,7 @@ const MobileFilterSortDrawer: React.FC<MobileFilterSortDrawerProps> = ({
                             <div className="mt-4 space-y-4">
                                 {categories.map(cat => (
                                     <div key={cat.name} className="flex items-center">
-                                        <input id={`filter-category-${cat.name}`} name="category" type="radio" value={cat.name} checked={selectedCategory === cat.name} onChange={(e) => onCategoryChange(e.target.value)} className="h-4 w-4 border-gray-300 text-yellow-600 focus:ring-yellow-500" />
+                                        <input id={`filter-category-${cat.name}`} name="category" type="radio" value={cat.name} checked={selectedCategory === cat.name} onChange={(e) => onCategoryChange(e.target.value)} className="h-4 w-4 border-gray-300 text-amber-600 focus:ring-amber-500" />
                                         <label htmlFor={`filter-category-${cat.name}`} className="ml-3 text-sm text-gray-600">{cat.name}</label>
                                     </div>
                                 ))}
@@ -73,7 +73,7 @@ const MobileFilterSortDrawer: React.FC<MobileFilterSortDrawerProps> = ({
                   <div className="border-t border-gray-200 px-4 py-4 sm:px-6">
                     <button 
                         onClick={handleApply}
-                        className="w-full flex items-center justify-center rounded-md border border-transparent bg-yellow-500 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-yellow-600"
+                        className="w-full flex items-center justify-center rounded-md border border-transparent bg-amber-500 px-6 py-3 text-base font-medium text-white shadow-sm hover:bg-amber-600"
                     >
                         Xem {productCount} vật tư
                     </button>

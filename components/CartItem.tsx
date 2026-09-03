@@ -6,14 +6,14 @@ import { calculateVariantStock } from "../utils/stockCalculator";
 interface CartItemProps {
   item: CartItemType;
   allProducts: Product[];
-  onRemove: (variantId: number) => void;
+  onRemove: (variantId: string) => void;
   onUpdateItem: (
-    variantId: number,
+    variantId: string,
     quantity: number,
-    oldVariantId?: number
+    oldVariantId?: string
   ) => void;
   onImageClick?: (images: string[], startIndex: number) => void;
-  onReplace?: (variantId: number) => void;
+  onReplace?: (variantId: string) => void;
 }
 
 const CartItem: React.FC<CartItemProps> = ({
@@ -137,10 +137,10 @@ const CartItem: React.FC<CartItemProps> = ({
           />
         </div>
 
-        <div className="ml-4 flex flex-1 flex-col">
+        <div className="ml-4 flex flex-1 flex-col min-w-0">
           <div>
             <div className="flex justify-between text-base font-medium text-gray-900">
-              <h3>{item.product.name}</h3>
+              <h3 className="truncate">{item.product.name}</h3>
             </div>
             {item.product.options.length > 0 && (
               <div className="mt-3 space-y-2">
@@ -165,7 +165,7 @@ const CartItem: React.FC<CartItemProps> = ({
                             onClick={() => handleOptionSelect(optionName, value)}
                             className={`px-2 py-1 text-xs font-medium rounded-md border transition-colors ${
                               selectedOptions[optionName] === value
-                                ? "bg-yellow-500 text-white border-transparent"
+                                ? "bg-amber-500 text-white border-transparent"
                                 : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                             }`}
                           >
@@ -178,7 +178,7 @@ const CartItem: React.FC<CartItemProps> = ({
                 })}
               </div>
             )}
-            <div className="mt-1 text-sm flex items-center gap-2">
+            <div className="mt-1 text-sm flex flex-wrap items-center gap-2">
               <p
                 className={
                   calculatedStock === 0
@@ -196,9 +196,9 @@ const CartItem: React.FC<CartItemProps> = ({
             </div>
 
             {isComposite && (
-              <div className="mt-2 text-xs text-gray-600 border-l-2 border-yellow-300 pl-2">
+              <div className="mt-2 text-xs text-gray-600 border-l-2 border-amber-300 pl-2">
                 <p className="font-medium">Bao gồm:</p>
-                <ul className="list-disc list-inside">
+                <ul className="list-disc list-inside break-words">
                   {item.variant.components!.map((comp) => {
                     const componentVariant = item.product.variants.find(
                       (v) => v.id === comp.variantId
@@ -216,8 +216,8 @@ const CartItem: React.FC<CartItemProps> = ({
               </div>
             )}
           </div>
-          <div className="flex flex-1 items-end justify-between text-sm">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between text-sm mt-4 gap-y-3 gap-x-4 w-full">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <div className="flex items-center border border-gray-300 rounded-md">
                 <button
                   type="button"
@@ -250,7 +250,7 @@ const CartItem: React.FC<CartItemProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 self-end sm:self-auto">
               {onReplace && (
                 <button
                   type="button"
@@ -263,7 +263,7 @@ const CartItem: React.FC<CartItemProps> = ({
               <button
                 type="button"
                 onClick={() => onRemove(item.variant.id)}
-                className="font-medium text-yellow-600 hover:text-yellow-500"
+                className="font-medium text-amber-600 hover:text-amber-500"
               >
                 Xóa
               </button>
@@ -276,3 +276,4 @@ const CartItem: React.FC<CartItemProps> = ({
 };
 
 export default CartItem;
+

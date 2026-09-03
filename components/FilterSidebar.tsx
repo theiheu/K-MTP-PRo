@@ -27,7 +27,7 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ categories, activeCategor
                         aria-pressed={activeCategory === category.name}
                         className={`w-full flex items-center p-3 rounded-lg text-sm font-medium transition-colors duration-200 ease-in-out ${
                             activeCategory === category.name
-                            ? 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-amber-100 text-amber-800'
                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                         }`}
                     >
@@ -47,3 +47,4 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({ categories, activeCategor
 };
 
 export default FilterSidebar;
+

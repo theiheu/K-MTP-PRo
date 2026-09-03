@@ -50,9 +50,10 @@ const TrashIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 interface ZoneListSectionProps {
   zones: Zone[];
-  onAddZone: (zone: Omit<Zone, "id" | "createdAt">) => void;
-  onUpdateZone: (id: string, zone: Omit<Zone, "id" | "createdAt">) => void;
-  onDeleteZone: (id: string) => boolean;
+  onAddZone: (zone: Omit<Zone, "id" | "createdAt">) => Promise<void>;
+  onUpdateZone: (id: string, zone: Omit<Zone, "id" | "createdAt">) => Promise<void>;
+  onDeleteZone: (id: string) => Promise<boolean>;
+  isReadOnly?: boolean;
 }
 
 const ZoneListSection: React.FC<ZoneListSectionProps> = ({
@@ -60,6 +61,7 @@ const ZoneListSection: React.FC<ZoneListSectionProps> = ({
   onAddZone,
   onUpdateZone,
   onDeleteZone,
+  isReadOnly,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
@@ -108,17 +110,19 @@ const ZoneListSection: React.FC<ZoneListSectionProps> = ({
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-semibold text-gray-800">
           Danh sách Khu vực
         </h2>
-        <button
-          onClick={handleOpenAddModal}
-          className="inline-flex items-center gap-2 justify-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700"
-        >
-          <PlusIcon className="w-5 h-5" />
-          Thêm Khu vực
-        </button>
+        {!isReadOnly && (
+          <button
+            onClick={handleOpenAddModal}
+            className="inline-flex items-center gap-2 justify-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700 w-full sm:w-auto"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Thêm Khu vực
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -134,20 +138,22 @@ const ZoneListSection: React.FC<ZoneListSectionProps> = ({
                   {zone.description}
                 </p>
               )}
-              <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
-                <button
-                  onClick={() => handleOpenEditModal(zone)}
-                  className="text-gray-600 hover:text-yellow-600 p-2 rounded-full hover:bg-gray-100"
-                >
-                  <PencilIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setZoneToDelete(zone)}
-                  className="text-gray-600 hover:text-red-600 p-2 rounded-full hover:bg-gray-100"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-              </div>
+              {!isReadOnly && (
+                <div className="mt-4 flex justify-end space-x-2 border-t pt-4">
+                  <button
+                    onClick={() => handleOpenEditModal(zone)}
+                    className="text-gray-600 hover:text-yellow-600 p-2 rounded-full hover:bg-gray-100"
+                  >
+                    <PencilIcon className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setZoneToDelete(zone)}
+                    className="text-gray-600 hover:text-red-600 p-2 rounded-full hover:bg-gray-100"
+                  >
+                    <TrashIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))}

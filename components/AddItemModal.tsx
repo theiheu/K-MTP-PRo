@@ -80,7 +80,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
             </div>
             <ul>
               {filteredProducts.map(product => (
-                <li key={product.id} onClick={() => handleSelectProduct(product)} className={`p-3 cursor-pointer rounded-md hover:bg-gray-100 ${selectedProduct?.id === product.id ? 'bg-yellow-100' : ''}`}>
+                <li key={product.id} onClick={() => handleSelectProduct(product)} className={`p-3 cursor-pointer rounded-md hover:bg-gray-100 ${selectedProduct?.id === product.id ? 'bg-amber-100' : ''}`}>
                   <p className="font-medium text-sm">{product.name}</p>
                   <p className="text-xs text-gray-500">{product.category}</p>
                 </li>
@@ -112,8 +112,8 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                         disabled={existingVariantIds.includes(variant.id) && variant.id !== variantToReplaceId}
                         className={`p-3 border rounded-md text-left text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                             selectedVariant?.id === variant.id
-                            ? 'border-yellow-500 bg-yellow-50 ring-2 ring-yellow-500'
-                            : 'border-gray-300 hover:border-yellow-400'
+                            ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-500'
+                            : 'border-gray-300 hover:border-amber-400'
                         }`}>
                         <p className="font-medium">{Object.values(variant.attributes).join(' / ')}</p>
                         <p className="text-xs text-gray-500 mt-1">Tồn kho: {variant.stock} {variant.unit}</p>
@@ -132,7 +132,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
                                 id="quantity"
                                 value={quantity}
                                 onChange={e => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                                className="w-24 rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+                                className="w-24 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
                                 min="1"
                             />
                             <span className="text-sm text-gray-600">{selectedVariant.unit}</span>
@@ -149,7 +149,7 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
           <button
             onClick={handleAddItem}
             disabled={!selectedVariant || quantity <= 0}
-            className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 border border-transparent rounded-md hover:bg-yellow-700 disabled:bg-gray-400"
+            className="px-4 py-2 text-sm font-medium text-white bg-amber-600 border border-transparent rounded-md hover:bg-amber-700 disabled:bg-gray-400"
           >
             Thêm vào Phiếu
           </button>
@@ -160,4 +160,5 @@ const AddItemModal: React.FC<AddItemModalProps> = ({
 };
 
 export default AddItemModal;
+
 

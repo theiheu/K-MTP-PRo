@@ -1,20 +1,31 @@
 export interface ChildComponent {
-  variantId: number;
+  variantId: string;
   quantity: number;
 }
 
-export interface Variant {
-  id: number;
-  attributes: { [key: string]: string }; // e.g., { "Màu sắc": "Đen", "Kích cỡ": "L" }
+export interface VariantBatch {
+  id: string;
+  variantId: string;
+  batchCode?: string;
+  expiryDate?: string;
   stock: number;
+  createdAt: string;
+}
+
+export interface Variant {
+  id: string;
+  attributes: { [key: string]: string }; // e.g., { "Màu sắc": "Đen", "Kích cỡ": "L" }
+  stock: number; // Computed total stock
+  batches?: VariantBatch[]; // Added for batch management
   price?: number;
   images?: string[]; // Specific images for this variant
   unit?: string;
   components?: ChildComponent[];
+  sku?: string;
 }
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   description: string;
   images: string[]; // General images, can be overridden by variant
@@ -34,7 +45,7 @@ export interface CartItem {
   quantity: number;
 }
 
-export type Status = "Đang chờ xử lý" | "Đã hoàn thành";
+export type Status = "Đang chờ xử lý" | "Đã duyệt yêu cầu" | "Đã hoàn thành" | "Đã huỷ";
 
 export interface RequisitionForm {
   id: string;
@@ -47,9 +58,12 @@ export interface RequisitionForm {
   fulfilledBy?: string;
   fulfilledAt?: string;
   fulfillmentNotes?: string;
+  receivedBy?: string;
+  receivedAt?: string;
+  receiveNotes?: string;
 }
 
-export type UserRole = "requester" | "manager";
+export type UserRole = "requester" | "manager" | "auditor";
 
 export interface Zone {
   id: string;
@@ -58,19 +72,46 @@ export interface Zone {
   createdAt: string;
 }
 
+export interface InventoryAuditItem {
+  id: string;
+  auditId: string;
+  productId: string;
+  variantId: string;
+  systemQuantity: number;
+  actualQuantity?: number;
+  reason?: string;
+  productName?: string;
+  variantAttributes?: string;
+}
+
+export interface InventoryAudit {
+  id: string;
+  title: string;
+  status: 'Đang kiểm kê' | 'Hoàn thành';
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  completedAt?: string;
+  items: InventoryAuditItem[];
+}
+
 export interface User {
   id: string;
   name: string;
   role: UserRole;
   zone?: string; // Khu vực chính của người yêu cầu
+  username?: string;
+  password?: string;
 }
 
 // --- START: Thêm mới cho Phiếu Nhập Kho ---
 export interface ReceiptItem {
-  variantId: number;
-  productId: number;
+  variantId: string;
+  productId: string;
   quantity: number;
-  // Dùng để hiển thị, không lưu vào localStorage
+  batchCode?: string; // Optional batch identifier
+  expiryDate?: string; // Optional expiry date (ISO string)
+  // Dùng để hiển thị
   productName?: string;
   variantAttributes?: { [key: string]: string };
   unit?: string;
@@ -86,7 +127,7 @@ export interface GoodsReceiptNote {
   linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
 }
 
-export type AdminTab = "products" | "categories" | "zones" | "deliveries";
+export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits";
 
 // --- START: Thêm mới cho Phiếu Giao Nhận ---
 export type DeliveryStatus = "pending" | "verified" | "rejected";
@@ -177,8 +218,8 @@ export interface DeliveryNote {
 }
 
 export interface DeliveryItem {
-  variantId: number;
-  productId: number;
+  variantId: string;
+  productId: string;
   quantity: number;
   actualQuantity?: number; // Actual quantity after verification
   qualityIssue?: boolean; // Whether there are quality issues

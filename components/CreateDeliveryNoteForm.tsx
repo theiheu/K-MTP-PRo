@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Product, DeliveryItem } from "../types";
+import Pagination from './Pagination';
 
 const PlusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg
@@ -33,6 +34,9 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
   const [selectedProduct, setSelectedProduct] = useState<number | "">("");
   const [selectedVariant, setSelectedVariant] = useState<number | "">("");
   const [quantity, setQuantity] = useState<number>(1);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const handleAddItem = () => {
     if (!selectedProduct || !selectedVariant) return;
@@ -100,7 +104,7 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
             id="deliveredBy"
             value={deliveredBy}
             onChange={(e) => setDeliveredBy(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
             required
           />
         </div>
@@ -125,7 +129,7 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
                   setSelectedProduct(Number(e.target.value) || "");
                   setSelectedVariant("");
                 }}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
               >
                 <option value="">Chọn vật tư...</option>
                 {products.map((product) => (
@@ -149,7 +153,7 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
                 onChange={(e) =>
                   setSelectedVariant(Number(e.target.value) || "")
                 }
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
                 disabled={!selectedProduct}
               >
                 <option value="">Chọn biến thể...</option>
@@ -179,14 +183,14 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
                     setQuantity(Math.max(1, parseInt(e.target.value) || 1))
                   }
                   min="1"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
                 />
               </div>
               <button
                 type="button"
                 onClick={handleAddItem}
                 disabled={!selectedProduct || !selectedVariant}
-                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 <PlusIcon className="h-5 w-5" />
               </button>
@@ -222,33 +226,49 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {items.map((item, index) => (
-                    <tr key={index}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.productName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {Object.values(item.variantAttributes || {}).join(
-                          " / "
-                        ) || "Mặc định"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {item.quantity} {item.unit}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveItem(index)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Xóa
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {(() => {
+                    const paginatedItems = items.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+                    return paginatedItems.map((item, index) => {
+                      const absoluteIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                      return (
+                        <tr key={absoluteIndex}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {item.productName}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {Object.values(item.variantAttributes || {}).join(
+                              " / "
+                            ) || "Mặc định"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {item.quantity} {item.unit}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(absoluteIndex)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Xóa
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
+            {items.length > ITEMS_PER_PAGE && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(items.length / ITEMS_PER_PAGE)}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </>
           ) : (
             <p className="text-gray-500 text-sm italic">
               Chưa có vật tư nào được thêm
@@ -268,7 +288,7 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
             placeholder="Nhập ghi chú nếu có..."
           />
         </div>
@@ -277,13 +297,13 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+            className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="px-4 py-2 text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+            className="px-4 py-2 text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
           >
             Tạo phiếu giao nhận
           </button>
@@ -294,3 +314,4 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
 };
 
 export default CreateDeliveryNoteForm;
+

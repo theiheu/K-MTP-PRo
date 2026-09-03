@@ -9,6 +9,8 @@ import type {
   DeliveryNote,
   User,
   CartItem,
+  InventoryAudit,
+  InventoryAuditItem,
 } from '../types';
 
 // =====================================================
@@ -22,7 +24,10 @@ export const productsService = {
       .select(`
         *,
         category:categories(name, icon),
-        variants(*)
+        variants(
+          *,
+          variant_batches(*)
+        )
       `)
       .order('created_at', { ascending: false });
 
@@ -30,19 +35,27 @@ export const productsService = {
 
     // Transform data to match Product interface
     return (products || []).map((p: any) => ({
-      id: parseInt(p.id, 10),
+      id: p.id,
       name: p.name,
       description: p.description || '',
       images: p.images || [],
       category: p.category?.name || '',
       options: p.options || [],
       variants: (p.variants || []).map((v: any) => ({
-        id: parseInt(v.id, 10),
+        id: v.id,
         attributes: v.attributes || {},
         stock: v.stock || 0,
         price: v.price,
         images: v.images,
         unit: v.unit,
+        batches: (v.variant_batches || []).map((b: any) => ({
+          id: b.id,
+          variantId: b.variant_id,
+          batchCode: b.batch_code,
+          expiryDate: b.expiry_date,
+          stock: b.stock,
+          createdAt: b.created_at
+        }))
       })),
     }));
   },
@@ -87,15 +100,31 @@ export const productsService = {
 
     if (variantsError) throw variantsError;
 
+    // Insert default batches for initial stock
+    const batchesToInsert = newVariants
+      .filter((v: any) => v.stock > 0)
+      .map((v: any) => ({
+        variant_id: v.id,
+        batch_code: 'DEFAULT',
+        stock: v.stock
+      }));
+      
+    if (batchesToInsert.length > 0) {
+      const { error: batchError } = await supabase
+        .from('variant_batches')
+        .insert(batchesToInsert);
+      if (batchError) throw batchError;
+    }
+
     return {
-      id: parseInt(newProduct.id, 10),
+      id: newProduct.id,
       name: newProduct.name,
       description: newProduct.description || '',
       images: newProduct.images || [],
       category: product.category,
       options: newProduct.options || [],
       variants: (newVariants || []).map((v: any) => ({
-        id: parseInt(v.id, 10),
+        id: v.id,
         attributes: v.attributes || {},
         stock: v.stock || 0,
         price: v.price,
@@ -123,17 +152,17 @@ export const productsService = {
         category_id: category?.id,
         options: product.options,
       })
-      .eq('id', product.id.toString());
+      .eq('id', product.id);
 
     if (productError) throw productError;
 
     // Delete old variants
-    await supabase.from('variants').delete().eq('product_id', product.id.toString());
+    await supabase.from('variants').delete().eq('product_id', product.id);
 
     // Insert new variants
     const variantsToInsert = product.variants.map((v) => ({
-      id: v.id.toString(),
-      product_id: product.id.toString(),
+      id: v.id,
+      product_id: product.id,
       attributes: v.attributes,
       stock: v.stock,
       price: v.price,
@@ -141,48 +170,114 @@ export const productsService = {
       unit: v.unit,
     }));
 
-    const { error: variantsError } = await supabase
+    const { data: newVariants, error: variantsError } = await supabase
       .from('variants')
-      .insert(variantsToInsert);
+      .insert(variantsToInsert)
+      .select();
 
     if (variantsError) throw variantsError;
+
+    // We must restore batches for variants that had them, but since we deleted variants, batches cascade-deleted!
+    // This is dangerous. Wait, we deleted variants then re-inserted them with the same IDs.
+    // If variant_batches has ON DELETE CASCADE, they are gone.
+    // Let's insert back the default batches if they were just set.
+    const batchesToInsert = product.variants
+      .flatMap(v => {
+        if (v.batches && v.batches.length > 0) {
+          return v.batches.map(b => ({
+            variant_id: v.id,
+            batch_code: b.batchCode || 'DEFAULT',
+            expiry_date: b.expiryDate || null,
+            stock: b.stock
+          }));
+        } else if (v.stock > 0) {
+           return [{
+             variant_id: v.id,
+             batch_code: 'DEFAULT',
+             stock: v.stock
+           }];
+        }
+        return [];
+      });
+
+    if (batchesToInsert.length > 0) {
+      await supabase.from('variant_batches').insert(batchesToInsert);
+    }
   },
 
-  async delete(productId: number): Promise<void> {
+  async delete(productId: string): Promise<void> {
     const { error } = await supabase
       .from('products')
       .delete()
-      .eq('id', productId.toString());
+      .eq('id', productId);
 
     if (error) throw error;
   },
 
-  async updateVariantStock(variantId: number, newStock: number): Promise<void> {
+  async updateVariantStock(variantId: string, newStock: number): Promise<void> {
     const { error } = await supabase
       .from('variants')
       .update({ stock: newStock })
-      .eq('id', variantId.toString());
+      .eq('id', variantId);
 
     if (error) throw error;
   },
 
-  async delete(formId: string): Promise<void> {
-    // First, delete associated items to be safe, in case cascading delete isn't set up.
-    const { error: itemsError } = await supabase
-      .from('requisition_items')
-      .delete()
-      .eq('requisition_id', formId);
+  async createOrUpdateBatch(variantId: string, quantity: number, batchCode?: string, expiryDate?: string): Promise<void> {
+    const defaultBatchCode = batchCode || 'DEFAULT';
+    
+    // Check if batch exists
+    let query = supabase.from('variant_batches').select('*').eq('variant_id', variantId).eq('batch_code', defaultBatchCode);
+    if (expiryDate) {
+      query = query.eq('expiry_date', expiryDate);
+    } else {
+      query = query.is('expiry_date', null);
+    }
 
-    if (itemsError) throw itemsError;
+    const { data: existingBatches, error: findError } = await query;
+    if (findError) throw findError;
 
-    // Then, delete the form itself
-    const { error: formError } = await supabase
-      .from('requisition_forms')
-      .delete()
-      .eq('id', formId);
-
-    if (formError) throw formError;
+    if (existingBatches && existingBatches.length > 0) {
+      const batch = existingBatches[0];
+      const { error: updateError } = await supabase
+        .from('variant_batches')
+        .update({ stock: batch.stock + quantity })
+        .eq('id', batch.id);
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from('variant_batches')
+        .insert({
+          variant_id: variantId,
+          batch_code: defaultBatchCode,
+          expiry_date: expiryDate || null,
+          stock: quantity
+        });
+      if (insertError) throw insertError;
+    }
   },
+
+  async getBatchesForVariant(variantId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('variant_batches')
+      .select('*')
+      .eq('variant_id', variantId)
+      .gt('stock', 0)
+      .order('expiry_date', { ascending: true, nullsFirst: false }); // nullsFirst false means no-expiry goes last
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async updateBatchStock(batchId: string, newStock: number): Promise<void> {
+    const { error } = await supabase
+      .from('variant_batches')
+      .update({ stock: newStock })
+      .eq('id', batchId);
+
+    if (error) throw error;
+  },
+
 };
 
 // =====================================================
@@ -226,10 +321,44 @@ export const categoriesService = {
   },
 
   async delete(categoryName: string): Promise<void> {
+    // 1. Get the category to delete
+    const { data: categoryToDelete } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', categoryName)
+      .single();
+
+    if (!categoryToDelete) return;
+
+    // 2. Ensure fallback category "Vật tư Khác" exists
+    let { data: fallbackCategory } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', 'Vật tư Khác')
+      .single();
+
+    if (!fallbackCategory) {
+      const { data: newFallback } = await supabase
+        .from('categories')
+        .insert({ name: 'Vật tư Khác', icon: '' })
+        .select()
+        .single();
+      fallbackCategory = newFallback;
+    }
+
+    if (fallbackCategory) {
+      // 3. Move all products to the fallback category
+      await supabase
+        .from('products')
+        .update({ category_id: fallbackCategory.id })
+        .eq('category_id', categoryToDelete.id);
+    }
+
+    // 4. Delete the target category
     const { error } = await supabase
       .from('categories')
       .delete()
-      .eq('name', categoryName);
+      .eq('id', categoryToDelete.id);
 
     if (error) throw error;
   },
@@ -321,7 +450,7 @@ export const requisitionsService = {
         *,
         requisition_items(
           *,
-          product:products(*),
+          product:products(*, category:categories(name, icon)),
           variant:variants(*)
         )
       `)
@@ -340,18 +469,21 @@ export const requisitionsService = {
       fulfilledBy: f.fulfilled_by,
       fulfilledAt: f.fulfilled_at,
       fulfillmentNotes: f.fulfillment_notes,
-      items: (f.requisition_items || []).map((item: any) => ({
+      receivedBy: f.received_by,
+      receivedAt: f.received_at,
+      receiveNotes: f.receive_notes,
+      items: (f.requisition_items || []).filter((item: any) => item.product && item.variant).map((item: any) => ({
         product: {
-          id: parseInt(item.product.id, 10),
-          name: item.product.name,
+          id: item.product.id,
+          name: item.product.name || '(Sản phẩm đã xóa)',
           description: item.product.description || '',
           images: item.product.images || [],
-          category: '', // Will be populated if needed
+          category: item.product.category?.name || '',
           options: item.product.options || [],
           variants: [],
         },
         variant: {
-          id: parseInt(item.variant.id, 10),
+          id: item.variant.id,
           attributes: item.variant.attributes || {},
           stock: item.variant.stock || 0,
           price: item.variant.price,
@@ -381,8 +513,8 @@ export const requisitionsService = {
     // Insert requisition items
     const itemsToInsert = form.items.map((item) => ({
       requisition_id: newForm.id,
-      product_id: item.product.id.toString(),
-      variant_id: item.variant.id.toString(),
+      product_id: item.product.id,
+      variant_id: item.variant.id,
       quantity: item.quantity,
     }));
 
@@ -430,8 +562,8 @@ export const requisitionsService = {
     if (form.items.length > 0) {
       const itemsToInsert = form.items.map((item) => ({
         requisition_id: form.id,
-        product_id: item.product.id.toString(),
-        variant_id: item.variant.id.toString(),
+        product_id: item.product.id,
+        variant_id: item.variant.id,
         quantity: item.quantity,
       }));
 
@@ -450,7 +582,7 @@ export const requisitionsService = {
     const { error } = await supabase
       .from('requisition_forms')
       .update({
-        status: 'Đã hoàn thành',
+        status: 'Đã duyệt yêu cầu',
         fulfilled_by: details.fulfillerName,
         fulfillment_notes: details.notes,
         fulfilled_at: new Date().toISOString(),
@@ -458,6 +590,38 @@ export const requisitionsService = {
       .eq('id', formId);
 
     if (error) throw error;
+  },
+
+  async confirmReceipt(formId: string, receivedBy: string, receiveNotes: string): Promise<void> {
+    const { error } = await supabase
+      .from('requisition_forms')
+      .update({
+        status: 'Đã hoàn thành',
+        received_by: receivedBy,
+        receive_notes: receiveNotes,
+        received_at: new Date().toISOString(),
+      })
+      .eq('id', formId);
+
+    if (error) throw error;
+  },
+
+  async delete(formId: string): Promise<void> {
+    // First, delete associated items to be safe
+    const { error: itemsError } = await supabase
+      .from('requisition_items')
+      .delete()
+      .eq('requisition_id', formId);
+
+    if (itemsError) throw itemsError;
+
+    // Then, delete the form itself
+    const { error: formError } = await supabase
+      .from('requisition_forms')
+      .delete()
+      .eq('id', formId);
+
+    if (formError) throw formError;
   },
 };
 
@@ -489,8 +653,8 @@ export const receiptsService = {
       createdAt: r.created_at,
       linkedRequisitionIds: r.linked_requisition_ids || [],
       items: (r.receipt_items || []).map((item: any) => ({
-        variantId: parseInt(item.variant_id, 10),
-        productId: parseInt(item.product_id, 10),
+        variantId: item.variant_id,
+        productId: item.product_id,
         quantity: item.quantity,
         productName: item.product?.name,
         variantAttributes: item.variant?.attributes,
@@ -517,8 +681,8 @@ export const receiptsService = {
     // Insert receipt items
     const itemsToInsert = receipt.items.map((item) => ({
       receipt_id: newReceipt.id,
-      product_id: item.productId.toString(),
-      variant_id: item.variantId.toString(),
+      product_id: item.productId,
+      variant_id: item.variantId,
       quantity: item.quantity,
     }));
 
@@ -538,6 +702,16 @@ export const receiptsService = {
       items: receipt.items,
     };
   },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase.from('goods_receipt_notes').delete().eq('id', id);
+    if (error) throw error;
+  },
+
+  async update(id: string, updates: any): Promise<void> {
+    const { error } = await supabase.from('goods_receipt_notes').update(updates).eq('id', id);
+    if (error) throw error;
+  }
 };
 
 // =====================================================
@@ -579,8 +753,8 @@ export const deliveryNotesService = {
       batchId: n.batch_id,
       processingDuration: n.processing_duration,
       items: (n.delivery_items || []).map((item: any) => ({
-        variantId: parseInt(item.variant_id, 10),
-        productId: parseInt(item.product_id, 10),
+        variantId: item.variant_id,
+        productId: item.product_id,
         quantity: item.quantity,
         actualQuantity: item.actual_quantity,
         qualityIssue: item.quality_issue,
@@ -617,8 +791,8 @@ export const deliveryNotesService = {
     // Insert delivery items
     const itemsToInsert = note.items.map((item) => ({
       delivery_note_id: newNote.id,
-      product_id: item.productId.toString(),
-      variant_id: item.variantId.toString(),
+      product_id: item.productId,
+      variant_id: item.variantId,
       quantity: item.quantity,
     }));
 
@@ -672,8 +846,204 @@ export const deliveryNotesService = {
 // =====================================================
 // USERS SERVICE
 // =====================================================
+// INVENTORY AUDITS SERVICE
+// =====================================================
+
+export const inventoryAuditsService = {
+  async getAll(): Promise<InventoryAudit[]> {
+    const { data: audits, error } = await supabase
+      .from('inventory_audits')
+      .select(`
+        *,
+        inventory_audit_items(
+          *,
+          product:products(*),
+          variant:variants(*)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (audits || []).map((a: any) => ({
+      id: a.id,
+      title: a.title,
+      status: a.status,
+      notes: a.notes,
+      createdBy: a.created_by,
+      createdAt: a.created_at,
+      completedAt: a.completed_at,
+      items: (a.inventory_audit_items || []).map((item: any) => ({
+        id: item.id,
+        auditId: item.audit_id,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        systemQuantity: item.system_quantity,
+        actualQuantity: item.actual_quantity,
+        reason: item.reason,
+        productName: item.product?.name,
+        variantAttributes: item.variant?.attributes,
+      })),
+    }));
+  },
+
+  async create(audit: Omit<InventoryAudit, 'id' | 'createdAt' | 'items'>, items: Omit<InventoryAuditItem, 'id' | 'auditId'>[]): Promise<InventoryAudit> {
+    const { data: newAudit, error: auditError } = await supabase
+      .from('inventory_audits')
+      .insert({
+        title: audit.title,
+        status: audit.status,
+        notes: audit.notes,
+        created_by: audit.createdBy,
+      })
+      .select()
+      .single();
+
+    if (auditError) throw auditError;
+
+    const itemsToInsert = items.map(item => ({
+      audit_id: newAudit.id,
+      product_id: item.productId,
+      variant_id: item.variantId,
+      system_quantity: item.systemQuantity,
+      actual_quantity: item.actualQuantity,
+      reason: item.reason,
+    }));
+
+    const { error: itemsError } = await supabase
+      .from('inventory_audit_items')
+      .insert(itemsToInsert);
+
+    if (itemsError) throw itemsError;
+
+    return this.getById(newAudit.id);
+  },
+
+  async getById(id: string): Promise<InventoryAudit> {
+    const { data, error } = await supabase
+      .from('inventory_audits')
+      .select(`
+        *,
+        inventory_audit_items(
+          *,
+          product:products(*),
+          variant:variants(*)
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      title: data.title,
+      status: data.status,
+      notes: data.notes,
+      createdBy: data.created_by,
+      createdAt: data.created_at,
+      completedAt: data.completed_at,
+      items: (data.inventory_audit_items || []).map((item: any) => ({
+        id: item.id,
+        auditId: item.audit_id,
+        productId: item.product_id,
+        variantId: item.variant_id,
+        systemQuantity: item.system_quantity,
+        actualQuantity: item.actual_quantity,
+        reason: item.reason,
+        productName: item.product?.name,
+        variantAttributes: item.variant?.attributes,
+      })),
+    };
+  },
+
+  async updateItem(itemId: string, actualQuantity: number | null, reason: string): Promise<void> {
+    const { error } = await supabase
+      .from('inventory_audit_items')
+      .update({
+        actual_quantity: actualQuantity,
+        reason: reason,
+      })
+      .eq('id', itemId);
+
+    if (error) throw error;
+  },
+
+  async complete(auditId: string): Promise<void> {
+    const { error } = await supabase
+      .from('inventory_audits')
+      .update({
+        status: 'Hoàn thành',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', auditId);
+
+    if (error) throw error;
+  },
+
+  async update(auditId: string, updates: Partial<{ title: string, notes: string }>): Promise<void> {
+    const { error } = await supabase
+      .from('inventory_audits')
+      .update(updates)
+      .eq('id', auditId);
+    if (error) throw error;
+  },
+
+  async delete(auditId: string): Promise<void> {
+    const { error } = await supabase
+      .from('inventory_audits')
+      .delete()
+      .eq('id', auditId);
+    if (error) throw error;
+  },
+};
+
+// =====================================================
+// USERS SERVICE
+// =====================================================
 
 export const usersService = {
+  async getAll(): Promise<User[]> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      role: u.role,
+      zone: u.zone,
+      username: u.username,
+      password: u.password,
+    }));
+  },
+
+  async login(username: string, password: string): Promise<User | null> {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', password)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found / wrong credentials
+      throw error;
+    }
+
+    return {
+      id: data.id,
+      name: data.name,
+      role: data.role,
+      zone: data.zone,
+      username: data.username,
+      password: data.password,
+    };
+  },
+
   async getByName(name: string): Promise<User | null> {
     const { data, error } = await supabase
       .from('users')
@@ -691,6 +1061,8 @@ export const usersService = {
       name: data.name,
       role: data.role,
       zone: data.zone,
+      username: data.username,
+      password: data.password,
     };
   },
 
@@ -701,6 +1073,8 @@ export const usersService = {
         name: user.name,
         role: user.role,
         zone: user.zone,
+        username: user.username,
+        password: user.password,
       })
       .select()
       .single();
@@ -712,7 +1086,35 @@ export const usersService = {
       name: data.name,
       role: data.role,
       zone: data.zone,
+      username: data.username,
+      password: data.password,
     };
   },
+
+  async update(id: string, user: Omit<User, 'id'>): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        name: user.name,
+        role: user.role,
+        zone: user.zone,
+        username: user.username,
+        password: user.password,
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('users')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  }
 };
+
+
 

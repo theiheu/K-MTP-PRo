@@ -1,1301 +1,496 @@
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  Suspense,
-  lazy,
-} from "react";
-import { Toaster, toast } from "react-hot-toast";
-import Header from "./components/Header";
-import ProductList from "./components/ProductList";
-import Cart from "./components/Cart";
-const Chatbot = lazy(() => import("./components/Chatbot"));
-import BottomNav from "./components/BottomNav";
-import DesktopNav from "./components/DesktopNav";
-import LoginPage from "./components/LoginPage";
-import Pagination from "./components/Pagination";
-import SearchBar from "./components/SearchBar";
-import CategoryNav from "./components/CategoryNav";
-import {
-  Product,
-  CartItem,
-  RequisitionForm,
-  User,
-  Category,
-  Variant,
-  GoodsReceiptNote,
-  AdminTab,
-  Zone,
-  DeliveryNote,
-} from "./types";
-import { PRODUCTS, DEFAULT_CATEGORIES } from "./constants";
-import { categoryIcons } from "./assets/icons/categories";
-import { calculateVariantStock } from "./utils/stockCalculator";
-import { cloneProductList } from "./utils/productUtils";
-import ImageGalleryModal from "./components/ImageGalleryModal";
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Toaster, toast } from 'react-hot-toast';
 
-const RequisitionListPage = lazy(
-  () => import("./components/RequisitionListPage")
-);
-const CreateRequisitionPage = lazy(
-  () => import("./components/CreateRequisitionPage")
-);
-const AdminPage = lazy(() => import("./components/AdminPage"));
-const CreateReceiptPage = lazy(() => import("./components/CreateReceiptPage"));
-const ReceiptList = lazy(() => import("./components/ReceiptList"));
-const DeliveryNoteList = lazy(() => import("./components/DeliveryNoteList"));
-const CreateDeliveryNote = lazy(
-  () => import("./components/CreateDeliveryNote")
-);
+import Header from './components/Header';
+import ProductList from './components/ProductList';
+import Cart from './components/Cart';
+import BottomNav from './components/BottomNav';
+import DesktopNav from './components/DesktopNav';
+import LoginPage from './components/LoginPage';
+import Pagination from './components/Pagination';
+import SearchBar from './components/SearchBar';
+import CategoryNav from './components/CategoryNav';
+import PopularProductsSlider from './components/PopularProductsSlider';
+import ImageGalleryModal from './components/ImageGalleryModal';
 
-const USER_STORAGE_KEY = "chicken_farm_user";
-const REQUISITIONS_STORAGE_KEY = "chicken_farm_requisitions";
-const PRODUCTS_STORAGE_KEY = "chicken_farm_products";
-const CATEGORIES_STORAGE_KEY = "chicken_farm_categories";
-const RECEIPTS_STORAGE_KEY = "chicken_farm_receipts";
-const ZONES_STORAGE_KEY = "chicken_farm_zones";
-const DELIVERY_NOTES_STORAGE_KEY = "chicken_farm_delivery_notes";
+import { useAuthStore } from './store/authStore';
+import { useCartStore } from './store/cartStore';
+import { useDataStore } from './store/dataStore';
+import { AdminTab } from './types';
+
+const RequisitionListPage = lazy(() => import('./components/RequisitionListPage'));
+const CreateRequisitionPage = lazy(() => import('./components/CreateRequisitionPage'));
+const AdminPage = lazy(() => import('./components/AdminPage'));
+const CreateReceiptPage = lazy(() => import('./components/CreateReceiptPage'));
+const ReceiptList = lazy(() => import('./components/ReceiptList'));
+const DeliveryNoteList = lazy(() => import('./components/DeliveryNoteList'));
+const CreateDeliveryNote = lazy(() => import('./components/CreateDeliveryNote'));
 
 const PRODUCTS_PER_PAGE = 10;
 
-type ViewKey =
-  | "shop"
-  | "requisitions"
-  | "receipts"
-  | "create-requisition"
-  | "admin"
-  | "create-receipt"
-  | "deliveries"
-  | "create-delivery";
+type ViewKey = 'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt' | 'deliveries' | 'create-delivery';
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [masterProductList, setMasterProductList] = useState<Product[]>(() => {
-    try {
-      const savedProducts = localStorage.getItem(PRODUCTS_STORAGE_KEY);
-      return savedProducts ? JSON.parse(savedProducts) : PRODUCTS;
-    } catch (error) {
-      console.error("Không thể tải sản phẩm từ localStorage", error);
-      return PRODUCTS;
-    }
-  });
+  // Auth Store
+  const { user, login, logout, checkSession } = useAuthStore();
+  
+  // Cart Store
+  const { cart, isCartOpen, setIsCartOpen, addToCart, removeFromCart, updateCartItem } = useCartStore();
+  
+  // Data Store
+  const {
+    products, categories, zones, requisitions, receipts, deliveries, users,
+    isFetchingInitialData, isActionLoading, fetchInitialData,
+    addUser, updateUser, deleteUser,
+    addProduct, updateProduct, deleteProduct,
+    addCategory, updateCategory, deleteCategory, reorderCategories,
+    addZone, updateZone, deleteZone,
+    createRequisition, updateRequisition, deleteRequisition,
+    fulfillRequisition,
+    confirmRequisitionReceipt,
+    createReceipt, deleteReceipt, updateReceipt,
+    createDelivery, verifyDelivery, rejectDelivery
+  } = useDataStore();
 
-  const [categories, setCategories] = useState<Category[]>(() => {
-    try {
-      const savedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
-      const parsed = savedCategories
-        ? JSON.parse(savedCategories)
-        : DEFAULT_CATEGORIES;
-
-      const updatedCategories = parsed
-        .filter((c: Category) => c.name !== "Tất cả")
-        .map((c: Category) => ({
-          ...c,
-          icon: categoryIcons[c.name] || c.icon, // Use imported icon
-        }));
-
-      return updatedCategories;
-    } catch (error) {
-      console.error("Không thể tải danh mục từ localStorage", error);
-      return DEFAULT_CATEGORIES
-        .filter((c) => c.name !== "Tất cả")
-        .map((c) => ({ ...c, icon: categoryIcons[c.name] || c.icon }));
-    }
-  });
-
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [isCartOpen, setIsCartOpen] = useState(false);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [category, setCategory] = useState("Tất cả");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [category, setCategory] = useState('Tất cả');
   const [productCurrentPage, setProductCurrentPage] = useState(1);
-
-  const [currentView, setCurrentView] = useState<ViewKey>("shop");
-  const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>("products");
-
-  const [requisitionForms, setRequisitionForms] = useState<RequisitionForm[]>(
-    () => {
-      try {
-        const savedRequisitions = localStorage.getItem(
-          REQUISITIONS_STORAGE_KEY
-        );
-        return savedRequisitions ? JSON.parse(savedRequisitions) : [];
-      } catch (error) {
-        console.error("Không thể tải phiếu yêu cầu từ localStorage", error);
-        return [];
-      }
-    }
-  );
-
-  const [goodsReceiptNotes, setGoodsReceiptNotes] = useState<
-    GoodsReceiptNote[]
-  >(() => {
-    try {
-      const savedReceipts = localStorage.getItem(RECEIPTS_STORAGE_KEY);
-      return savedReceipts ? JSON.parse(savedReceipts) : [];
-    } catch (error) {
-      console.error("Không thể tải phiếu nhập kho từ localStorage", error);
-      return [];
-    }
-  });
-
-  const [zones, setZones] = useState<Zone[]>(() => {
-    try {
-      const savedZones = localStorage.getItem(ZONES_STORAGE_KEY);
-      return savedZones
-        ? JSON.parse(savedZones)
-        : [
-            {
-              id: "1",
-              name: "Khu 1",
-              description: "",
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: "2",
-              name: "Khu 2",
-              description: "",
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: "3",
-              name: "Khu 3",
-              description: "",
-              createdAt: new Date().toISOString(),
-            },
-            {
-              id: "4",
-              name: "Khu 4",
-              description: "",
-              createdAt: new Date().toISOString(),
-            },
-          ];
-    } catch (error) {
-      console.error("Không thể tải danh sách khu vực từ localStorage", error);
-      return [];
-    }
-  });
-
-    const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('products');
+  
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
-  const [deliveryNotes, setDeliveryNotes] = useState<DeliveryNote[]>(() => {
-    try {
-      const savedNotes = localStorage.getItem(DELIVERY_NOTES_STORAGE_KEY);
-      return savedNotes ? JSON.parse(savedNotes) : [];
-    } catch (error) {
-      console.error("Không thể tải phiếu giao hàng từ localStorage", error);
-      return [];
-    }
-  });
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
-      }
-      // Initialize search from URL (?q=)
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get("q");
-      if (q) {
-        setSearchTerm(q);
-      }
-    } catch (error) {
-      console.error(
-        "Không thể đọc thông tin người dùng từ localStorage",
-        error
-      );
+    if (user) {
+      fetchInitialData();
     }
-    setIsInitializing(false);
+  }, [user, fetchInitialData]);
+
+  const currentView = useMemo(() => {
+    const path = location.pathname;
+    if (path === '/') return 'shop';
+    if (path === '/requisitions') return 'requisitions';
+    if (path === '/requisitions/create') return 'create-requisition';
+    if (path === '/receipts') return 'receipts';
+    if (path === '/receipts/create') return 'create-receipt';
+    if (path === '/deliveries') return 'deliveries';
+    if (path === '/deliveries/create') return 'create-delivery';
+    if (path === '/admin') return 'admin';
+    return 'shop';
+  }, [location.pathname]);
+
+  // Sync search to URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (q && !searchTerm) setSearchTerm(q);
   }, []);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [currentUser, currentView, productCurrentPage]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        REQUISITIONS_STORAGE_KEY,
-        JSON.stringify(requisitionForms)
-      );
-    } catch (error) {
-      console.error("Không thể lưu phiếu yêu cầu vào localStorage", error);
-    }
-  }, [requisitionForms]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        RECEIPTS_STORAGE_KEY,
-        JSON.stringify(goodsReceiptNotes)
-      );
-    } catch (error) {
-      console.error("Không thể lưu phiếu nhập kho vào localStorage", error);
-    }
-  }, [goodsReceiptNotes]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        PRODUCTS_STORAGE_KEY,
-        JSON.stringify(masterProductList)
-      );
-    } catch (error) {
-      console.error("Không thể lưu sản phẩm vào localStorage", error);
-    }
-  }, [masterProductList]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
-    } catch (error) {
-      console.error("Không thể lưu danh mục vào localStorage", error);
-    }
-  }, [categories]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(ZONES_STORAGE_KEY, JSON.stringify(zones));
-      window.zones = zones;
-    } catch (error) {
-      console.error("Không thể lưu khu vực vào localStorage", error);
-    }
-  }, [zones]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        DELIVERY_NOTES_STORAGE_KEY,
-        JSON.stringify(deliveryNotes)
-      );
-    } catch (error) {
-      console.error("Không thể lưu phiếu giao hàng vào localStorage", error);
-    }
-  }, [deliveryNotes]);
+    const params = new URLSearchParams(window.location.search);
+    if (searchTerm) params.set('q', searchTerm);
+    else params.delete('q');
+    const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [searchTerm]);
 
   useEffect(() => {
     setProductCurrentPage(1);
   }, [searchTerm, category]);
 
-  // Sync search to URL (?q=) without reloading
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (searchTerm) {
-      params.set("q", searchTerm);
-    } else {
-      params.delete("q");
+    if (!isFetchingInitialData) {
+      setTimeout(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      }, 50);
     }
-    const newUrl = `${window.location.pathname}${
-      params.toString() ? `?${params.toString()}` : ""
-    }${window.location.hash}`;
-    window.history.replaceState(null, "", newUrl);
-  }, [searchTerm]);
+  }, [user, currentView, productCurrentPage, isFetchingInitialData]);
 
+  // Data processing
   const filteredAndSortedProducts = useMemo(() => {
-    let tempProducts = masterProductList;
-
+    let temp = products;
     if (searchTerm) {
-      tempProducts = tempProducts.filter(
-        (p) =>
-          p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.description.toLowerCase().includes(searchTerm.toLowerCase())
+      temp = temp.filter(p => 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
+    if (category !== 'Tất cả') temp = temp.filter(p => p.category === category);
+    return temp;
+  }, [searchTerm, category, products]);
 
-    if (category !== "Tất cả") {
-      tempProducts = tempProducts.filter((p) => p.category === category);
-    }
+  const paginatedProducts = useMemo(() => 
+    filteredAndSortedProducts.slice((productCurrentPage - 1) * PRODUCTS_PER_PAGE, productCurrentPage * PRODUCTS_PER_PAGE),
+  [filteredAndSortedProducts, productCurrentPage]);
 
-    return tempProducts;
-  }, [searchTerm, category, masterProductList]);
+  const totalPages = Math.ceil(filteredAndSortedProducts.length / PRODUCTS_PER_PAGE);
 
-  const paginatedProducts = useMemo(
-    () =>
-      filteredAndSortedProducts.slice(
-        (productCurrentPage - 1) * PRODUCTS_PER_PAGE,
-        productCurrentPage * PRODUCTS_PER_PAGE
-      ),
-    [filteredAndSortedProducts, productCurrentPage]
-  );
+  const allCategoriesForNav = useMemo(() => [{ name: 'Tất cả', icon: '' }, ...categories], [categories]);
+  
+  const popularProducts = useMemo(() => {
+    if (!requisitions || requisitions.length === 0) return [];
+    const freq: Record<string, number> = {};
+    requisitions.forEach(req => {
+      req.items.forEach(item => {
+        freq[item.product.id] = (freq[item.product.id] || 0) + 1;
+      });
+    });
+    
+    const sorted = [...products].sort((a, b) => (freq[b.id] || 0) - (freq[a.id] || 0));
+    return sorted.filter(p => freq[p.id] > 0).slice(0, 8);
+  }, [products, requisitions]);
 
-  const totalPages = useMemo(
-    () => Math.ceil(filteredAndSortedProducts.length / PRODUCTS_PER_PAGE),
-    [filteredAndSortedProducts]
-  );
+  const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
-  const allCategoriesForNav: Category[] = useMemo(
-    () => [{ name: "Tất cả", icon: "" }, ...categories],
-    [categories]
-  );
-
-  const cartItemCount = useMemo(
-    () => cart.reduce((total, item) => total + item.quantity, 0),
-    [cart]
-  );
-
+  // Handlers
   const handleOpenGallery = useCallback((images: string[], startIndex: number) => {
     setGalleryImages(images);
     setGalleryStartIndex(startIndex);
     setIsGalleryOpen(true);
   }, []);
 
-  const showDesktopNav = useMemo(
-    () =>
-      [
-        "shop",
-        "requisitions",
-        "receipts",
-        "admin",
-        "deliveries",
-        "create-delivery",
-      ].includes(currentView),
-    [currentView]
-  );
-
   const handleNavigate = useCallback((view: ViewKey, tab?: AdminTab) => {
-    setCurrentView(view);
-    if (view === "admin" && tab) {
-      setAdminInitialTab(tab);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (view === 'admin' && tab) setAdminInitialTab(tab);
+    switch (view) {
+      case 'shop': navigate('/'); break;
+      case 'create-requisition': navigate('/requisitions/create'); break;
+      case 'create-receipt': navigate('/receipts/create'); break;
+      case 'create-delivery': navigate('/deliveries/create'); break;
+      default: navigate(`/${view}`); break;
     }
-  }, []);
+  }, [navigate]);
 
-  const showToast = useCallback(
-    (product: Product, quantity: number, isUpdate: boolean) => {
-      const message = isUpdate
-        ? `Đã cập nhật: ${product.name} (${quantity})`
-        : `Đã thêm: ${product.name} (${quantity})`;
+  const handleAddToCart = useCallback((product: any, variant: any, quantity: number) => {
+    addToCart(product, variant, quantity);
+    toast.success(`Đã thêm ${product.name} (${quantity})`);
+  }, [addToCart]);
 
-      toast.custom(
-        (t) => (
-          <div
-            className={`${
-              t.visible ? "animate-enter" : "animate-leave"
-            } max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
-          >
-            <div className="flex-1 w-0 p-4">
-              <div className="flex items-start">
-                <div className="flex-shrink-0 pt-0.5">
-                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                    <svg
-                      className="h-6 w-6 text-yellow-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <div className="ml-3 flex-1">
-                  <p className="text-sm font-medium text-gray-900">{message}</p>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Nhấn giỏ hàng để xem chi tiết
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="flex border-l border-gray-200">
-              <button
-                onClick={() => toast.dismiss(t.id)}
-                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-yellow-600 hover:text-yellow-500 focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        ),
-        {
-          position: "top-right",
-          duration: 3000,
-        }
-      );
-    },
-    []
-  );
-  const addToCart = useCallback(
-    (product: Product, variant: Variant, quantity: number) => {
-      const toastId = `cart-${product.id}-${variant.id}-${Date.now()}`;
+  const handleUpdateCartItem = useCallback((variantId: string, quantity: number, oldVariantId?: string) => {
+    updateCartItem(variantId, quantity, oldVariantId);
+  }, [updateCartItem]);
 
-      setCart((prevCart) => {
-        const existingItem = prevCart.find(
-          (item) => item.variant.id === variant.id
-        );
-
-        if (existingItem) {
-          // Nếu sản phẩm đã tồn tại, cập nhật số lượng
-          const newQuantity = existingItem.quantity + quantity;
-
-          // Hiển thị toast
-          toast.custom(
-            (t) => (
-              <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5">
-                <div className="flex-1 w-0 p-4">
-                  <div className="flex items-start">
-                    <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                      <svg
-                        className="h-6 w-6 text-yellow-600"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-3 flex-1">
-                      <p className="text-sm font-medium text-gray-900">
-                        Đã cập nhật: {product.name} ({newQuantity})
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ),
-            {
-              id: toastId,
-              duration: 2000,
-              position: "top-right",
-            }
-          );
-
-          return prevCart.map((item) =>
-            item.variant.id === variant.id
-              ? { ...item, quantity: newQuantity }
-              : item
-          );
-        }
-
-        // Nếu là sản phẩm mới
-        toast.custom(
-          (t) => (
-            <div className="max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5">
-              <div className="flex-1 w-0 p-4">
-                <div className="flex items-start">
-                  <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                    <svg
-                      className="h-6 w-6 text-yellow-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      Đã thêm: {product.name} ({quantity})
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ),
-          {
-            id: toastId,
-            duration: 2000,
-            position: "top-right",
-          }
-        );
-
-        return [...prevCart, { product, variant, quantity }];
-      });
-    },
-    []
-  );
-
-  const removeFromCart = useCallback((variantId: number) => {
-    setCart((prevCart) =>
-      prevCart.filter((item) => item.variant.id !== variantId)
-    );
-  }, []);
-
-  const updateCartItem = useCallback(
-    (variantId: number, quantity: number, oldVariantId?: number) => {
-      setCart((prevCart) => {
-        // Check if new variant already exists in cart
-        const existingItemIndex = prevCart.findIndex(
-          (item) => item.variant.id === variantId
-        );
-
-        // If changing variant
-        if (oldVariantId) {
-          const oldItemIndex = prevCart.findIndex(
-            (item) => item.variant.id === oldVariantId
-          );
-
-          if (oldItemIndex === -1) return prevCart;
-
-          const oldItem = prevCart[oldItemIndex];
-          const newVariant = oldItem.product.variants.find(
-            (v) => v.id === variantId
-          );
-
-          if (!newVariant) return prevCart;
-
-          // If new variant already exists, remove old item and update quantity
-          if (existingItemIndex !== -1) {
-            return prevCart
-              .filter((_, index) => index !== oldItemIndex)
-              .map((item, index) => {
-                if (index === existingItemIndex) {
-                  return {
-                    ...item,
-                    quantity: item.quantity + quantity,
-                  };
-                }
-                return item;
-              });
-          }
-
-          // Otherwise, just update the variant
-          return prevCart.map((item, index) => {
-            if (index === oldItemIndex) {
-              return {
-                ...item,
-                variant: newVariant,
-                quantity,
-              };
-            }
-            return item;
-          });
-        }
-
-        // If just updating quantity
-        return prevCart.map((item) => {
-          if (item.variant.id === variantId) {
-            return {
-              ...item,
-              quantity: Math.max(1, quantity),
-            };
-          }
-          return item;
-        });
-      });
-    },
-    []
-  );
-
-  // Delivery note handlers
-  const handleCreateDeliveryNote = useCallback(
-    (items: DeliveryNote["items"], receiptId: string, shipperId: string) => {
-      if (!currentUser) return;
-      const newNote: DeliveryNote = {
-        id: `DN-${Date.now()}`,
-        items,
-        status: "pending",
-        receiptId,
-        shipperId,
-        createdBy: currentUser.name,
-        createdAt: new Date().toISOString(),
-      };
-      setDeliveryNotes((prev) => [newNote, ...prev]);
-      handleNavigate("deliveries");
-      return newNote;
-    },
-    [currentUser, handleNavigate]
-  );
-
-  const handleVerifyDeliveryNote = useCallback(
-    (noteId: string, verifierName: string, verificationNotes: string = "") => {
-      setDeliveryNotes((prev) =>
-        prev.map((note) => {
-          if (note.id === noteId) {
-            return {
-              ...note,
-              status: "verified",
-              verifiedBy: verifierName,
-              verificationNotes,
-              verifiedAt: new Date().toISOString(),
-            };
-          }
-          return note;
-        })
-      );
-    },
-    []
-  );
-
-  const handleRejectDeliveryNote = useCallback(
-    (noteId: string, verifierName: string, rejectionReason: string) => {
-      setDeliveryNotes((prev) =>
-        prev.map((note) => {
-          if (note.id === noteId) {
-            return {
-              ...note,
-              status: "rejected",
-              verifiedBy: verifierName,
-              verificationNotes: rejectionReason,
-              verifiedAt: new Date().toISOString(),
-            };
-          }
-          return note;
-        })
-      );
-    },
-    []
-  );
+  const handleCreateRequisition = useCallback(async (details: any) => {
+    try {
+      await createRequisition(details, cart);
+      useCartStore.getState().clearCart();
+      toast.success('Đã tạo phiếu yêu cầu thành công!');
+      navigate('/requisitions');
+    } catch (e: any) {
+      alert(e.message || 'Lỗi');
+    }
+  }, [cart, createRequisition, navigate]);
 
   const handleNavigateToCreateRequisition = useCallback(() => {
     if (cartItemCount === 0) {
-      alert("Vui lòng thêm vật tư vào phiếu trước khi tạo.");
+      alert('Vui lòng thêm vật tư vào phiếu trước khi tạo.');
       return;
     }
-    handleNavigate("create-requisition");
-  }, [cartItemCount, handleNavigate]);
+    navigate('/requisitions/create');
+  }, [cartItemCount, navigate]);
 
-  const handleCreateRequisition = useCallback(
-    (details: { requesterName: string; zone: string; purpose: string }) => {
-      if (!currentUser) return;
-      const newForm: RequisitionForm = {
-        id: `REQ-${Date.now()}`,
-        ...details,
-        items: cart,
-        status: "Đang chờ xử lý",
-        createdAt: new Date().toISOString(),
-      };
-      setRequisitionForms((prev) => [newForm, ...prev]);
-      setCart([]);
-      alert("Đã tạo phiếu yêu cầu thành công!");
-      handleNavigate("requisitions");
-    },
-    [cart, currentUser, handleNavigate]
-  );
-
-  const handleFulfillRequisition = useCallback(
-    (
-      formId: string,
-      details: { notes: string; fulfillerName: string },
-      currentProductList: Product[],
-      shouldClone: boolean = true
-    ): { success: boolean; updatedProducts: Product[]; message?: string } => {
-      const formToFulfill = requisitionForms.find((f) => f.id === formId);
-      if (!formToFulfill) {
-        return {
-          success: false,
-          updatedProducts: currentProductList,
-          message: "Lỗi: Không tìm thấy phiếu yêu cầu.",
-        };
-      }
-
-      const workingProductList = shouldClone
-        ? cloneProductList(currentProductList)
-        : currentProductList;
-
-      let stockSufficient = true;
-      const stockErrors: string[] = [];
-
-      for (const item of formToFulfill.items) {
-        const currentStock = calculateVariantStock(
-          item.variant,
-          workingProductList
-        );
-        if (currentStock < item.quantity) {
-          const variantName =
-            Object.values(item.variant.attributes).join(" / ") || "";
-          stockErrors.push(
-            `- Không đủ tồn kho cho "${item.product.name}" ${variantName}. Yêu cầu ${item.quantity}, còn lại ${currentStock}.`
-          );
-          stockSufficient = false;
-        }
-      }
-
-      if (!stockSufficient) {
-        return {
-          success: false,
-          updatedProducts: currentProductList,
-          message: "Không thể hoàn thành phiếu:\n" + stockErrors.join("\n"),
-        };
-      }
-
-      formToFulfill.items.forEach((item) => {
-        const parentProductIndex = workingProductList.findIndex(
-          (p) => p.id === item.product.id
-        );
-        if (parentProductIndex === -1) return;
-
-        const isComposite =
-          item.variant.components && item.variant.components.length > 0;
-        if (isComposite) {
-          item.variant.components!.forEach((component) => {
-            const componentVariantIndex = workingProductList[
-              parentProductIndex
-            ].variants.findIndex((v) => v.id === component.variantId);
-            if (componentVariantIndex !== -1) {
-              workingProductList[parentProductIndex].variants[
-                componentVariantIndex
-              ].stock -= item.quantity * component.quantity;
-            }
-          });
-        } else {
-          const variantIndex = workingProductList[
-            parentProductIndex
-          ].variants.findIndex((v) => v.id === item.variant.id);
-          if (variantIndex !== -1) {
-            workingProductList[parentProductIndex].variants[
-              variantIndex
-            ].stock -= item.quantity;
-          }
-        }
-      });
-
-      setRequisitionForms((prev) =>
-        prev.map((form) =>
-          form.id === formId
-            ? {
-                ...form,
-                status: "Đã hoàn thành",
-                fulfilledBy: details.fulfillerName,
-                fulfillmentNotes: details.notes,
-                fulfilledAt: new Date().toISOString(),
-              }
-            : form
-        )
-      );
-
-      return {
-        success: true,
-        updatedProducts: workingProductList,
-        message: "Đã hoàn thành phiếu yêu cầu thành công!",
-      };
-    },
-    [requisitionForms]
-  );
-
-  const triggerFulfillRequisition = useCallback(
-    (formId: string, details: { notes: string; fulfillerName: string }) => {
-      const result = handleFulfillRequisition(
-        formId,
-        details,
-        masterProductList
-      );
-      if (result.success) {
-        setMasterProductList(result.updatedProducts);
-      }
-      if (result.message) {
-        alert(result.message);
-      }
-    },
-    [handleFulfillRequisition, masterProductList]
-  );
-
-  const handleUpdateRequisition = useCallback((updatedForm: RequisitionForm) => {
-    setRequisitionForms(prevForms =>
-      prevForms.map(form =>
-        form.id === updatedForm.id ? updatedForm : form
-      )
-    );
-    toast.success('Phiếu yêu cầu đã được cập nhật thành công!');
-  }, []);
-
-  const handleDeleteRequisition = useCallback((formId: string) => {
-    setRequisitionForms(prevForms => prevForms.filter(form => form.id !== formId));
-    toast.success('Phiếu yêu cầu đã được xoá thành công!');
-  }, []);
-
-  const handleAddProduct = useCallback(
-    (productData: Omit<Product, "id">) =>
-      setMasterProductList((prev) => [
-        ...prev,
-        { ...productData, id: Date.now() },
-      ]),
-    []
-  );
-
-  const handleUpdateProduct = useCallback(
-    (updatedProduct: Product) =>
-      setMasterProductList((prev) =>
-        prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-      ),
-    []
-  );
-
-  const handleDeleteProduct = useCallback(
-    (productId: number) =>
-      setMasterProductList((prev) => prev.filter((p) => p.id !== productId)),
-    []
-  );
-
-  const handleAddCategory = useCallback(
-    (categoryData: Category) => {
-      if (
-        categories.some(
-          (c) => c.name.toLowerCase() === categoryData.name.toLowerCase()
-        )
-      ) {
-        alert("Một danh mục với tên này đã tồn tại.");
-        return;
-      }
-      setCategories((prev) => [...prev, categoryData]);
-    },
-    [categories]
-  );
-
-  const handleDeleteCategory = useCallback(
-    (categoryName: string): boolean => {
-      if (masterProductList.some((p) => p.category === categoryName))
-        return false;
-      setCategories((prev) => prev.filter((c) => c.name !== categoryName));
-      return true;
-    },
-    [masterProductList]
-  );
-
-  const handleUpdateCategory = useCallback(
-    (originalName: string, updatedCategory: Category) => {
-      if (
-        originalName !== updatedCategory.name &&
-        categories.some(
-          (c) => c.name.toLowerCase() === updatedCategory.name.toLowerCase()
-        )
-      ) {
-        alert("Một danh mục với tên này đã tồn tại.");
-        return;
-      }
-      setCategories((prev) =>
-        prev.map((c) => (c.name === originalName ? updatedCategory : c))
-      );
-      if (originalName !== updatedCategory.name) {
-        setMasterProductList((prev) =>
-          prev.map((p) =>
-            p.category === originalName
-              ? { ...p, category: updatedCategory.name }
-              : p
-          )
-        );
-      }
-    },
-    [categories]
-  );
-
-  const handleReorderCategories = useCallback(
-    (reorderedCategories: Category[]) => {
-      setCategories(reorderedCategories);
-    },
-    []
-  );
-
-  const handleAddZone = useCallback(
-    (zoneData: Omit<Zone, "id" | "createdAt">) => {
-      setZones((prev) => [
-        ...prev,
-        {
-          ...zoneData,
-          id: `ZONE-${Date.now()}`,
-          createdAt: new Date().toISOString(),
-        },
-      ]);
-    },
-    []
-  );
-
-  const handleUpdateZone = useCallback(
-    (id: string, zoneData: Omit<Zone, "id" | "createdAt">) => {
-      setZones((prev) =>
-        prev.map((zone) => (zone.id === id ? { ...zone, ...zoneData } : zone))
-      );
-    },
-    []
-  );
-
-  const handleDeleteZone = useCallback(
-    (id: string): boolean => {
-      // Kiểm tra xem khu vực có đang được sử dụng trong phiếu yêu cầu không
-      const isUsed = requisitionForms.some(
-        (form) => form.zone === zones.find((z) => z.id === id)?.name
-      );
-      if (isUsed) return false;
-
-      setZones((prev) => prev.filter((zone) => zone.id !== id));
-      return true;
-    },
-    [requisitionForms, zones]
-  );
-
-  const handleLogin = useCallback((user: User) => {
+  const handleFulfillRequisition = useCallback(async (formId: string, details: any) => {
     try {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-      setCurrentUser(user);
-    } catch (error) {
-      console.error(
-        "Không thể lưu thông tin người dùng vào localStorage",
-        error
-      );
-      alert("Đã xảy ra lỗi khi lưu thông tin của bạn.");
-    }
-  }, []);
-
-  const handleLogout = useCallback(() => {
-    if (window.confirm("Bạn có chắc chắn muốn đăng xuất không?")) {
-      try {
-        localStorage.removeItem(USER_STORAGE_KEY);
-        setCurrentUser(null);
-      } catch (error) {
-        console.error(
-          "Không thể xóa thông tin người dùng khỏi localStorage",
-          error
-        );
+      const result = await fulfillRequisition(formId, details);
+      if (!result.success) {
+        alert(result.message);
+      } else {
+        toast.success('Đã hoàn thành phiếu yêu cầu!');
       }
+    } catch (e: any) {
+      alert(e.message || 'Lỗi');
     }
-  }, []);
+  }, [fulfillRequisition]);
 
-  const handleConfirmReceipt = useCallback(
-    (receiptData: Omit<GoodsReceiptNote, "id" | "createdAt">) => {
-      if (!currentUser) return;
+  const handleConfirmReceipt = useCallback(async (formId: string) => {
+    const notes = window.prompt("Nhập ghi chú nhận hàng (tuỳ chọn):");
+    if (notes === null) return; // User cancelled
 
-      let updatedProducts = cloneProductList(masterProductList);
-
-      receiptData.items.forEach((item) => {
-        const productIndex = updatedProducts.findIndex(
-          (p) => p.id === item.productId
-        );
-        if (productIndex !== -1) {
-          const variantIndex = updatedProducts[productIndex].variants.findIndex(
-            (v) => v.id === item.variantId
-          );
-          if (variantIndex !== -1) {
-            updatedProducts[productIndex].variants[variantIndex].stock +=
-              item.quantity;
-          }
-        }
-      });
-
-      const fulfilledReqIds: string[] = [];
-      const pendingRequisitions = requisitionForms
-        .filter((f) => f.status === "Đang chờ xử lý")
-        .sort(
-          (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
-
-      for (const form of pendingRequisitions) {
-        const result = handleFulfillRequisition(
-          form.id,
-          {
-            notes: `Tự động cấp phát từ Phiếu nhập kho GRN-${Date.now()}`,
-            fulfillerName: "Hệ thống (Nhập kho)",
-          },
-          updatedProducts,
-          false
-        );
-
-        if (result.success) {
-          updatedProducts = result.updatedProducts;
-          fulfilledReqIds.push(form.id);
-        }
-      }
-
-      const newReceipt: GoodsReceiptNote = {
-        ...receiptData,
-        id: `GRN-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-        createdBy: currentUser.name,
-        linkedRequisitionIds: fulfilledReqIds,
-      };
-
-      setGoodsReceiptNotes((prev) => [newReceipt, ...prev]);
-      setMasterProductList(updatedProducts);
-
-      let alertMessage =
-        "Đã tạo Phiếu nhập kho thành công và cập nhật tồn kho.";
-      if (fulfilledReqIds.length > 0) {
-        alertMessage += `\nHệ thống đã tự động cấp phát cho các phiếu yêu cầu: ${fulfilledReqIds.join(
-          ", "
-        )}.`;
-      }
-      alert(alertMessage);
-      handleNavigate("receipts");
-    },
-    [
-      currentUser,
-      handleFulfillRequisition,
-      handleNavigate,
-      masterProductList,
-      requisitionForms,
-    ]
-  );
-
-  // Pass delivery note handlers to child components
-  const deliveryHandlers = useMemo(
-    () => ({
-      createDeliveryNote: handleCreateDeliveryNote,
-      verifyDeliveryNote: handleVerifyDeliveryNote,
-      rejectDeliveryNote: handleRejectDeliveryNote,
-    }),
-    [
-      handleCreateDeliveryNote,
-      handleVerifyDeliveryNote,
-      handleRejectDeliveryNote,
-    ]
-  );
-
-  // For dependencies array
-  const contentDependencies = [
-    currentView,
-    searchTerm,
-    allCategoriesForNav,
-    category,
-    paginatedProducts,
-    addToCart,
-    filteredAndSortedProducts.length,
-    masterProductList,
-    totalPages,
-    productCurrentPage,
-    requisitionForms,
-    triggerFulfillRequisition,
-    currentUser,
-    goodsReceiptNotes,
-    handleNavigate,
-    cart,
-    handleCreateRequisition,
-    updateCartItem,
-    removeFromCart,
-    categories,
-    adminInitialTab,
-    handleAddProduct,
-    handleUpdateProduct,
-    handleDeleteProduct,
-    handleAddCategory,
-    handleDeleteCategory,
-    handleUpdateCategory,
-    handleReorderCategories,
-    handleConfirmReceipt,
-    deliveryNotes,
-    deliveryHandlers,
-    handleUpdateRequisition,
-  ];
-
-  const content = useMemo(() => {
-    switch (currentView) {
-      case "shop":
-        return (
-          <>
-            <div className="bg-white sm:bg-gray-50 pt-6 pb-2 sm:pb-4">
-              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <SearchBar
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                />
-              </div>
-            </div>
-            <CategoryNav
-              categories={allCategoriesForNav}
-              activeCategory={category}
-              onSelectCategory={setCategory}
-            />
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-              <ProductList
-                products={paginatedProducts}
-                onAddToCart={addToCart}
-                totalProducts={filteredAndSortedProducts.length}
-                allProducts={masterProductList}
-                onImageClick={handleOpenGallery}
-              />
-              {totalPages > 1 && (
-                <div className="mt-8">
-                  <Pagination
-                    currentPage={productCurrentPage}
-                    totalPages={totalPages}
-                    onPageChange={setProductCurrentPage}
-                  />
-                </div>
-              )}
-            </div>
-          </>
-        );
-      case "requisitions":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <RequisitionListPage
-              forms={requisitionForms}
-              onFulfill={triggerFulfillRequisition}
-              currentUser={currentUser!}
-              cartItems={cart}
-              allProducts={masterProductList}
-              onCartRemove={removeFromCart}
-              onCartUpdateItem={updateCartItem}
-              onCreateRequisition={handleNavigateToCreateRequisition}
-              onUpdateRequisition={handleUpdateRequisition}
-              onDeleteRequisition={handleDeleteRequisition}
-            />
-          </main>
-        );
-      case "receipts":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <ReceiptList
-              receipts={goodsReceiptNotes}
-              products={masterProductList}
-              onNavigate={handleNavigate}
-            />
-          </main>
-        );
-      case "create-requisition":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <CreateRequisitionPage
-              user={currentUser}
-              allProducts={masterProductList}
-              cartItems={cart}
-              onSubmit={handleCreateRequisition}
-              onCancel={() => handleNavigate("shop")}
-              onUpdateItem={updateCartItem}
-              onRemoveItem={removeFromCart}
-            />
-          </main>
-        );
-      case "admin":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <AdminPage
-              products={masterProductList}
-              categories={categories}
-              zones={zones}
-              initialTab={adminInitialTab}
-              onNavigate={handleNavigate}
-              onAddProduct={handleAddProduct}
-              onUpdateProduct={handleUpdateProduct}
-              onDeleteProduct={handleDeleteProduct}
-              onAddCategory={handleAddCategory}
-              onDeleteCategory={handleDeleteCategory}
-              onUpdateCategory={handleUpdateCategory}
-              onReorderCategories={handleReorderCategories}
-              onAddZone={handleAddZone}
-              onUpdateZone={handleUpdateZone}
-              onDeleteZone={handleDeleteZone}
-            />
-          </main>
-        );
-      case "create-receipt":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <CreateReceiptPage
-              user={currentUser}
-              products={masterProductList}
-              categories={categories}
-              onSubmit={handleConfirmReceipt}
-              onCancel={() => handleNavigate("receipts")}
-              onAddProduct={handleAddProduct}
-            />
-          </main>
-        );
-      case "deliveries":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <Suspense fallback={<div>Loading...</div>}>
-              <DeliveryNoteList
-                deliveryNotes={deliveryNotes}
-                products={masterProductList}
-                currentUser={currentUser!}
-                onNavigate={handleNavigate}
-                {...deliveryHandlers}
-              />
-            </Suspense>
-          </main>
-        );
-      case "create-delivery":
-        return (
-          <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <CreateDeliveryNote
-              user={currentUser}
-              products={masterProductList}
-              receipts={goodsReceiptNotes}
-              onSubmit={handleCreateDeliveryNote}
-              onCancel={() => handleNavigate("deliveries")}
-            />
-          </main>
-        );
-      default:
-        return null;
+    try {
+      await confirmRequisitionReceipt(formId, user?.name || 'Người dùng', notes);
+      toast.success('Đã xác nhận nhận hàng thành công!');
+    } catch (e: any) {
+      alert(e.message || 'Lỗi khi xác nhận nhận hàng');
     }
-  }, contentDependencies);
+  }, [confirmRequisitionReceipt, user]);
 
-  if (isInitializing) {
+  const handleCreateReceipt = useCallback(async (receiptData: any) => {
+    try {
+      const { fulfilledReqIds } = await createReceipt({ ...receiptData, createdBy: user?.name || '' });
+      let msg = 'Đã tạo Phiếu nhập kho thành công!';
+      if (fulfilledReqIds && fulfilledReqIds.length > 0) msg += `\nHệ thống đã tự động cấp phát: ${fulfilledReqIds.join(', ')}`;
+      alert(msg);
+      navigate('/receipts');
+    } catch (e: any) {
+      alert(e.message || 'Lỗi');
+    }
+  }, [createReceipt, navigate, user]);
+
+  const handleDeleteReceipt = useCallback(async (receiptId: string) => {
+    if (window.confirm(`Bạn có chắc chắn muốn xoá phiếu nhập kho này không? ID: ${receiptId}. Hành động này sẽ hoàn trả lại số lượng tồn kho.`)) {
+      await deleteReceipt(receiptId);
+    }
+  }, [deleteReceipt]);
+
+  const handleEditReceipt = useCallback(async (receipt: any) => {
+    await updateReceipt(receipt.id, {}); // Shows alert for now
+  }, [updateReceipt]);
+
+  const handleCreateDeliveryNoteWrapper = useCallback(async (items: any, receiptId: string, shipperId: string) => {
+    try {
+      await createDelivery(items, receiptId, shipperId, user?.name || '');
+      navigate('/deliveries');
+    } catch (e: any) {
+      alert(e.message || 'Lỗi');
+    }
+  }, [createDelivery, navigate, user]);
+
+  const showDesktopNav = ['shop', 'requisitions', 'receipts', 'admin', 'deliveries', 'create-delivery'].includes(currentView);
+
+  if (!user) return <LoginPage />;
+
+  if (isFetchingInitialData) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-yellow-500 border-t-transparent"></div>
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center">
+          <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-amber-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-500 font-medium">Đang tải dữ liệu từ máy chủ...</p>
+        </div>
       </div>
     );
   }
 
-  if (!currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50 pb-16 sm:pb-0">
-      <Toaster
-        containerStyle={{
-          top: 80,
-          right: 20,
-        }}
-        toastOptions={{
-          className: "",
-          style: {
-            padding: "0",
-            margin: "0",
-            background: "transparent",
-            boxShadow: "none",
-          },
-        }}
-      />
-      <Header
-        cartItemCount={cartItemCount}
-        onCartClick={() => setIsCartOpen(true)}
-        onNavigate={handleNavigate}
-        currentView={currentView}
-        user={currentUser}
-        onLogout={handleLogout}
-      />
-      {showDesktopNav && (
-        <DesktopNav
+      <Toaster containerStyle={{ top: 80, right: 20 }} />
+      
+      {isActionLoading && (
+        <div className="fixed inset-0 z-[9999] bg-black bg-opacity-30 flex flex-col items-center justify-center">
+          <div className="bg-white px-6 py-4 rounded-lg shadow-xl flex items-center space-x-3">
+            <div className="h-6 w-6 animate-spin rounded-full border-4 border-solid border-amber-500 border-t-transparent"></div>
+            <span className="text-gray-800 font-medium">Đang xử lý...</span>
+          </div>
+        </div>
+      )}
+
+      <div className="contents print:hidden">
+        <Header
+          cartItemCount={cartItemCount}
+          onCartClick={() => setIsCartOpen(true)}
           onNavigate={handleNavigate}
           currentView={currentView}
-          user={currentUser}
+          user={user}
+          onLogout={logout}
         />
-      )}
-      <Suspense
-        fallback={
-          <div className="py-10 text-center text-gray-500">
-            Đang tải nội dung...
-          </div>
-        }
-      >
-        {content}
+        
+        {showDesktopNav && <DesktopNav onNavigate={handleNavigate} currentView={currentView} user={user} />}
+      </div>
+
+      <Suspense fallback={<div className="py-10 text-center text-gray-500">Đang tải nội dung...</div>}>
+        <Routes>
+          <Route path="/" element={
+            <>
+              {popularProducts.length > 0 && (
+                <div className="bg-white pt-6 pb-2 sm:pb-4">
+                  <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                    <PopularProductsSlider
+                      products={popularProducts}
+                      allProducts={products}
+                      onAddToCart={handleAddToCart}
+                      onImageClick={handleOpenGallery}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white sm:bg-gray-50 pt-2 pb-4">
+                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                  <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+                </div>
+              </div>
+              
+              <CategoryNav categories={allCategoriesForNav} activeCategory={category} onSelectCategory={setCategory} />
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Danh sách vật tư</h2>
+                <ProductList
+                  products={paginatedProducts}
+                  onAddToCart={handleAddToCart}
+                  totalProducts={filteredAndSortedProducts.length}
+                  allProducts={products}
+                  onImageClick={handleOpenGallery}
+                />
+                {totalPages > 1 && (
+                  <div className="mt-8">
+                    <Pagination currentPage={productCurrentPage} totalPages={totalPages} onPageChange={setProductCurrentPage} />
+                  </div>
+                )}
+              </div>
+            </>
+          } />
+          
+          <Route path="/requisitions" element={
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <RequisitionListPage
+                forms={requisitions}
+                zones={zones}
+                onFulfill={handleFulfillRequisition}
+                onConfirmReceipt={handleConfirmReceipt}
+                currentUser={user}
+                cartItems={cart}
+                allProducts={products}
+                onCartRemove={removeFromCart}
+                onCartUpdateItem={handleUpdateCartItem}
+                onCreateRequisition={handleNavigateToCreateRequisition}
+                onUpdateRequisition={updateRequisition}
+                onDeleteRequisition={deleteRequisition}
+              />
+            </main>
+          } />
+          
+          <Route path="/receipts" element={
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <ReceiptList 
+                receipts={receipts} 
+                products={products} 
+                onNavigate={handleNavigate} 
+                isReadOnly={user?.role === 'auditor'} 
+                onEditReceipt={handleEditReceipt}
+                onDeleteReceipt={handleDeleteReceipt}
+              />
+            </main>
+          } />
+          
+          <Route path="/requisitions/create" element={
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <CreateRequisitionPage zones={zones}
+                user={user}
+                allProducts={products}
+                cartItems={cart}
+                onSubmit={handleCreateRequisition}
+                onCancel={() => navigate('/')}
+                onUpdateItem={handleUpdateCartItem}
+                onRemoveItem={removeFromCart}
+              />
+            </main>
+          } />
+          
+          <Route path="/admin" element={
+            !["manager", "auditor"].includes(user?.role || "") ? <Navigate to="/" replace /> :
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <AdminPage
+                products={products}
+                categories={categories}
+                zones={zones}
+                users={users}
+                initialTab={adminInitialTab}
+                onNavigate={handleNavigate}
+                onAddProduct={addProduct}
+                onUpdateProduct={updateProduct}
+                onDeleteProduct={deleteProduct}
+                onAddCategory={addCategory}
+                onDeleteCategory={deleteCategory}
+                onUpdateCategory={updateCategory}
+                onReorderCategories={reorderCategories}
+                onAddZone={addZone}
+                onUpdateZone={updateZone}
+                onDeleteZone={deleteZone}
+                onAddUser={addUser}
+                onUpdateUser={updateUser}
+                onDeleteUser={deleteUser}
+              />
+            </main>
+          } />
+          
+          <Route path="/receipts/create" element={
+            user?.role !== "manager" ? <Navigate to="/" replace /> :
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <CreateReceiptPage
+                user={user}
+                products={products}
+                categories={categories}
+                onSubmit={handleCreateReceipt}
+                onCancel={() => handleNavigate('receipts')}
+                onAddProduct={addProduct}
+              />
+            </main>
+          } />
+          
+          <Route path="/deliveries" element={
+            !["manager", "auditor"].includes(user?.role || "") ? <Navigate to="/" replace /> :
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <DeliveryNoteList 
+                deliveryNotes={deliveries} 
+                products={products} 
+                currentUser={user}
+                onNavigate={handleNavigate}
+                createDeliveryNote={handleCreateDeliveryNoteWrapper as any}
+                verifyDeliveryNote={verifyDelivery}
+                rejectDeliveryNote={rejectDelivery}
+                isReadOnly={user?.role !== 'manager'}
+              />
+            </main>
+          } />
+          
+          <Route path="/deliveries/create" element={
+            user?.role !== "manager" ? <Navigate to="/" replace /> :
+            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+              <CreateDeliveryNote
+                user={user}
+                products={products}
+                receipts={receipts}
+                onSubmit={handleCreateDeliveryNoteWrapper as any}
+                onCancel={() => handleNavigate('deliveries')}
+              />
+            </main>
+          } />
+          
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </Suspense>
+      <div className="contents print:hidden">
+        <BottomNav onNavigate={handleNavigate} currentView={currentView} user={user} />
+      </div>
+      <ImageGalleryModal isOpen={isGalleryOpen} onClose={() => setIsGalleryOpen(false)} images={galleryImages} startIndex={galleryStartIndex} />
 
-      <Chatbot allProducts={masterProductList} />
-      <BottomNav
-        onNavigate={handleNavigate}
-        currentView={currentView}
-        user={currentUser}
-      />
-
-      <ImageGalleryModal
-        isOpen={isGalleryOpen}
-        onClose={() => setIsGalleryOpen(false)}
-        images={galleryImages}
-        startIndex={galleryStartIndex}
-      />
+      {isCartOpen && (
+        <div className="relative z-50">
+          <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={() => setIsCartOpen(false)}></div>
+          <div className="fixed inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <div className="pointer-events-auto w-screen max-w-md bg-white shadow-xl flex flex-col">
+                  <div className="flex items-start justify-between px-4 py-6 sm:px-6">
+                    <h2 className="text-lg font-medium text-gray-900">Phiếu Yêu Cầu Tạm Thời</h2>
+                    <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-gray-500">
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto px-4 sm:px-6">
+                    <Cart
+                      cartItems={cart}
+                      allProducts={products}
+                      onRemove={removeFromCart}
+                      onUpdateItem={handleUpdateCartItem}
+                      onCreateRequisition={() => { setIsCartOpen(false); handleNavigateToCreateRequisition(); }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

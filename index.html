@@ -42,15 +42,11 @@
     html {
       scrollbar-width: thin;
       scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+      overflow-y: scroll; /* Fix layout shift on Windows */
+      scrollbar-gutter: stable;
     }
 
-    /* Prevent iOS auto-zoom on input focus */
-    /* iOS Safari zooms on input fields if the font-size is less than 16px. */
-    input,
-    textarea,
-    select {
-      font-size: 16px !important;
-    }
+    /* Prevent iOS auto-zoom on input focus is handled by viewport meta tag */
 
     /* Utility to hide scrollbar */
     .no-scrollbar::-webkit-scrollbar {
@@ -59,6 +55,32 @@
     .no-scrollbar {
       -ms-overflow-style: none;  /* IE and Edge */
       scrollbar-width: none;  /* Firefox */
+    }
+
+    /* Print utilities */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .print-only, .print-only * {
+        visibility: visible;
+      }
+      .print-only {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+        background: white;
+      }
+      .no-print {
+        display: none !important;
+      }
+      @page {
+        margin: 1.5cm;
+        size: A4;
+      }
     }
   </style>
 </head>

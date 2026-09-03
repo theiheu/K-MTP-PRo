@@ -107,10 +107,10 @@ const BottomNav: React.FC<BottomNavProps> = ({
       <div className="flex justify-around items-center h-16">
         <button
           onClick={() => onNavigate("shop")}
-          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${
+          className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
             currentView === "shop" || currentView === "create-requisition"
-              ? "text-yellow-600"
-              : "text-gray-500 hover:text-yellow-600"
+              ? "text-amber-600"
+              : "text-gray-500 hover:text-amber-600"
           }`}
         >
           <StoreIcon className="w-6 h-6 mb-1" />
@@ -118,23 +118,23 @@ const BottomNav: React.FC<BottomNavProps> = ({
         </button>
         <button
           onClick={() => onNavigate("requisitions")}
-          className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${
+          className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
             currentView === "requisitions"
-              ? "text-yellow-600"
-              : "text-gray-500 hover:text-yellow-600"
+              ? "text-amber-600"
+              : "text-gray-500 hover:text-amber-600"
           }`}
         >
           <ListBulletIcon className="w-6 h-6 mb-1" />
           Phiếu yêu cầu
         </button>
-        {user.role === "manager" && (
+        {["manager", "auditor"].includes(user.role) && (
           <>
             <button
               onClick={() => onNavigate("receipts")}
-              className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${
+              className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
                 viewsForReceipts.includes(currentView)
-                  ? "text-yellow-600"
-                  : "text-gray-500 hover:text-yellow-600"
+                  ? "text-amber-600"
+                  : "text-gray-500 hover:text-amber-600"
               }`}
             >
               <ArchiveBoxArrowDownIcon className="w-6 h-6 mb-1" />
@@ -142,10 +142,10 @@ const BottomNav: React.FC<BottomNavProps> = ({
             </button>
             <button
               onClick={() => onNavigate("deliveries")}
-              className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${
+              className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
                 ["deliveries", "create-delivery"].includes(currentView)
-                  ? "text-yellow-600"
-                  : "text-gray-500 hover:text-yellow-600"
+                  ? "text-amber-600"
+                  : "text-gray-500 hover:text-amber-600"
               }`}
             >
               <svg
@@ -165,11 +165,11 @@ const BottomNav: React.FC<BottomNavProps> = ({
               Giao Hàng
             </button>
             <button
-              onClick={() => onNavigate("admin")}
-              className={`flex flex-col items-center justify-center w-full h-full text-sm font-medium transition-colors ${
+              onClick={() => onNavigate("admin", "products")}
+              className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
                 currentView === "admin"
-                  ? "text-yellow-600"
-                  : "text-gray-500 hover:text-yellow-600"
+                  ? "text-amber-600"
+                  : "text-gray-500 hover:text-amber-600"
               }`}
             >
               <WrenchScrewdriverIcon className="w-6 h-6 mb-1" />
@@ -183,3 +183,4 @@ const BottomNav: React.FC<BottomNavProps> = ({
 };
 
 export default BottomNav;
+

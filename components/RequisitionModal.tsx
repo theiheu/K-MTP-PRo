@@ -10,6 +10,7 @@ interface RequisitionModalProps {
     purpose: string;
   }) => void;
   user: User;
+  zones: { id: string; name: string }[];
 }
 
 const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -34,15 +35,16 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
   onClose,
   onSubmit,
   user,
+  zones,
 }) => {
   const [requesterName, setRequesterName] = useState("");
-  const [zone, setZone] = useState(user.zone || "Khu 1");
+  const [zone, setZone] = useState(user.zone || (zones && zones.length > 0 ? zones[0].name : ""));
   const [purpose, setPurpose] = useState("");
 
   useEffect(() => {
     if (isOpen) {
       // Đặt lại trạng thái biểu mẫu khi modal mở
-      setZone(user.zone || "Khu 1");
+      setZone(user.zone || (zones && zones.length > 0 ? zones[0].name : ""));
       setPurpose("");
       if (user.role === "requester") {
         setRequesterName(user.name);
@@ -78,7 +80,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
     >
       <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
       <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-        <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+        <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
           <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
             <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
               <div className="sm:flex sm:items-start">
@@ -122,7 +124,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
                                 : undefined
                             }
                             readOnly={!isManager}
-                            className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${
+                            className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6 ${
                               !isManager ? "bg-gray-100 cursor-not-allowed" : ""
                             }`}
                             placeholder={
@@ -145,9 +147,9 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
                             name="zone"
                             value={zone}
                             onChange={(e) => setZone(e.target.value)}
-                            className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                            className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6"
                           >
-                            {window.zones?.map((z) => (
+                            {zones?.map((z) => (
                               <option key={z.id} value={z.name}>
                                 {z.name}
                               </option>
@@ -169,7 +171,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
                             id="purpose"
                             value={purpose}
                             onChange={(e) => setPurpose(e.target.value)}
-                            className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                            className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6"
                             placeholder="Vd: Sửa chữa máy cho gà ăn"
                             required
                           ></textarea>
@@ -184,7 +186,7 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
               <button
                 type="submit"
                 form="requisitionForm"
-                className="inline-flex w-full justify-center rounded-md bg-yellow-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-600 sm:ml-3 sm:w-auto"
+                className="inline-flex w-full justify-center rounded-md bg-amber-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-600 sm:ml-3 sm:w-auto"
               >
                 Gửi Phiếu Yêu cầu
               </button>
@@ -204,3 +206,4 @@ const RequisitionModal: React.FC<RequisitionModalProps> = ({
 };
 
 export default RequisitionModal;
+

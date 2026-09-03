@@ -101,12 +101,12 @@ export function lazyLoadImage(img: HTMLImageElement, src: string): void {
 // Report Web Vitals
 export function reportWebVitals(onPerfEntry?: (metric: any) => void): void {
   if (onPerfEntry && typeof onPerfEntry === 'function') {
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(onPerfEntry);
-      getFID(onPerfEntry);
-      getFCP(onPerfEntry);
-      getLCP(onPerfEntry);
-      getTTFB(onPerfEntry);
+    import('web-vitals').then(({ onCLS, onINP, onFCP, onLCP, onTTFB }) => {
+      onCLS(onPerfEntry);
+      onINP(onPerfEntry); // FID was replaced by INP
+      onFCP(onPerfEntry);
+      onLCP(onPerfEntry);
+      onTTFB(onPerfEntry);
     }).catch(() => {
       // web-vitals not installed, silently fail
     });

@@ -17,7 +17,9 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
         date: new Date(delivery.createdAt),
         title: "Tạo phiếu",
         person: delivery.createdBy,
+        notes: undefined,
         type: "create",
+        metadata: null,
       },
       ...(delivery.history || []).map((h) => ({
         date: new Date(h.timestamp),
@@ -35,6 +37,7 @@ export const VerificationDetails: React.FC<VerificationDetailsProps> = ({
               person: verification.verifiedBy,
               notes: verification.notes,
               type: "verify",
+              metadata: null,
             },
           ]
         : []),

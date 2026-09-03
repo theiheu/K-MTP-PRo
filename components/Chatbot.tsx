@@ -260,7 +260,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
         onTouchStart={handleDragStart}
         onClick={handleBubbleClick}
       >
-        <div className="bg-yellow-500 text-white rounded-full p-4 shadow-lg hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500">
+        <div className="bg-amber-500 text-white rounded-full p-4 shadow-lg hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
           <ChatBubbleIcon />
         </div>
       </div>
@@ -280,7 +280,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
           </button>
           {messages.length === 0 && !isLoading ? (
             <div className="flex flex-col h-full items-center justify-center text-center text-gray-500 p-4">
-              <div className="text-yellow-300">
+              <div className="text-amber-300">
                 <ChatBubbleIcon className="w-12 h-12" />
               </div>
               <p className="mt-4 text-sm">
@@ -297,14 +297,14 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
                 }`}
               >
                 {msg.sender === "ai" && (
-                  <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 text-white">
+                  <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-white">
                     <ChatBubbleIcon />
                   </div>
                 )}
                 <div
                   className={`p-3 rounded-lg max-w-xs md:max-w-sm ${
                     msg.sender === "user"
-                      ? "bg-yellow-500 text-white"
+                      ? "bg-amber-500 text-white"
                       : "bg-gray-200 text-gray-800"
                   }`}
                 >
@@ -340,7 +340,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
           )}
           {isLoading && (
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0 text-white">
+              <div className="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 text-white">
                 <ChatBubbleIcon />
               </div>
               <div className="p-3 rounded-lg bg-gray-200">
@@ -362,13 +362,13 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder="Hỏi tôi để tìm một vật tư..."
-              className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              className="w-full pr-12 pl-4 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500"
               disabled={isLoading}
             />
             <button
               onClick={handleSend}
               disabled={isLoading}
-              className="absolute right-1 top-1/2 -translate-y-1/2 bg-yellow-500 text-white p-2 rounded-full hover:bg-yellow-600 disabled:bg-yellow-300"
+              className="absolute right-1 top-1/2 -translate-y-1/2 bg-amber-500 text-white p-2 rounded-full hover:bg-amber-600 disabled:bg-amber-300"
             >
               <PaperAirplaneIcon />
             </button>
@@ -380,3 +380,4 @@ const Chatbot: React.FC<ChatbotProps> = ({ allProducts }) => {
 };
 
 export default Chatbot;
+

@@ -1,5 +1,6 @@
 import React from "react";
 import { User } from "../types";
+import NotificationBell from "./NotificationBell";
 
 interface HeaderProps {
   cartItemCount: number;
@@ -112,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({
             {/* User info for Desktop */}
             <div className="hidden sm:block">
               <div className="text-sm font-medium text-gray-800">
-                {user.name}
+                {user.name} <span className="text-gray-400 font-normal">({user.username})</span>
               </div>
               <div className="text-xs text-gray-500">
                 {user.role === "manager"
@@ -128,7 +129,7 @@ const Header: React.FC<HeaderProps> = ({
               onClick={() => onNavigate("shop")}
               className="flex items-center space-x-2 text-xl sm:text-2xl font-bold text-gray-800"
             >
-              <StoreIcon className="h-8 w-8 text-yellow-600" />
+              <StoreIcon className="h-8 w-8 text-amber-600" />
               <span className="hidden sm:inline">Vật tư Trại Gà</span>
               <span className="sm:hidden text-lg">Vật tư Trại Gà</span>
             </button>
@@ -138,7 +139,7 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex-1 flex justify-end items-center">
             {/* Cart Button for Desktop */}
             {currentView === "shop" && (
-              <div className="hidden sm:ml-6 sm:flow-root">
+              <div className="hidden sm:ml-4 sm:flow-root">
                 <button
                   onClick={onCartClick}
                   className="group -m-2 p-2 flex items-center relative"
@@ -157,11 +158,19 @@ const Header: React.FC<HeaderProps> = ({
               </div>
             )}
 
+            <div className="ml-2 sm:ml-4">
+              <NotificationBell 
+                userRole={user.role} 
+                onNavigateToRequisitions={() => onNavigate('requisitions')}
+                onNavigateToInventory={() => onNavigate('admin')}
+              />
+            </div>
+
             {/* Logout Button */}
             <button
               onClick={onLogout}
               title="Đăng xuất"
-              className="ml-4 p-2 text-gray-500 hover:text-gray-700"
+              className="ml-2 sm:ml-4 p-2 text-gray-500 hover:text-gray-700"
             >
               <ArrowRightOnRectangleIcon className="h-6 w-6" />
             </button>
@@ -173,3 +182,4 @@ const Header: React.FC<HeaderProps> = ({
 };
 
 export default Header;
+

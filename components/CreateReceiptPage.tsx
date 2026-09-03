@@ -5,6 +5,7 @@ import SearchBar from './SearchBar';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import ImageGalleryModal from './ImageGalleryModal';
 import ProductFormModal from './ProductFormModal';
+import Pagination from './Pagination';
 import { calculateVariantStock } from '../utils/stockCalculator';
 
 interface CreateReceiptPageProps {
@@ -26,12 +27,18 @@ const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, categories, onSubmit, onCancel, onAddProduct }) => {
     const [supplier, setSupplier] = useState('');
     const [notes, setNotes] = useState('');
-    const [quantities, setQuantities] = useState<{ [key: number]: number }>({});
+    const [inputs, setInputs] = useState<{ [key: string]: { quantity: number; batchCode?: string; expiryDate?: string } }>({});
 
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState<string>('all');
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 10;
+
+    React.useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, categoryFilter]);
     
-    const [expandedProductIds, setExpandedProductIds] = useState<Set<number>>(new Set());
+    const [expandedProductIds, setExpandedProductIds] = useState<Set<string>>(new Set());
     
     // State for image gallery
     const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -40,7 +47,7 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
 
     const [isProductFormModalOpen, setIsProductFormModalOpen] = useState(false);
 
-    const handleToggleExpand = (productId: number) => {
+    const handleToggleExpand = (productId: string) => {
         setExpandedProductIds(prev => {
             const newSet = new Set(prev);
             if (newSet.has(productId)) {
@@ -86,17 +93,18 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
     
     const itemsToReceive = useMemo(() => {
         const items: (ReceiptItem & { productName: string; variantAttributes: {[key: string]: string}; unit?: string })[] = [];
-        for (const variantIdStr in quantities) {
-            const variantId = parseInt(variantIdStr, 10);
-            const quantity = quantities[variantId];
-            if (quantity > 0) {
+        for (const variantId in inputs) {
+            const input = inputs[variantId];
+            if (input.quantity > 0) {
                 for (const product of products) {
-                    const variant = product.variants.find(v => v.id === variantId);
+                    const variant = product.variants.find(v => v.id.toString() === variantId);
                     if (variant) {
                         items.push({
                             productId: product.id,
                             variantId: variant.id,
-                            quantity: quantity,
+                            quantity: input.quantity,
+                            batchCode: input.batchCode,
+                            expiryDate: input.expiryDate,
                             productName: product.name,
                             variantAttributes: variant.attributes,
                             unit: variant.unit
@@ -107,14 +115,17 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
             }
         }
         return items;
-    }, [quantities, products]);
+    }, [inputs, products]);
 
-    const handleQuantityChange = (variantId: number, value: string) => {
-        const quantity = parseInt(value, 10);
-        setQuantities(prev => ({
-            ...prev,
-            [variantId]: isNaN(quantity) || quantity < 0 ? 0 : quantity
-        }));
+    const handleInputChange = (variantId: string, field: 'quantity' | 'batchCode' | 'expiryDate', value: string) => {
+        setInputs(prev => {
+            const current = prev[variantId] || { quantity: 0, batchCode: '', expiryDate: '' };
+            if (field === 'quantity') {
+                const quantity = parseInt(value, 10);
+                return { ...prev, [variantId]: { ...current, quantity: isNaN(quantity) || quantity < 0 ? 0 : quantity } };
+            }
+            return { ...prev, [variantId]: { ...current, [field]: value } };
+        });
     };
     
     const handleSubmit = (e: React.FormEvent) => {
@@ -160,7 +171,7 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
                           id="receipt-category-filter"
                           value={categoryFilter}
                           onChange={(e) => setCategoryFilter(e.target.value)}
-                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm h-full"
+                          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm h-full"
                       >
                          <option value="all">Tất cả Danh mục</option>
                          {allUniqueCategories.map((cat) => cat !== 'all' && <option key={cat} value={cat}>{cat}</option>)}
@@ -172,7 +183,7 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
                 <button 
                   type="button" 
                   onClick={() => setIsProductFormModalOpen(true)}
-                  className="text-sm font-medium text-yellow-600 hover:text-yellow-800"
+                  className="text-sm font-medium text-amber-600 hover:text-amber-800"
                 >
                   Vật tư không có trong danh sách? Thêm mới tại đây.
                 </button>
@@ -180,81 +191,117 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
 
               {/* Danh sách vật tư */}
               <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-2">
-                {filteredProducts.length > 0 ? filteredProducts.map(product => {
-                    const isExpanded = expandedProductIds.has(product.id);
-                    return (
-                        <div key={product.id} className="border rounded-lg">
-                            <div 
-                                className="p-3 cursor-pointer hover:bg-gray-50 transition-colors"
-                                onClick={() => handleToggleExpand(product.id)}
-                                role="button"
-                                aria-expanded={isExpanded}
-                                aria-controls={`variants-${product.id}`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div
-                                        className="w-12 h-12 rounded-md flex-shrink-0 cursor-pointer overflow-hidden group"
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Ngăn việc mở/đóng khi nhấp vào ảnh
-                                            handleOpenGallery(product.images, 0);
-                                        }}
-                                    >
-                                        <ImageWithPlaceholder
-                                            src={product.images[0]}
-                                            alt={product.name}
-                                            className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                        />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-medium text-gray-800">{product.name}</h3>
-                                        <p className={`text-xs ${product.totalStock > 0 ? 'text-gray-500' : 'text-red-600 font-semibold'}`}>
-                                            Tổng tồn kho: {product.totalStock}
-                                        </p>
-                                    </div>
-                                    <ChevronDownIcon className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                                </div>
-                            </div>
-    
-                            {isExpanded && (
-                                <div id={`variants-${product.id}`} className="border-t border-gray-200">
-                                    <div className="pl-3 pr-3 pb-3 sm:pl-[60px] sm:pr-3 sm:pb-3">
-                                        <table className="w-full text-sm text-left mt-2">
-                                            <thead className="text-xs text-gray-600 bg-gray-50">
-                                                <tr>
-                                                    <th className="px-2 py-1 font-medium">Biến thể</th>
-                                                    <th className="px-2 py-1 font-medium text-right">Số lượng nhập</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                            {product.variants.map(variant => (
-                                                <tr key={variant.id} className="border-t">
-                                                    <td className="px-2 py-2">
-                                                        <p className="text-gray-700">{Object.values(variant.attributes).join(' / ') || 'Mặc định'}</p>
-                                                        <p className="text-xs text-gray-500">Tồn kho: {variant.stock}</p>
-                                                    </td>
-                                                    <td className="px-2 py-2 text-right">
-                                                        <input
-                                                            type="number"
-                                                            value={quantities[variant.id] || ''}
-                                                            onClick={(e) => e.stopPropagation()} // Ngăn việc đóng lại khi nhấp vào input
-                                                            onChange={e => handleQuantityChange(variant.id, e.target.value)}
-                                                            placeholder="0"
-                                                            min="0"
-                                                            className="w-24 text-center rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 text-sm p-1.5"
-                                                        />
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )
-                }) : (
-                    <p className="text-center text-gray-500 py-8">Không có vật tư nào phù hợp với bộ lọc.</p>
-                )}
+                {(() => {
+                  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
+                  const paginatedProducts = filteredProducts.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+                  
+                  return (
+                    <>
+                      {paginatedProducts.length > 0 ? paginatedProducts.map(product => {
+                          const isExpanded = expandedProductIds.has(product.id);
+                          return (
+                              <div key={product.id} className="border rounded-lg">
+                                  <div 
+                                      className="p-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                                      onClick={() => handleToggleExpand(product.id)}
+                                      role="button"
+                                      aria-expanded={isExpanded}
+                                      aria-controls={`variants-${product.id}`}
+                                  >
+                                      <div className="flex items-center gap-3">
+                                          <div
+                                              className="w-12 h-12 rounded-md flex-shrink-0 cursor-pointer overflow-hidden group"
+                                              onClick={(e) => {
+                                                  e.stopPropagation(); // Ngăn việc mở/đóng khi nhấp vào ảnh
+                                                  handleOpenGallery(product.images, 0);
+                                              }}
+                                          >
+                                              <ImageWithPlaceholder
+                                                  src={product.images[0]}
+                                                  alt={product.name}
+                                                  className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                                              />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                              <h3 className="font-medium text-gray-800">{product.name}</h3>
+                                              <p className={`text-xs ${product.totalStock > 0 ? 'text-gray-500' : 'text-red-600 font-semibold'}`}>
+                                                  Tổng tồn kho: {product.totalStock}
+                                              </p>
+                                          </div>
+                                          <ChevronDownIcon className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                                      </div>
+                                  </div>
+          
+                                  {isExpanded && (
+                                      <div id={`variants-${product.id}`} className="border-t border-gray-200">
+                                          <div className="pl-3 pr-3 pb-3 sm:pl-[60px] sm:pr-3 sm:pb-3">
+                                              <table className="w-full text-sm text-left mt-2">
+                                                  <thead className="text-xs text-gray-600 bg-gray-50">
+                                                      <tr>
+                                                          <th className="px-2 py-1 font-medium">Biến thể</th>
+                                                          <th className="px-2 py-1 font-medium text-left">Mã Lô</th>
+                                                          <th className="px-2 py-1 font-medium text-left">Hạn dùng</th>
+                                                          <th className="px-2 py-1 font-medium text-right">Số lượng nhập</th>
+                                                      </tr>
+                                                  </thead>
+                                                  <tbody>
+                                                  {product.variants.map(variant => (
+                                                      <tr key={variant.id} className="border-t">
+                                                          <td className="px-2 py-2">
+                                                              <p className="text-gray-700">{Object.values(variant.attributes).join(' / ') || 'Mặc định'}</p>
+                                                              <p className="text-xs text-gray-500">Tồn kho: {variant.stock}</p>
+                                                          </td>
+                                                          <td className="px-2 py-2">
+                                                              <input
+                                                                  type="text"
+                                                                  value={inputs[variant.id]?.batchCode || ''}
+                                                                  onClick={(e) => e.stopPropagation()}
+                                                                  onChange={e => handleInputChange(variant.id, 'batchCode', e.target.value)}
+                                                                  placeholder="VD: L01"
+                                                                  className="w-20 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm p-1.5"
+                                                              />
+                                                          </td>
+                                                          <td className="px-2 py-2">
+                                                              <input
+                                                                  type="date"
+                                                                  value={inputs[variant.id]?.expiryDate || ''}
+                                                                  onClick={(e) => e.stopPropagation()}
+                                                                  onChange={e => handleInputChange(variant.id, 'expiryDate', e.target.value)}
+                                                                  className="w-32 rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm p-1.5"
+                                                              />
+                                                          </td>
+                                                          <td className="px-2 py-2 text-right">
+                                                              <input
+                                                                  type="number"
+                                                                  value={inputs[variant.id]?.quantity || ''}
+                                                                  onClick={(e) => e.stopPropagation()}
+                                                                  onChange={e => handleInputChange(variant.id, 'quantity', e.target.value)}
+                                                                  placeholder="0"
+                                                                  min="0"
+                                                                  className="w-24 text-center rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 text-sm p-1.5"
+                                                              />
+                                                          </td>
+                                                      </tr>
+                                                  ))}
+                                                  </tbody>
+                                              </table>
+                                          </div>
+                                      </div>
+                                  )}
+                              </div>
+                          )
+                      }) : (
+                          <p className="text-center text-gray-500 py-8">Không có vật tư nào phù hợp với bộ lọc.</p>
+                      )}
+                      
+                      {filteredProducts.length > 0 && (
+                          <div className="mt-4">
+                              <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
+                          </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
     
@@ -285,7 +332,14 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
                                     <li key={item.variantId} className="flex items-center py-2">
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm font-medium text-gray-900 truncate">{item.productName}</p>
-                                            <p className="text-xs text-gray-500 truncate">{Object.values(item.variantAttributes).join(' / ') || 'Mặc định'}</p>
+                                            <p className="text-xs text-gray-500 truncate">{Object.values(item.variantAttributes || {}).join(' / ') || 'Mặc định'}</p>
+                                            {(item.batchCode || item.expiryDate) && (
+                                                <p className="text-xs text-amber-600">
+                                                    {item.batchCode && `Lô: ${item.batchCode}`}
+                                                    {item.batchCode && item.expiryDate && ' | '}
+                                                    {item.expiryDate && `HSD: ${new Date(item.expiryDate).toLocaleDateString('vi-VN')}`}
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="ml-4 flex-shrink-0 text-sm">
                                             <span className="font-semibold">{item.quantity}</span> {item.unit}
@@ -329,3 +383,4 @@ const CreateReceiptPage: React.FC<CreateReceiptPageProps> = ({ user, products, c
 };
 
 export default CreateReceiptPage;
+

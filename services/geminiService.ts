@@ -78,9 +78,6 @@ export const getAIRecommendations = async (
   Dựa trên phân tích của bạn, xác định các vật tư phù hợp nhất và trả về ID của chúng. Ưu tiên các mặt hàng còn trong kho.`;
 
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
-
     const response = await ai!.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -88,9 +85,7 @@ export const getAIRecommendations = async (
         responseMimeType: "application/json",
         responseSchema: recommendationSchema,
       },
-      signal: controller.signal as unknown as AbortSignal,
     });
-    clearTimeout(timeout);
 
     const jsonResponse = JSON.parse(response.text);
     const recommendedIds: number[] = jsonResponse.product_ids || [];

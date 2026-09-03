@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Product, Category, Variant, ChildComponent } from '../types';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
+import Pagination from './Pagination';
 import { calculateVariantStock } from '../utils/stockCalculator';
 import { processImage, validateImageFile } from '../utils/imageUtils';
 
@@ -160,7 +161,7 @@ const ComponentEditor: React.FC<{
                                                     <select
                                                         value={comp.variantId}
                                                         onChange={(e) => handleComponentChange(index, 'variantId', e.target.value)}
-                                                        className="block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                                                        className="block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm focus:border-amber-500 focus:ring-amber-500"
                                                     >
                                                         <option value={0}>-- Chọn biến thể --</option>
                                                         {availableVariants.map(v => (
@@ -179,7 +180,7 @@ const ComponentEditor: React.FC<{
                                                             value={comp.quantity}
                                                             min="1"
                                                             onChange={(e) => handleComponentChange(index, 'quantity', e.target.value)}
-                                                            className="block w-full text-center rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                                                            className="block w-full text-center rounded-md border-gray-300 shadow-sm px-3 py-2 sm:text-sm focus:border-amber-500 focus:ring-amber-500"
                                                         />
                                                     </div>
                                                     <button
@@ -211,7 +212,7 @@ const ComponentEditor: React.FC<{
                             <button
                                 type="button"
                                 onClick={handleAddComponent}
-                                className="mt-4 w-full text-sm font-medium text-yellow-600 rounded-md ring-1 ring-inset ring-yellow-300 hover:bg-yellow-50 py-2 transition-colors"
+                                className="mt-4 w-full text-sm font-medium text-amber-600 rounded-md ring-1 ring-inset ring-amber-300 hover:bg-amber-50 py-2 transition-colors"
                             >
                                 + Thêm Thành phần
                             </button>
@@ -220,7 +221,7 @@ const ComponentEditor: React.FC<{
                             <button
                                 type="button"
                                 onClick={handleSave}
-                                className="inline-flex w-full justify-center rounded-md bg-yellow-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700 sm:w-auto transition-colors"
+                                className="inline-flex w-full justify-center rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 sm:w-auto transition-colors"
                             >
                                 Lưu thay đổi
                             </button>
@@ -305,13 +306,22 @@ const VariantRowContent: React.FC<{
                         />
                     </div>
                 ) : (
-                    <input
-                        type="number"
-                        value={variant.stock}
-                        onChange={e => handleVariantChange(index, 'stock', e.target.value)}
-                        className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
-                        min="0"
-                    />
+                    <div>
+                        <input
+                            type="number"
+                            value={variant.stock}
+                            onChange={e => handleVariantChange(index, 'stock', e.target.value)}
+                            className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-amber-500 focus:ring-amber-500"
+                            min="0"
+                            disabled={variant.batches && variant.batches.length > 0} // Disable direct edit if batches exist
+                            title={variant.batches && variant.batches.length > 0 ? "Sử dụng Kiểm kê kho để điều chỉnh tồn kho khi đã có Lô" : ""}
+                        />
+                        {variant.batches && variant.batches.length > 0 && (
+                            <div className="text-[10px] text-gray-500 mt-1 whitespace-nowrap">
+                                {variant.batches.length} Lô
+                            </div>
+                        )}
+                    </div>
                 )}
             </td>
             <td className="px-2 py-2">
@@ -319,7 +329,7 @@ const VariantRowContent: React.FC<{
                     type="number"
                     value={variant.price || ''}
                     onChange={e => handleVariantChange(index, 'price', e.target.value)}
-                    className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                    className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-amber-500 focus:ring-amber-500"
                     min="0"
                     placeholder="0"
                 />
@@ -330,19 +340,19 @@ const VariantRowContent: React.FC<{
                     placeholder="Cái, Bộ,..."
                     value={variant.unit || ''}
                     onChange={e => handleVariantChange(index, 'unit', e.target.value)}
-                    className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-yellow-500 focus:ring-yellow-500"
+                    className="w-24 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-amber-500 focus:ring-amber-500"
                 />
             </td>
             <td className="px-2 py-2">
                 <button
                     type="button"
                     onClick={() => setEditingVariantIndex(index)}
-                    className="inline-flex items-center gap-1 text-yellow-600 hover:text-yellow-800 text-sm font-medium hover:bg-yellow-50 px-2 py-1 rounded transition-colors"
+                    className="inline-flex items-center gap-1 text-amber-600 hover:text-amber-800 text-sm font-medium hover:bg-amber-50 px-2 py-1 rounded transition-colors"
                     title="Quản lý thành phần"
                 >
                     <span>Sửa</span>
                     {variant.components && variant.components.length > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-yellow-600 rounded-full">
+                        <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-amber-600 rounded-full">
                             {variant.components.length}
                         </span>
                     )}
@@ -444,6 +454,9 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
   const [showCamera, setShowCamera] = useState(false);
   const [imageTarget, setImageTarget] = useState<{ type: 'general' | 'variant'; index?: number }>({ type: 'general' });
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
 
   // Track previous state to prevent unnecessary resets
   const prevIsOpenRef = useRef(isOpen);
@@ -786,12 +799,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
   return (
     <>
     <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*,.heic,.heif" multiple style={{ display: 'none' }} />
-    <div className="relative z-50" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"></div>
-        <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
-          <div className="flex min-h-full items-end justify-center p-0 text-center sm:items-center sm:p-4">
-            <form onSubmit={handleSubmit} className="relative flex flex-col transform overflow-hidden rounded-t-lg sm:rounded-lg bg-white text-left shadow-xl transition-all w-full h-screen sm:h-auto sm:max-h-[90vh] sm:my-8 sm:w-full sm:max-w-4xl">
-              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 flex-grow overflow-y-auto">
+    <div className="relative z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose}></div>
+        <div className="fixed inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-0 sm:pl-16">
+                    <form onSubmit={handleSubmit} className="pointer-events-auto w-screen max-w-4xl transform transition-all duration-300 ease-in-out flex h-full flex-col bg-white shadow-xl">
+                        <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
                 {/* Header */}
                 <div className="flex justify-between items-start">
                     <h3 className="text-lg font-semibold leading-6 text-gray-900" id="modal-title">
@@ -843,7 +857,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                             className={`mt-1 block w-full rounded-md shadow-sm px-3 py-2 sm:text-sm ${
                                 errors.name
                                     ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                                    : 'border-gray-300 focus:border-yellow-500 focus:ring-yellow-500'
+                                    : 'border-gray-300 focus:border-amber-500 focus:ring-amber-500'
                             }`}
                             placeholder="Nhập tên vật tư..."
                         />
@@ -856,14 +870,14 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                             name="category"
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 px-3 py-2 sm:text-sm"
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 px-3 py-2 sm:text-sm"
                         >
                             {categories.map(cat => <option key={cat.name} value={cat.name}>{cat.name}</option>)}
                         </select>
                     </div>
                     <div className="sm:col-span-6">
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">Mô tả</label>
-                        <textarea name="description" id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 px-3 py-2 sm:text-sm"></textarea>
+                        <textarea name="description" id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 px-3 py-2 sm:text-sm"></textarea>
                     </div>
 
                     <div className="sm:col-span-6">
@@ -937,7 +951,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                                     <button type="button" onClick={() => removeOption(index)} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon className="w-5 h-5"/></button>
                                 </div>
                             ))}
-                            <button type="button" onClick={addOption} className="w-full text-sm font-medium text-yellow-600 rounded-md ring-1 ring-inset ring-yellow-300 hover:bg-yellow-50 py-2">+ Thêm Thuộc tính</button>
+                            <button type="button" onClick={addOption} className="w-full text-sm font-medium text-amber-600 rounded-md ring-1 ring-inset ring-amber-300 hover:bg-amber-50 py-2">+ Thêm Thuộc tính</button>
                         </div>
                     </div>
 
@@ -959,42 +973,59 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
-                                    {variants.map((variant, index) => (
-                                        <tr key={variant.id} className="hover:bg-gray-50 transition-colors">
-                                            <VariantRowContent
-                                                variant={variant}
-                                                index={index}
-                                                allProducts={allProducts}
-                                                currentProductVariants={variants}
-                                                handleVariantChange={handleVariantChange}
-                                                setEditingVariantIndex={setEditingVariantIndex}
-                                                openCamera={openCamera}
-                                                triggerFileUpload={triggerFileUpload}
-                                                handleImageDelete={handleImageDelete}
-                                                onDuplicateVariant={handleDuplicateVariant}
-                                                currentProductId={product?.id}
-                                            />
-                                        </tr>
-                                    ))}
+                                    {(() => {
+                                        const totalPages = Math.ceil(variants.length / ITEMS_PER_PAGE) || 1;
+                                        const paginatedVariants = variants.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+                                        return paginatedVariants.map((variant, index) => {
+                                            const absoluteIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                                            return (
+                                                <tr key={variant.id} className="hover:bg-gray-50 transition-colors">
+                                                    <VariantRowContent
+                                                        variant={variant}
+                                                        index={absoluteIndex}
+                                                        allProducts={allProducts}
+                                                        currentProductVariants={variants}
+                                                        handleVariantChange={handleVariantChange}
+                                                        setEditingVariantIndex={setEditingVariantIndex}
+                                                        openCamera={openCamera}
+                                                        triggerFileUpload={triggerFileUpload}
+                                                        handleImageDelete={handleImageDelete}
+                                                        onDuplicateVariant={handleDuplicateVariant}
+                                                        currentProductId={product?.id}
+                                                    />
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
                                 </tbody>
                             </table>
                         </div>
+                        {variants.length > ITEMS_PER_PAGE && (
+                            <div className="mt-4">
+                                <Pagination 
+                                    currentPage={currentPage} 
+                                    totalPages={Math.ceil(variants.length / ITEMS_PER_PAGE)} 
+                                    onPageChange={setCurrentPage} 
+                                />
+                            </div>
+                        )}
                         {errors.variants && <p className="mt-2 text-sm text-red-600">{errors.variants}</p>}
                     </div>
 
                 </div>
-              </div>
-              {/* Footer */}
-              <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                  <button type="submit" className="inline-flex w-full justify-center rounded-md bg-yellow-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-yellow-700 sm:ml-3 sm:w-auto">
-                      Lưu Vật tư
-                  </button>
-                  <button type="button" onClick={onClose} className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
-                      Hủy
-                  </button>
-              </div>
-            </form>
-          </div>
+                        </div>
+                        {/* Footer */}
+                        <div className="border-t border-gray-200 bg-gray-50 px-4 py-3 sm:px-6 flex justify-end gap-3 flex-shrink-0">
+                            <button type="button" onClick={onClose} className="rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                                Hủy
+                            </button>
+                            <button type="submit" className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600">
+                                Lưu Vật tư
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
     {showCamera && (
@@ -1003,7 +1034,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                 <video ref={videoCallbackRef} className="w-full h-auto rounded-md" playsInline muted autoPlay></video>
                 <div className="mt-4 flex justify-between">
                     <button type="button" onClick={() => setShowCamera(false)} className="px-4 py-2 rounded-md bg-gray-200 text-gray-800">Hủy</button>
-                    <button type="button" onClick={handleCapture} className="px-4 py-2 rounded-md bg-yellow-500 text-white">Chụp</button>
+                    <button type="button" onClick={handleCapture} className="px-4 py-2 rounded-md bg-amber-500 text-white">Chụp</button>
                 </div>
             </div>
         </div>

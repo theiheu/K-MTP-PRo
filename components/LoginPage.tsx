@@ -1,10 +1,5 @@
 import React, { useState } from 'react';
-import { User } from '../types';
-import { USERS } from '../constants';
-
-interface LoginPageProps {
-  onLogin: (user: User) => void;
-}
+import { useAuthStore } from '../store/authStore';
 
 const StoreIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
@@ -24,134 +19,145 @@ const UserIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const LoginPage: React.FC = () => {
+  const { login, isLoading, error: authError } = useAuthStore();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [requesterName, setRequesterName] = useState('');
-  const [requesterError, setRequesterError] = useState('');
-  const [managerPassword, setManagerPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-
-  const handleRequesterLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setRequesterError('');
-    const trimmedName = requesterName.trim();
-    if (!trimmedName) {
-        setRequesterError('Vui lòng nhập tên của bạn.');
+    setLoginError('');
+    
+    if (!username.trim() || !password) {
+        setLoginError('Vui lòng nhập tên đăng nhập và mật khẩu.');
         return;
     }
-    const user = USERS.find(u => u.role === 'requester' && u.name.toLowerCase() === trimmedName.toLowerCase());
     
-    if (user) {
-      onLogin(user);
-    } else {
-        setRequesterError('Không tìm thấy người dùng. Vui lòng kiểm tra lại tên.');
-    }
-  };
-
-  const handleManagerLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // For demo purposes, the password is 'admin123'. In a real app, use a secure auth system.
-    if (managerPassword === 'admin123') {
-      setPasswordError('');
-      const managerUser = USERS.find(u => u.role === 'manager');
-      if (managerUser) {
-        onLogin(managerUser);
-      }
-    } else {
-      setPasswordError('Mật khẩu không đúng. Vui lòng thử lại.');
+    const success = await login(username.trim(), password);
+    if (!success) {
+      setLoginError(useAuthStore.getState().error || 'Đăng nhập thất bại.');
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-            <StoreIcon className="mx-auto h-12 w-auto text-yellow-600" />
-            <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
-                Hệ thống Vật tư Trại Gà
-            </h2>
-            <p className="mt-2 text-sm text-gray-600">
-                Vui lòng đăng nhập để tiếp tục
-            </p>
+    <div className="min-h-screen min-h-[100dvh] flex text-gray-900 font-sans">
+      {/* Left side - Branding/Image (Hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-amber-500 to-orange-700 p-12 flex-col justify-between relative overflow-hidden">
+        {/* Decorative circles */}
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-white opacity-10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-black opacity-10 rounded-full blur-3xl"></div>
+        
+        <div className="relative z-10 flex items-center gap-3 text-white">
+          <StoreIcon className="h-10 w-10" />
+          <span className="text-2xl font-bold tracking-wider">K-MTP FARM</span>
         </div>
 
-        <div className="bg-white shadow-lg rounded-lg p-8 space-y-6">
-            <div>
-                <h3 className="text-lg font-medium text-gray-800">Đăng nhập với vai trò Người Yêu Cầu</h3>
-                <form onSubmit={handleRequesterLogin} className="mt-4 space-y-4">
-                    <div>
-                        <label htmlFor="requester-name" className="sr-only">Nhập tên của bạn</label>
-                        <div className="relative">
-                            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <UserIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                            </span>
-                            <input
-                                id="requester-name"
-                                name="name"
-                                type="text"
-                                required
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pl-10 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-yellow-500 focus:outline-none focus:ring-yellow-500 sm:text-sm"
-                                placeholder="Nhập tên của bạn"
-                                value={requesterName}
-                                onChange={(e) => {
-                                    setRequesterName(e.target.value);
-                                    if (requesterError) setRequesterError('');
-                                }}
-                            />
-                        </div>
-                    </div>
-                    {requesterError && <p className="text-xs text-red-600">{requesterError}</p>}
-                    <button
-                        type="submit"
-                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-500 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-                    >
-                        Đăng nhập
-                    </button>
-                </form>
-            </div>
-            
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-300" />
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-2 text-gray-500">hoặc</span>
-                </div>
+        <div className="relative z-10 max-w-lg">
+          <h1 className="text-4xl font-extrabold text-white leading-tight mb-6">
+            Hệ thống Quản lý Vật tư Trại Gà Toàn diện
+          </h1>
+          <p className="text-amber-100 text-lg leading-relaxed">
+            Kiểm soát kho bãi, theo dõi nhập xuất vật tư, và quản lý yêu cầu từ các khu vực một cách dễ dàng và chính xác.
+          </p>
+        </div>
+
+        <div className="relative z-10 text-amber-200 text-sm">
+          &copy; {new Date().getFullYear()} K-MTP. All rights reserved.
+        </div>
+      </div>
+
+      {/* Right side - Login Form */}
+      <div className="w-full lg:w-1/2 flex flex-col bg-gray-50 p-6 sm:p-12">
+        <div className="flex-1 flex flex-col justify-start lg:justify-center items-center w-full pt-8 lg:pt-0">
+          <div className="w-full max-w-md">
+            <div className="lg:hidden mb-10 text-center">
+              <StoreIcon className="mx-auto h-12 w-auto text-amber-600 mb-4" />
+              <h2 className="text-3xl font-extrabold text-gray-900">
+                Vật tư Trại Gà
+              </h2>
             </div>
 
-            <div>
-                 <h3 className="text-lg font-medium text-gray-800">Đăng nhập với vai trò Quản lý</h3>
-                 <form onSubmit={handleManagerLogin} className="mt-4 space-y-4">
-                    <div>
-                        <label htmlFor="manager-password" className="sr-only">Mật khẩu</label>
-                         <div className="relative">
-                            <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                <LockClosedIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-                            </span>
-                            <input
-                                id="manager-password"
-                                name="password"
-                                type="password"
-                                required
-                                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 pl-10 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-yellow-500 focus:outline-none focus:ring-yellow-500 sm:text-sm"
-                                placeholder="Mật khẩu"
-                                value={managerPassword}
-                                onChange={(e) => {
-                                    setManagerPassword(e.target.value);
-                                    if (passwordError) setPasswordError(''); // Clear error on new input
-                                }}
-                            />
-                        </div>
-                    </div>
-                    {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
-                    <button
-                        type="submit"
-                        className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-gray-700 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                        >
-                        Đăng nhập
-                    </button>
-                 </form>
+            <div className="bg-white shadow-xl rounded-2xl p-8 sm:p-10 border border-gray-100 relative">
+              {isLoading && (
+                <div className="absolute inset-0 bg-white/70 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-solid border-amber-500 border-t-transparent"></div>
+                </div>
+              )}
+              
+              <div className="mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Đăng nhập</h3>
+                <p className="text-gray-500">Chào mừng trở lại! Vui lòng điền thông tin để tiếp tục.</p>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div>
+                  <label htmlFor="username" className="block text-sm font-semibold text-gray-700 mb-2">Tên đăng nhập</label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                      <UserIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </span>
+                    <input
+                      id="username"
+                      name="username"
+                      type="text"
+                      required
+                      className="block w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 pl-12 text-gray-900 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200 transition-colors"
+                      placeholder="Nhập tên đăng nhập"
+                      value={username}
+                      onChange={(e) => {
+                        setUsername(e.target.value);
+                        if (loginError) setLoginError('');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Mật khẩu</label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                      <LockClosedIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                    </span>
+                    <input
+                      id="password"
+                      name="password"
+                      type="password"
+                      required
+                      className="block w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 pl-12 text-gray-900 focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200 transition-colors"
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (loginError) setLoginError('');
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm flex items-start gap-2 border border-red-100">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 flex-shrink-0 mt-0.5">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                    </svg>
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full flex justify-center py-3.5 px-4 rounded-xl text-base font-semibold text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:opacity-50 transition-all shadow-md hover:shadow-lg mt-8"
+                >
+                  Đăng nhập vào hệ thống
+                </button>
+              </form>
             </div>
+          </div>
+        </div>
+        
+        <div className="mt-auto pt-8 pb-4 text-center text-sm text-gray-500 lg:hidden">
+          &copy; {new Date().getFullYear()} K-MTP. All rights reserved.
         </div>
       </div>
     </div>

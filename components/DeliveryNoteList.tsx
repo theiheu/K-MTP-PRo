@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   DeliveryNote,
   DeliveryStatus,
@@ -8,6 +8,10 @@ import {
   DeliveryVerification,
 } from "../types";
 import { VerificationDetails } from "./VerificationDetails";
+import { format } from "date-fns";
+import { useSortableData } from '../hooks/useSortableData';
+import SortableHeader from './SortableHeader';
+import Pagination from "./Pagination";
 
 interface DeliveryNoteListProps {
   deliveryNotes: DeliveryNote[];
@@ -29,6 +33,7 @@ interface DeliveryNoteListProps {
     verifierName: string,
     rejectionReason: string
   ) => void;
+  isReadOnly?: boolean;
 }
 
 const statusLabels: Record<DeliveryStatus, string> = {
@@ -38,7 +43,7 @@ const statusLabels: Record<DeliveryStatus, string> = {
 };
 
 const statusStyles: Record<DeliveryStatus, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
+  pending: "bg-amber-100 text-amber-800",
   verified: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
 };
@@ -51,14 +56,19 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
   createDeliveryNote,
   verifyDeliveryNote,
   rejectDeliveryNote,
+  isReadOnly,
 }) => {
+  const [expandedDeliveries, setExpandedDeliveries] = useState<string[]>([]);
+  const toggleExpand = (id: string) => {
+    setExpandedDeliveries(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
   const [currentDelivery, setCurrentDelivery] = useState<DeliveryNote | null>(
     null
   );
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | DeliveryStatus>(
-    "all"
-  );
+  const [statusFilter, setStatusFilter] = useState<"all" | DeliveryStatus>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   // Advanced filters and validation
   const [advancedFilter, setAdvancedFilter] = useState({
@@ -78,7 +88,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
       (d) => d.status === "rejected"
     ).length;
     const withIssues = deliveryNotes.filter((d) =>
-      d.items.some((i) => i.hasIssue)
+      d.items.some((i) => i.qualityIssue)
     ).length;
 
     return {
@@ -103,7 +113,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
   }>({});
 
   const [issues, setIssues] = useState<{
-    [key: string]: { hasIssue: boolean; note?: string };
+    [key: string]: { qualityIssue: boolean; note?: string };
   }>({});
 
   const [rejectionReason, setRejectionReason] = useState("");
@@ -141,7 +151,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
       const matchesAdvancedFilter =
         (!advancedFilter.shipperId ||
           note.shipperId === advancedFilter.shipperId) &&
-        (!advancedFilter.hasIssues || note.items.some((i) => i.hasIssue)) &&
+        (!advancedFilter.hasIssues || note.items.some((i) => i.qualityIssue)) &&
         (advancedFilter.priority === "all" ||
           note.priority === advancedFilter.priority);
 
@@ -154,7 +164,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
   // Export function
   const exportToCSV = useCallback(() => {
     const csvContent = filteredDeliveries.map((d) => ({
-      "Mã phiếu": d.id,
+      "Mã phiếu": d.id.substring(0, 8).toUpperCase(),
       "Ngày tạo": new Date(d.createdAt).toLocaleDateString(),
       "Người giao": d.shipperId,
       "Trạng thái": statusLabels[d.status],
@@ -239,7 +249,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
     setStopProcessingTimer(() => stopTimer);
   }, []);
 
-  const getProductDetails = (productId: number, variantId: number) => {
+  const getProductDetails = (productId: string, variantId: string) => {
     const product = products.find((p) => p.id === productId);
     const variant = product?.variants.find((v) => v.id === variantId);
     return {
@@ -250,18 +260,33 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
     };
   };
 
-  const sortedDeliveries = useMemo(() => {
+  const defaultSortedDeliveries = useMemo(() => {
     return [...filteredDeliveries].sort(
       (a, b) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   }, [filteredDeliveries]);
 
+  const { items: sortedDeliveries, requestSort, sortConfig } = useSortableData(defaultSortedDeliveries, { key: '', direction: null });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateRange, advancedFilter]);
+
+  const totalPages = Math.ceil(sortedDeliveries.length / ITEMS_PER_PAGE);
+  const paginatedDeliveries = sortedDeliveries.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   const handleStartCheck = (delivery: DeliveryNote) => {
     setCurrentDelivery(delivery);
     const initialQuantities: { [key: string]: number } = {};
     const initialIssues: {
-      [key: string]: { hasIssue: boolean; note?: string };
+      [key: string]: { qualityIssue: boolean; note?: string };
     } = {};
     const initialVerification: DeliveryVerification = {
       verifiedBy: currentUser.name,
@@ -272,7 +297,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
     delivery.items.forEach((item) => {
       const key = `${item.productId}-${item.variantId}`;
       initialQuantities[key] = item.quantity;
-      initialIssues[key] = { hasIssue: false };
+      initialIssues[key] = { qualityIssue: false };
       initialVerification.itemChecks[key] = {
         actualQuantity: item.quantity,
         hasIssue: false,
@@ -337,16 +362,16 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:space-x-4">
             <h2 className="text-xl font-semibold text-gray-800">
               Phiếu Giao Hàng
             </h2>
             {selectedDeliveries.length > 0 && (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleBulkVerify}
-                  className="bg-green-500 text-white px-3 py-1 text-sm rounded hover:bg-green-600"
+                  className="bg-green-500 text-white px-3 py-1 text-sm rounded hover:bg-green-600 whitespace-nowrap"
                 >
                   Xác nhận {selectedDeliveries.length} phiếu
                 </button>
@@ -360,7 +385,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                       exportToCSV();
                     }
                   }}
-                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600"
+                  className="bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 whitespace-nowrap"
                 >
                   Xuất CSV
                 </button>
@@ -385,78 +410,163 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
               </div>
             )}
           </div>
-          <button
-            onClick={() => onNavigate("create-delivery")}
-            className="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600"
-          >
-            Tạo phiếu giao hàng
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {!isReadOnly && (
+              <button
+                onClick={() => onNavigate("create-delivery")}
+                className="bg-amber-500 text-white px-4 py-2 rounded hover:bg-amber-600 inline-flex items-center justify-center w-full sm:w-auto whitespace-nowrap"
+              >
+                Tạo phiếu giao hàng
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="bg-white p-4 rounded-lg shadow-sm space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Search */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Tìm kiếm
-              </label>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm theo mã phiếu, người giao..."
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-              />
-            </div>
+        <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100">
+            <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:items-end">
+                <div className="flex gap-2 w-full lg:flex-1">
+                    <div className="flex-1 min-w-0 relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Tìm theo mã phiếu, người giao..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="block w-full rounded-md border-gray-300 shadow-sm pl-9 pr-3 py-2 border focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
+                        />
+                    </div>
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`lg:hidden flex-shrink-0 px-3 py-2 border rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                            showFilters || statusFilter !== 'all' || dateRange.start !== new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0] || dateRange.end !== new Date().toISOString().split("T")[0]
+                                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Lọc {(statusFilter !== 'all' || dateRange.start !== new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0] || dateRange.end !== new Date().toISOString().split("T")[0]) && <span className="flex h-2 w-2 rounded-full bg-red-500 ml-0.5"></span>}
+                    </button>
+                </div>
 
-            {/* Status Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Trạng thái
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as any)}
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="pending">Chờ kiểm tra</option>
-                <option value="verified">Đã xác nhận</option>
-                <option value="rejected">Đã từ chối</option>
-              </select>
+                {/* Desktop Inline Filters */}
+                <div className="hidden lg:flex lg:flex-row gap-3 w-auto items-end">
+                    <div className="w-48">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Trạng thái</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value as any)}
+                            className="block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 border focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
+                        >
+                            <option value="all">Tất cả trạng thái</option>
+                            <option value="pending">Chờ kiểm tra</option>
+                            <option value="verified">Đã xác nhận</option>
+                            <option value="rejected">Đã từ chối</option>
+                        </select>
+                    </div>
+                    <div className="w-36">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Từ ngày</label>
+                        <input
+                            type="date"
+                            value={dateRange.start}
+                            onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
+                            className="block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 border focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
+                        />
+                    </div>
+                    <div className="w-36">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Đến ngày</label>
+                        <input
+                            type="date"
+                            value={dateRange.end}
+                            onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
+                            className="block w-full rounded-md border-gray-300 shadow-sm px-3 py-2 border focus:border-amber-500 focus:ring-amber-500 sm:text-sm"
+                        />
+                    </div>
+                </div>
             </div>
-
-            {/* Date Range */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Từ ngày
-              </label>
-              <input
-                type="date"
-                value={dateRange.start}
-                onChange={(e) =>
-                  setDateRange((prev) => ({ ...prev, start: e.target.value }))
-                }
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Đến ngày
-              </label>
-              <input
-                type="date"
-                value={dateRange.end}
-                onChange={(e) =>
-                  setDateRange((prev) => ({ ...prev, end: e.target.value }))
-                }
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
-              />
-            </div>
-          </div>
         </div>
+
+        {/* Mobile Filter Bottom Sheet */}
+        {showFilters && (
+            <div className="fixed inset-0 z-[100] flex items-end justify-center lg:hidden">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowFilters(false)}></div>
+                <div className="bg-white w-full max-w-md rounded-t-3xl p-6 shadow-2xl relative z-10 animate-slide-up">
+                    <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-xl font-bold text-gray-900">Lọc phiếu giao hàng</h3>
+                        <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div className="space-y-6 overflow-y-auto max-h-[70vh] pb-4">
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
+                            <select
+                                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors"
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as any)}
+                            >
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="pending">Chờ kiểm tra</option>
+                                <option value="verified">Đã xác nhận</option>
+                                <option value="rejected">Đã từ chối</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Từ ngày</label>
+                            <input
+                                type="date"
+                                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors text-gray-800"
+                                style={{ WebkitAppearance: 'none', display: 'block' }}
+                                value={dateRange.start}
+                                onChange={(e) => setDateRange((prev) => ({ ...prev, start: e.target.value }))}
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Đến ngày</label>
+                            <input
+                                type="date"
+                                className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors text-gray-800"
+                                style={{ WebkitAppearance: 'none', display: 'block' }}
+                                value={dateRange.end}
+                                onChange={(e) => setDateRange((prev) => ({ ...prev, end: e.target.value }))}
+                            />
+                        </div>
+
+                        <div className="pt-4 flex gap-3">
+                            <button
+                                onClick={() => { 
+                                    setStatusFilter('all'); 
+                                    setDateRange({
+                                        start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split("T")[0],
+                                        end: new Date().toISOString().split("T")[0],
+                                    });
+                                }}
+                                className="flex-1 py-3.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
+                            >
+                                Xoá lọc
+                            </button>
+                            <button
+                                onClick={() => setShowFilters(false)}
+                                className="flex-1 py-3.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md transition-colors"
+                            >
+                                Áp dụng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
       </div>
 
       {/* Statistics */}
@@ -469,7 +579,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
         </div>
         <div className="bg-white p-4 rounded-lg shadow-sm">
           <div className="text-sm font-medium text-gray-500">Chờ xác nhận</div>
-          <div className="mt-1 text-2xl font-semibold text-yellow-600">
+          <div className="mt-1 text-2xl font-semibold text-amber-600">
             {filteredDeliveries.filter((d) => d.status === "pending").length}
           </div>
         </div>
@@ -494,106 +604,87 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
         </div>
       ) : (
         <div className="space-y-4">
-          {sortedDeliveries.map((delivery) => (
-            <div
-              key={delivery.id}
-              className={`bg-white shadow-sm rounded-lg p-6 ${
-                selectedDeliveries.includes(delivery.id)
-                  ? "ring-2 ring-yellow-500"
-                  : ""
-              }`}
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex items-start space-x-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedDeliveries.includes(delivery.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedDeliveries([
-                          ...selectedDeliveries,
-                          delivery.id,
-                        ]);
-                      } else {
-                        setSelectedDeliveries(
-                          selectedDeliveries.filter((id) => id !== delivery.id)
-                        );
-                      }
-                    }}
-                    className="mt-1 rounded text-yellow-600 focus:ring-yellow-500"
-                  />
-                  <div>
-                    <h3 className="text-lg font-medium text-gray-900">
-                      Phiếu #{delivery.id}
-                    </h3>
-                    <div className="mt-2 text-sm text-gray-500">
-                      <p>Mã phiếu nhập: {delivery.receiptId}</p>
-                      <p>Mã người giao: {delivery.shipperId}</p>
-                      <p>
-                        Người tạo: {delivery.createdBy} (
-                        {new Date(delivery.createdAt).toLocaleString("vi-VN")})
-                      </p>
-                      {delivery.verifiedBy && delivery.verifiedAt && (
-                        <p>
-                          {delivery.status === "verified"
-                            ? "Người xác nhận: "
-                            : "Người từ chối: "}
-                          {delivery.verifiedBy} (
-                          {new Date(delivery.verifiedAt).toLocaleString(
-                            "vi-VN"
-                          )}
-                          )
-                        </p>
-                      )}
-                      {delivery.quality && (
-                        <p className="mt-2">
-                          Đánh giá chất lượng: {delivery.quality.rating}/5
-                          {delivery.quality.comments && (
-                            <span className="block mt-1 italic">
-                              "{delivery.quality.comments}"
-                            </span>
-                          )}
-                        </p>
-                      )}
-                      {delivery.processingDuration && (
-                        <p className="mt-1">
-                          Thời gian xử lý: {delivery.processingDuration} phút
-                        </p>
-                      )}
-                    </div>
+          <div className="overflow-x-auto bg-white rounded-lg shadow ring-1 ring-black ring-opacity-5">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase"></th>
+                <SortableHeader label="Mã phiếu" sortKey="id" currentSort={sortConfig} onRequestSort={requestSort} />
+                <SortableHeader label="Mã PNK" sortKey="receiptId" currentSort={sortConfig} onRequestSort={requestSort} />
+                <SortableHeader label="Người giao" sortKey="shipperId" currentSort={sortConfig} onRequestSort={requestSort} />
+                <SortableHeader label="Trạng thái" sortKey="status" currentSort={sortConfig} onRequestSort={requestSort} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <SortableHeader label="Ngày tạo" sortKey="createdAt" currentSort={sortConfig} onRequestSort={requestSort} />
+                <SortableHeader label="Người xác nhận" sortKey="verifiedBy" currentSort={sortConfig} onRequestSort={requestSort} />
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {paginatedDeliveries.map((delivery) => {
+                const isExpanded = expandedDeliveries.includes(delivery.id);
+                return (
+                  <React.Fragment key={delivery.id}>
+                    <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpand(delivery.id)}>
+                      <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDeliveries.includes(delivery.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDeliveries([...selectedDeliveries, delivery.id]);
+                            } else {
+                              setSelectedDeliveries(selectedDeliveries.filter((id) => id !== delivery.id));
+                            }
+                          }}
+                          className="rounded text-amber-600 focus:ring-amber-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 flex-shrink-0 transform transition-transform ${isExpanded ? 'rotate-90' : ''} text-gray-400`} viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M8 5v14l11-7z" />
+                          </svg>
+                          {delivery.id.substring(0, 8).toUpperCase()}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{delivery.receiptId.substring(0, 8).toUpperCase()}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{delivery.shipperId}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyles[delivery.status]}`}>
+                          {statusLabels[delivery.status]}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{new Date(delivery.createdAt).toLocaleDateString("vi-VN")}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{delivery.verifiedBy || '-'}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-center" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setShowHistory(delivery.id)} className="text-amber-600 hover:text-amber-700 text-xs font-medium">Lịch sử</button>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={8} className="px-0 py-0">
+                          <div className={`bg-gray-50 border-t border-b border-gray-200 p-4 ${selectedDeliveries.includes(delivery.id) ? "ring-2 ring-amber-500 inset-0" : ""}`}>
+                            <div className="flex justify-between items-start mb-4">
+                              <div className="text-sm text-gray-500 space-y-1">
+                                <p><strong>Người tạo:</strong> {delivery.createdBy} ({new Date(delivery.createdAt).toLocaleString("vi-VN")})</p>
+                                {delivery.quality && (
+                                  <p><strong>Đánh giá chất lượng:</strong> {delivery.quality.rating}/5
+                                    {delivery.quality.comments && <span className="italic"> "{delivery.quality.comments}"</span>}
+                                  </p>
+                                )}
+                                {delivery.processingDuration && (
+                                  <p><strong>Thời gian xử lý:</strong> {delivery.processingDuration} phút</p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="mt-2">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead>
+                                  <tr>
+                                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vật tư</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biến thể</th>
+                                    <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">SL Giao</th>
+                                    {delivery.status === "verified" && (
 
-                    {/* History Button */}
-                    <button
-                      onClick={() => setShowHistory(delivery.id)}
-                      className="mt-2 text-sm text-yellow-600 hover:text-yellow-700"
-                    >
-                      Xem lịch sử
-                    </button>
-                  </div>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    statusStyles[delivery.status]
-                  }`}
-                >
-                  {statusLabels[delivery.status]}
-                </span>
-              </div>
-
-              <div className="mt-4">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Vật tư
-                      </th>
-                      <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Biến thể
-                      </th>
-                      <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        SL Giao
-                      </th>
-                      {delivery.status === "verified" && (
                         <th className="px-6 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           SL Thực tế
                         </th>
@@ -644,19 +735,19 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                                 <div className="flex items-center space-x-2">
                                   <input
                                     type="checkbox"
-                                    checked={issues[itemKey]?.hasIssue || false}
+                                    checked={issues[itemKey]?.qualityIssue || false}
                                     onChange={(e) =>
                                       setIssues({
                                         ...issues,
                                         [itemKey]: {
                                           ...issues[itemKey],
-                                          hasIssue: e.target.checked,
+                                          qualityIssue: e.target.checked,
                                         },
                                       })
                                     }
-                                    className="rounded border-gray-300 text-yellow-600"
+                                    className="rounded border-gray-300 text-amber-600"
                                   />
-                                  {issues[itemKey]?.hasIssue && (
+                                  {issues[itemKey]?.qualityIssue && (
                                     <input
                                       type="text"
                                       value={issues[itemKey]?.note || ""}
@@ -683,9 +774,9 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                                   {item.actualQuantity} {unit}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {item.hasIssue && (
+                                  {item.qualityIssue && (
                                     <span className="text-red-600">
-                                      {item.issueNote}
+                                      {item.issueNotes}
                                     </span>
                                   )}
                                 </td>
@@ -704,7 +795,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                   <div className="mt-4 flex justify-end">
                     <button
                       onClick={() => handleStartCheck(delivery)}
-                      className="px-4 py-2 text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                      className="px-4 py-2 text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                     >
                       Bắt đầu kiểm tra
                     </button>
@@ -721,14 +812,14 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                   </button>
                   <button
                     onClick={handleVerify}
-                    className="px-4 py-2 text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                    className="px-4 py-2 text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
                   >
                     Xác nhận kiểm tra
                   </button>
                 </div>
               )}
 
-              {delivery.status === "checking" &&
+              {delivery.status === "pending" &&
                 currentUser.role === "manager" && (
                   <div className="mt-4 flex justify-end">
                     <button
@@ -750,15 +841,30 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                 </div>
               )}
 
-              {delivery.notes && (
+              {delivery.verificationNotes && (
                 <div className="mt-4 p-4 bg-gray-50 rounded-md">
                   <p className="text-sm text-gray-700">
-                    <strong>Ghi chú:</strong> {delivery.notes}
+                    <strong>Ghi chú:</strong> {delivery.verificationNotes}
                   </p>
                 </div>
               )}
-            </div>
-          ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
         </div>
       )}
 
@@ -794,14 +900,14 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                           }
                           className={`p-2 rounded-full ${
                             qualityRating.rating === rating
-                              ? "bg-yellow-100 ring-2 ring-yellow-500"
+                              ? "bg-amber-100 ring-2 ring-amber-500"
                               : "hover:bg-gray-100"
                           }`}
                         >
                           <svg
                             className={`w-6 h-6 ${
                               qualityRating.rating >= rating
-                                ? "text-yellow-500"
+                                ? "text-amber-500"
                                 : "text-gray-300"
                             }`}
                             fill="currentColor"
@@ -826,7 +932,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                         }))
                       }
                       rows={3}
-                      className="w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500 focus:outline-none"
                       placeholder="Nhập nhận xét về chất lượng..."
                     />
                   </div>
@@ -836,14 +942,14 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                 <button
                   type="button"
                   onClick={completeVerification}
-                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-yellow-600 text-base font-medium text-white hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-amber-600 text-base font-medium text-white hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Hoàn tất xác nhận
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowQualityRating(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Hủy
                 </button>
@@ -880,7 +986,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowHistory(null)}
-                  className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:w-auto sm:text-sm"
+                  className="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:w-auto sm:text-sm"
                 >
                   Đóng
                 </button>
@@ -909,7 +1015,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
                   rows={4}
-                  className="w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-amber-500 focus:ring-amber-500 focus:outline-none"
                   placeholder="Nhập lý do từ chối phiếu giao nhận..."
                 />
               </div>
@@ -927,7 +1033,7 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
                     setShowRejectionModal(false);
                     setRejectionReason("");
                   }}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
                 >
                   Hủy
                 </button>
@@ -941,3 +1047,5 @@ const DeliveryNoteList: React.FC<DeliveryNoteListProps> = ({
 };
 
 export default DeliveryNoteList;
+
+

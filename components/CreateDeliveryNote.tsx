@@ -6,6 +6,7 @@ import {
   DeliveryNote,
   DeliveryItem,
 } from "../types";
+import Pagination from './Pagination';
 
 interface CreateDeliveryNoteProps {
   user: User | null;
@@ -30,6 +31,9 @@ const CreateDeliveryNote: React.FC<CreateDeliveryNoteProps> = ({
     useState<GoodsReceiptNote | null>(null);
   const [shipperId, setShipperId] = useState("");
   const [items, setItems] = useState<DeliveryItem[]>([]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -103,8 +107,9 @@ const CreateDeliveryNote: React.FC<CreateDeliveryNoteProps> = ({
               const receipt = receipts.find((r) => r.id === e.target.value);
               setSelectedReceipt(receipt || null);
               setItems([]);
+              setCurrentPage(1);
             }}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
             required
           >
             <option value="">-- Chọn phiếu nhập kho --</option>
@@ -125,7 +130,7 @@ const CreateDeliveryNote: React.FC<CreateDeliveryNoteProps> = ({
             type="text"
             value={shipperId}
             onChange={(e) => setShipperId(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500"
             placeholder="Nhập ID người giao hàng"
             required
           />
@@ -156,80 +161,93 @@ const CreateDeliveryNote: React.FC<CreateDeliveryNoteProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {selectedReceipt.items.map((item, index) => {
-                    const product = products.find(
-                      (p) => p.id === item.productId
-                    );
-                    const variant = product?.variants.find(
-                      (v) => v.id === item.variantId
-                    );
-                    const variantName = variant
-                      ? Object.values(variant.attributes).join(" / ")
-                      : "";
-                    const isSelected = items.some(
-                      (i) =>
-                        i.productId === item.productId &&
-                        i.variantId === item.variantId
-                    );
+                  {(() => {
+                    const paginatedItems = selectedReceipt.items.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+                    return paginatedItems.map((item, index) => {
+                      const absoluteIndex = (currentPage - 1) * ITEMS_PER_PAGE + index;
+                      const product = products.find(
+                        (p) => p.id === item.productId
+                      );
+                      const variant = product?.variants.find(
+                        (v) => v.id === item.variantId
+                      );
+                      const variantName = variant
+                        ? Object.values(variant.attributes).join(" / ")
+                        : "";
+                      const isSelected = items.some(
+                        (i) =>
+                          i.productId === item.productId &&
+                          i.variantId === item.variantId
+                      );
 
-                    return (
-                      <tr key={`${item.productId}-${item.variantId}`}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(e) =>
-                              handleToggleItem(index, e.target.checked)
-                            }
-                            className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
-                          />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {product?.name || "Unknown Product"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {variantName || "Mặc định"}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
-                          {isSelected ? (
+                      return (
+                        <tr key={`${item.productId}-${item.variantId}`}>
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <input
-                              type="number"
-                              value={
-                                items.find(
-                                  (i) =>
-                                    i.productId === item.productId &&
-                                    i.variantId === item.variantId
-                                )?.quantity || 0
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) =>
+                                handleToggleItem(absoluteIndex, e.target.checked)
                               }
-                              onChange={(e) => {
-                                const idx = items.findIndex(
-                                  (i) =>
-                                    i.productId === item.productId &&
-                                    i.variantId === item.variantId
-                                );
-                                if (idx !== -1) {
-                                  handleQuantityChange(
-                                    idx,
-                                    Math.max(0, parseInt(e.target.value) || 0)
-                                  );
-                                }
-                              }}
-                              max={item.quantity}
-                              min="0"
-                              className="w-20 rounded-md border-gray-300 text-right"
+                              className="rounded border-gray-300 text-amber-600 focus:ring-amber-500"
                             />
-                          ) : (
-                            <span className="text-sm text-gray-900">
-                              {item.quantity} {variant?.unit}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {product?.name || "Unknown Product"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {variantName || "Mặc định"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            {isSelected ? (
+                              <input
+                                type="number"
+                                value={
+                                  items.find(
+                                    (i) =>
+                                      i.productId === item.productId &&
+                                      i.variantId === item.variantId
+                                  )?.quantity || 0
+                                }
+                                onChange={(e) => {
+                                  const idx = items.findIndex(
+                                    (i) =>
+                                      i.productId === item.productId &&
+                                      i.variantId === item.variantId
+                                  );
+                                  if (idx !== -1) {
+                                    handleQuantityChange(
+                                      idx,
+                                      Math.max(0, parseInt(e.target.value) || 0)
+                                    );
+                                  }
+                                }}
+                                max={item.quantity}
+                                min="0"
+                                className="w-20 rounded-md border-gray-300 text-right"
+                              />
+                            ) : (
+                              <span className="text-sm text-gray-900">
+                                {item.quantity} {variant?.unit}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
+            {selectedReceipt.items.length > ITEMS_PER_PAGE && (
+              <div className="mt-4">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(selectedReceipt.items.length / ITEMS_PER_PAGE)}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -237,13 +255,13 @@ const CreateDeliveryNote: React.FC<CreateDeliveryNoteProps> = ({
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+            className="px-4 py-2 text-sm font-medium rounded-md text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="px-4 py-2 text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+            className="px-4 py-2 text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
           >
             Tạo phiếu giao hàng
           </button>
@@ -254,3 +272,4 @@ const CreateDeliveryNote: React.FC<CreateDeliveryNoteProps> = ({
 };
 
 export default CreateDeliveryNote;
+

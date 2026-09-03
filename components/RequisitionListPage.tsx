@@ -7,9 +7,13 @@ import Pagination from "./Pagination";
 import EditRequisitionPage from './EditRequisitionPage';
 import Cart from "./Cart";
 import SearchBar from "./SearchBar";
+import { printPhieuXuatKho } from '../utils/printUtils';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableHeader from './SortableHeader';
 
 interface RequisitionListPageProps {
   forms: RequisitionForm[];
+  zones: { id: string; name: string }[];
   onFulfill: (
     formId: string,
     details: { notes: string; fulfillerName: string }
@@ -17,20 +21,175 @@ interface RequisitionListPageProps {
   currentUser: User;
   cartItems: CartItem[];
   allProducts: Product[];
-  onCartRemove: (variantId: number) => void;
-  onCartUpdateItem: (variantId: number, quantity: number) => void;
+  onCartRemove: (variantId: string) => void;
+  onCartUpdateItem: (variantId: string, quantity: number) => void;
   onCreateRequisition: () => void;
   onUpdateRequisition: (form: RequisitionForm) => void;
   onDeleteRequisition: (formId: string) => void;
+  onConfirmReceipt: (formId: string) => void;
 }
 
-type StatusFilter = "Tất cả" | "Đang chờ xử lý" | "Đã hoàn thành";
+type StatusFilter = "Tất cả" | "Đang chờ xử lý" | "Đã duyệt yêu cầu" | "Đã hoàn thành" | "Đã huỷ";
 type DateFilterOption = "all" | "today" | "thisWeek" | "thisMonth" | "custom";
 
 const REQUISITIONS_PER_PAGE = 5;
 
+const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDeleteRequisition, onConfirmReceipt, handleEdit, allProducts }: any) => {
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  return (
+    <React.Fragment>
+      <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+        <td className="px-4 py-3 whitespace-nowrap text-sm font-mono text-gray-600">
+          <div className="flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 flex-shrink-0 transform transition-transform ${isExpanded ? 'rotate-90' : ''} text-gray-400`} viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+            {req.id.substring(0, 8).toUpperCase()}
+          </div>
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{req.requesterName}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{req.zone}</td>
+        <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">{req.purpose}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-center font-semibold text-gray-700">{req.items.length}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-center">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.status === 'Đang chờ xử lý' ? 'bg-amber-100 text-amber-800' : req.status === 'Đã duyệt yêu cầu' ? 'bg-blue-100 text-blue-800' : req.status === 'Đã hoàn thành' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+            {req.status}
+          </span>
+        </td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{new Date(req.createdAt).toLocaleDateString('vi-VN')}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">{req.fulfilledBy || '-'}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-center">
+          <div className="flex items-center justify-center gap-2">
+            {currentUser.role === 'manager' && req.status === 'Đang chờ xử lý' && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleInitiateFulfillment(req); }}
+                className="inline-flex justify-center rounded bg-green-100 text-green-700 px-2 py-1 text-xs font-medium hover:bg-green-200"
+              >
+                Duyệt
+              </button>
+            )}
+            {currentUser.role !== 'auditor' && req.status === 'Đã duyệt yêu cầu' && onConfirmReceipt && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onConfirmReceipt(req.id); }}
+                className="inline-flex justify-center rounded bg-blue-100 text-blue-700 px-2 py-1 text-xs font-medium hover:bg-blue-200"
+              >
+                Nhận
+              </button>
+            )}
+            {(currentUser.role === 'manager' || currentUser.name === req.requesterName) && req.status === 'Đang chờ xử lý' && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleEdit(req); }}
+                  className="inline-flex justify-center rounded bg-gray-100 text-gray-700 px-2 py-1 text-xs font-medium hover:bg-gray-200"
+                >
+                  Sửa
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteRequisition(req.id); }}
+                  className="inline-flex justify-center rounded bg-red-100 text-red-700 px-2 py-1 text-xs font-medium hover:bg-red-200"
+                >
+                  Xoá
+                </button>
+              </>
+            )}
+          </div>
+        </td>
+      </tr>
+      {isExpanded && (
+        <tr>
+          <td colSpan={9} className="px-0 py-0">
+            <div className="bg-gray-50 border-t border-b border-gray-200 p-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-2">Chi tiết vật tư yêu cầu</h4>
+              <div className="overflow-x-auto rounded border border-gray-200 bg-white">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-xs text-gray-500">
+                    <tr>
+                      <th className="px-4 py-2 font-medium">STT</th>
+                      <th className="px-4 py-2 font-medium text-center">Hình ảnh</th>
+                      <th className="px-4 py-2 font-medium">Tên vật tư</th>
+                      <th className="px-4 py-2 font-medium">Phân loại</th>
+                      <th className="px-4 py-2 font-medium text-right">Số lượng</th>
+                      <th className="px-4 py-2 font-medium text-right">Tồn kho</th>
+                      <th className="px-4 py-2 font-medium">Đơn vị</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {req.items.map((item: any, idx: number) => {
+                      const product = allProducts?.find((p: any) => p.id === item.product.id);
+                      const variant = product?.variants.find((v: any) => v.id === item.variant.id);
+                      const stock = variant?.stock || 0;
+                      return (
+                        <tr key={idx}>
+                          <td className="px-4 py-2 text-xs text-gray-400">{idx + 1}</td>
+                          <td className="px-4 py-2 text-center">
+                            {product?.images && product.images.length > 0 ? (
+                              <img
+                                src={product.images[0]}
+                                alt={product.name}
+                                className="w-10 h-10 object-cover rounded border border-gray-200 inline-block"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center border border-gray-200 inline-flex">
+                                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-sm font-medium text-gray-800">{item.product.name}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500">{Object.values(item.variant.attributes).join(' / ') || 'Mặc định'}</td>
+                          <td className="px-4 py-2 text-sm text-right font-semibold text-amber-600">{item.quantity}</td>
+                          <td className={`px-4 py-2 text-sm text-right font-semibold ${stock < item.quantity ? 'text-red-600' : 'text-green-600'}`}>{stock}</td>
+                          <td className="px-4 py-2 text-sm text-gray-500">{item.variant.unit || 'Cái'}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-4 flex flex-col sm:flex-row justify-between sm:items-start gap-4 bg-gray-50 p-3 rounded border border-gray-200">
+                <div className="space-y-1">
+                  <div className="text-xs text-gray-600">
+                    <span className="font-semibold text-gray-700">Tạo bởi:</span> {req.requesterName} — {new Date(req.createdAt).toLocaleString('vi-VN')}
+                    {req.purpose && <> — <span className="italic text-gray-500">"{req.purpose}"</span></>}
+                  </div>
+                  {req.fulfilledAt && (
+                    <div className="text-xs text-blue-700">
+                      <span className="font-semibold">Duyệt bởi:</span> {req.fulfilledBy} — {new Date(req.fulfilledAt).toLocaleString('vi-VN')}
+                      {req.fulfillmentNotes && <> — <span className="italic">"{req.fulfillmentNotes}"</span></>}
+                    </div>
+                  )}
+                  {req.receivedAt && (
+                    <div className="text-xs text-green-700">
+                      <span className="font-semibold">Nhận bởi:</span> {req.receivedBy} — {new Date(req.receivedAt).toLocaleString('vi-VN')}
+                      {req.receiveNotes && <> — <span className="italic">"{req.receiveNotes}"</span></>}
+                    </div>
+                  )}
+                </div>
+                
+                <button
+                  onClick={() => printPhieuXuatKho(req)}
+                  className="inline-flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  In phiếu
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+
+    </React.Fragment>
+  );
+};
+
 const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   forms,
+  zones,
   onFulfill,
   currentUser,
   cartItems,
@@ -40,6 +199,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   onCreateRequisition,
   onUpdateRequisition,
   onDeleteRequisition,
+  onConfirmReceipt,
 }) => {
   const [formToFulfill, setFormToFulfill] = useState<RequisitionForm | null>(
     null
@@ -47,10 +207,9 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Tất cả");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [dateFilterOption, setDateFilterOption] =
-    useState<DateFilterOption>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
 
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
@@ -71,69 +230,19 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   };
 
   useEffect(() => {
-    if (dateFilterOption === "custom") return;
-
-    const toYyyyMmDd = (d: Date) => d.toISOString().split("T")[0];
-    const today = new Date();
-
-    let newStartDate = "";
-    let newEndDate = "";
-
-    switch (dateFilterOption) {
-      case "today": {
-        const todayStr = toYyyyMmDd(today);
-        newStartDate = todayStr;
-        newEndDate = todayStr;
-        break;
-      }
-      case "thisWeek": {
-        const firstDay = new Date(
-          today.setDate(today.getDate() - today.getDay())
-        );
-        const lastDay = new Date(firstDay);
-        lastDay.setDate(lastDay.getDate() + 6);
-        newStartDate = toYyyyMmDd(firstDay);
-        newEndDate = toYyyyMmDd(lastDay);
-        break;
-      }
-      case "thisMonth": {
-        const firstDayOfMonth = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          1
-        );
-        const lastDayOfMonth = new Date(
-          today.getFullYear(),
-          today.getMonth() + 1,
-          0
-        );
-        newStartDate = toYyyyMmDd(firstDayOfMonth);
-        newEndDate = toYyyyMmDd(lastDayOfMonth);
-        break;
-      }
-      case "all":
-        break;
-    }
-
-    setStartDate(newStartDate);
-    setEndDate(newEndDate);
-
-  }, [dateFilterOption]);
-
-  useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, startDate, endDate, dateFilterOption, searchTerm]);
+  }, [statusFilter, startDate, endDate, searchTerm]);
 
   const handleInitiateFulfillment = (form: RequisitionForm) => {
     setFormToFulfill(form);
   };
 
-  const handleConfirmFulfillment = (details: {
+  const handleConfirmFulfillment = async (details: {
     notes: string;
     fulfillerName: string;
   }) => {
     if (formToFulfill) {
-      onFulfill(formToFulfill.id, details);
+      await onFulfill(formToFulfill.id, details);
     }
     setFormToFulfill(null);
   };
@@ -145,7 +254,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   };
 
   const userFilteredForms =
-    currentUser.role === "manager"
+    ["manager", "auditor"].includes(currentUser.role)
       ? forms
       : forms.filter((form) => form.requesterName === currentUser.name);
 
@@ -185,13 +294,15 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
     return true;
   });
 
-  const sortedForms = [...finalFilteredForms].sort((a, b) => {
+  const defaultSortedForms = [...finalFilteredForms].sort((a, b) => {
     if (a.status === "Đang chờ xử lý" && b.status !== "Đang chờ xử lý")
       return -1;
     if (a.status !== "Đang chờ xử lý" && b.status === "Đang chờ xử lý")
       return 1;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
+
+  const { items: sortedForms, requestSort, sortConfig } = useSortableData(defaultSortedForms, { key: '', direction: null });
 
   const totalPages = Math.ceil(sortedForms.length / REQUISITIONS_PER_PAGE);
   const paginatedForms = sortedForms.slice(
@@ -202,7 +313,9 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
   const filterOptions: StatusFilter[] = [
     "Tất cả",
     "Đang chờ xử lý",
+    "Đã duyệt yêu cầu",
     "Đã hoàn thành",
+    "Đã huỷ",
   ];
 
   const renderEmptyState = () => {
@@ -243,6 +356,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
         user={currentUser}
         requisition={editingRequisition}
         allProducts={allProducts}
+        zones={zones}
         onSubmit={handleUpdateRequisition}
         onCancel={handleCancelEdit}
       />
@@ -251,9 +365,17 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
 
   return (
     <div>
-      <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-6">
-        Danh sách Phiếu Yêu cầu
-      </h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+          Phiếu Yêu Cầu
+        </h1>
+        <button
+          onClick={onCreateRequisition}
+          className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium py-2 px-4 rounded shadow-sm"
+        >
+          Tạo phiếu yêu cầu
+        </button>
+      </div>
 
       {cartItems.length > 0 && (
         <div className="mb-6">
@@ -267,107 +389,181 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
         </div>
       )}
 
-      <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-        <div className="mb-4">
-          <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} placeholder="Tìm theo ID, người yêu cầu, mục đích..." />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 items-start">
-          <div className="lg:col-span-2">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Lọc theo trạng thái
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              {filterOptions.map((option) => (
-                <button
-                  key={option}
-                  onClick={() => setStatusFilter(option)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors duration-200 ${
-                    statusFilter === option
-                      ? "bg-yellow-500 text-white shadow"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
+      <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 lg:items-end">
+          <div className="flex gap-2 w-full lg:flex-1">
+            <div className="flex-1 min-w-0 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                placeholder="Tìm mã, người yêu cầu..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`lg:hidden flex-shrink-0 px-3 py-2 border rounded-md text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                showFilters || statusFilter !== 'Tất cả' || startDate || endDate
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Lọc {(statusFilter !== 'Tất cả' || startDate || endDate) && <span className="flex h-2 w-2 rounded-full bg-red-500 ml-0.5"></span>}
+            </button>
           </div>
 
-          <div className="lg:col-span-3">
-            <label
-              htmlFor="date-filter-select"
-              className="block text-sm font-medium text-gray-700 mb-2"
-            >
-              Lọc theo ngày tạo phiếu
-            </label>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          {/* Desktop Inline Filters */}
+          <div className="hidden lg:flex lg:flex-row gap-3 w-auto">
+            <div className="w-48">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Trạng thái</label>
               <select
-                id="date-filter-select"
-                value={dateFilterOption}
-                onChange={(e) =>
-                  setDateFilterOption(e.target.value as DateFilterOption)
-                }
-                className="block w-full sm:w-auto flex-grow rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               >
-                <option value="all">Mọi lúc</option>
-                <option value="today">Hôm nay</option>
-                <option value="thisWeek">Tuần này</option>
-                <option value="thisMonth">Tháng này</option>
-                <option value="custom">Tùy chỉnh...</option>
+                {filterOptions.map(option => (
+                  <option key={option} value={option}>{option === 'Tất cả' ? 'Tất cả trạng thái' : option}</option>
+                ))}
               </select>
-
-              {dateFilterOption === "custom" && (
-                <>
-                  <div className="flex-1">
-                    <label htmlFor="start-date" className="sr-only">
-                      Từ ngày
-                    </label>
-                    <input
-                      type="date"
-                      id="start-date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
-                      max={endDate || undefined}
-                    />
-                  </div>
-                  <span className="text-gray-500 text-sm hidden sm:inline">
-                    đến
-                  </span>
-                  <div className="flex-1">
-                    <label htmlFor="end-date" className="sr-only">
-                      Đến ngày
-                    </label>
-                    <input
-                      type="date"
-                      id="end-date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="block w-full rounded-md border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500 sm:text-sm"
-                      min={startDate || undefined}
-                    />
-                  </div>
-                </>
-              )}
+            </div>
+            <div className="w-36">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Từ ngày</label>
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-600"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                max={endDate || undefined}
+              />
+            </div>
+            <div className="w-36">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Đến ngày</label>
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 text-gray-600"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
+              />
             </div>
           </div>
         </div>
       </div>
 
+      {/* Mobile Filter Bottom Sheet */}
+      {showFilters && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center lg:hidden">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setShowFilters(false)}></div>
+          <div className="bg-white w-full max-w-md rounded-t-3xl p-6 shadow-2xl relative z-10 animate-slide-up">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Lọc phiếu yêu cầu</h3>
+              <button onClick={() => setShowFilters(false)} className="text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 p-2 rounded-full transition-colors">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="space-y-6 overflow-y-auto max-h-[70vh] pb-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
+                <select
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
+                >
+                  {filterOptions.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Từ ngày</label>
+                <input
+                  type="date"
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors text-gray-800"
+                  style={{ WebkitAppearance: 'none', display: 'block' }}
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  max={endDate || undefined}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Đến ngày</label>
+                <input
+                  type="date"
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-amber-500 focus:ring-0 bg-gray-50 transition-colors text-gray-800"
+                  style={{ WebkitAppearance: 'none', display: 'block' }}
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate || undefined}
+                />
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  onClick={() => { setStatusFilter('Tất cả'); setStartDate(''); setEndDate(''); }}
+                  className="flex-1 py-3.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
+                >
+                  Xoá lọc
+                </button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="flex-1 py-3.5 px-4 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md transition-colors"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-6">
         {sortedForms.length > 0 ? (
           <>
-            {paginatedForms.map((form) => (
-              <RequisitionCard
-                key={form.id}
-                form={form}
-                onInitiateFulfillment={handleInitiateFulfillment}
-                userRole={currentUser.role}
-                onImageClick={handleOpenGallery}
-                onEdit={handleEdit}
-                onDelete={onDeleteRequisition}
-              />
-            ))}
+            <div className="overflow-x-auto bg-white rounded-lg shadow ring-1 ring-black ring-opacity-5">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <SortableHeader label="Mã phiếu" sortKey="id" currentSort={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader label="Người yêu cầu" sortKey="requesterName" currentSort={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader label="Khu vực" sortKey="zone" currentSort={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader label="Mục đích" sortKey="purpose" currentSort={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader label="Số VT" sortKey="items.length" currentSort={sortConfig} onRequestSort={requestSort} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                    <SortableHeader label="Trạng thái" sortKey="status" currentSort={sortConfig} onRequestSort={requestSort} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                    <SortableHeader label="Ngày tạo" sortKey="createdAt" currentSort={sortConfig} onRequestSort={requestSort} />
+                    <SortableHeader label="Người duyệt" sortKey="receivedBy" currentSort={sortConfig} onRequestSort={requestSort} />
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedForms.map(req => (
+                    <RequisitionTableRow 
+                      key={req.id} 
+                      req={req} 
+                      currentUser={currentUser} 
+                      handleInitiateFulfillment={handleInitiateFulfillment} 
+                      onDeleteRequisition={onDeleteRequisition} 
+                      onConfirmReceipt={onConfirmReceipt} 
+                      handleEdit={handleEdit} 
+                      allProducts={allProducts}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="mt-8">
               <Pagination
                 currentPage={currentPage}
@@ -400,3 +596,6 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
 };
 
 export default RequisitionListPage;
+
+
+

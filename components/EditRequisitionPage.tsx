@@ -9,6 +9,7 @@ interface EditRequisitionPageProps {
   user: User;
   requisition: RequisitionForm;
   allProducts: Product[];
+  zones: { id: string; name: string }[];
   onSubmit: (updatedRequisition: RequisitionForm) => void;
   onCancel: () => void;
 }
@@ -17,6 +18,7 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
   user,
   requisition,
   allProducts,
+  zones,
   onSubmit,
   onCancel,
 }) => {
@@ -64,24 +66,24 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
     onSubmit(updatedRequisition);
   };
 
-  const handleRequestRemove = (variantId: number) => {
+  const handleRequestRemove = (variantId: string) => {
     const item = currentItems.find((i) => i.variant.id === variantId);
     if (item) {
       setItemToRemove(item);
     }
   };
 
-  const handleUpdateItem = (variantId: number, quantity: number) => {
+  const handleUpdateItem = (variantId: string, quantity: number) => {
     setCurrentItems(currentItems.map(item =>
       item.variant.id === variantId ? { ...item, quantity } : item
     ));
   };
 
-  const handleRemoveItem = (variantId: number) => {
+  const handleRemoveItem = (variantId: string) => {
     setCurrentItems(currentItems.filter(item => item.variant.id !== variantId));
   };
 
-  const handleRequestReplace = (variantId: number) => {
+  const handleRequestReplace = (variantId: string) => {
     setVariantToReplaceId(variantId);
     setIsAddItemModalOpen(true);
   };
@@ -146,7 +148,7 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAddItemModalOpen(true)}
-                className="w-full flex justify-center items-center py-2 px-4 border border-dashed border-gray-400 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+                className="w-full flex justify-center items-center py-2 px-4 border border-dashed border-gray-400 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -174,7 +176,7 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
                      id="createdAt"
                      value={createdAt}
                      onChange={(e) => setCreatedAt(e.target.value)}
-                     className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6"
+                     className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6"
                    />
                  </div>
                </div>
@@ -192,7 +194,7 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
                   value={requesterName}
                   onChange={(e) => setRequesterName(e.target.value)}
                   readOnly={!isManager}
-                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6 ${
                     !isManager ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                   required
@@ -211,11 +213,11 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
                   value={zone}
                   onChange={(e) => setZone(e.target.value)}
                   disabled={!isManager}
-                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6 ${
                     !isManager ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 >
-                  {window.zones?.map((z) => (
+                  {zones?.map((z) => (
                     <option key={z.id} value={z.name}>
                       {z.name}
                     </option>
@@ -236,7 +238,7 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
                   readOnly={!isManager}
-                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-yellow-600 sm:text-sm sm:leading-6 ${
+                  className={`block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-amber-600 sm:text-sm sm:leading-6 ${
                     !isManager ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                   required
@@ -248,7 +250,7 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
               <button
                 type="submit"
                 disabled={currentItems.length === 0 || !isManager}
-                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 Lưu Thay Đổi
               </button>
@@ -287,4 +289,5 @@ const EditRequisitionPage: React.FC<EditRequisitionPageProps> = ({
 };
 
 export default EditRequisitionPage;
+
 
