@@ -24,6 +24,9 @@ export function useSortableData<T>(items: T[], initialConfig: SortConfig = { key
         } else if (sortConfig.key === 'totalStock' && a.variants && b.variants) {
           aValue = a.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
           bValue = b.variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
+        } else if (sortConfig.key === 'totalQuantity' && a.items && b.items) {
+          aValue = a.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
+          bValue = b.items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
         }
 
         // Handle string comparison for Vietnamese

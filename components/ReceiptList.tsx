@@ -359,7 +359,7 @@ const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, products, onNavigat
                           <tr>
                             <SortableHeader label="Mã phiếu" sortKey="id" currentSort={sortConfig} onRequestSort={requestSort} />
                             <SortableHeader label="Nhà cung cấp" sortKey="supplier" currentSort={sortConfig} onRequestSort={requestSort} />
-                            <SortableHeader label="Tổng SL" sortKey="items.length" currentSort={sortConfig} onRequestSort={requestSort} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                            <SortableHeader label="Tổng SL" sortKey="totalQuantity" currentSort={sortConfig} onRequestSort={requestSort} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
                             <SortableHeader label="Ngày tạo" sortKey="createdAt" currentSort={sortConfig} onRequestSort={requestSort} />
                             <SortableHeader label="Người tạo" sortKey="createdBy" currentSort={sortConfig} onRequestSort={requestSort} />
                             <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Thao tác</th>
