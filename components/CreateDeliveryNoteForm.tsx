@@ -197,7 +197,7 @@ const CreateDeliveryNoteForm: React.FC<CreateDeliveryNoteFormProps> = ({
             </div>
           </div>
 
-          {items.length > 0 ? (
+          {items.length > 0 ? ( <>
             <div className="mt-4">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">

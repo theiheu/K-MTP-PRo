@@ -5,6 +5,8 @@ import * as XLSX from 'xlsx';
 import { useAuthStore } from '../store/authStore';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import Pagination from './Pagination';
+import { useSortableData } from '../hooks/useSortableData';
+import SortableHeader from './SortableHeader';
 
 const InventoryAuditSection: React.FC = () => {
   const { inventoryAudits, createInventoryAudit, updateInventoryAuditItem, completeInventoryAudit, deleteInventoryAudit, updateInventoryAudit, products, categories, zones } = useDataStore();
@@ -28,6 +30,10 @@ const InventoryAuditSection: React.FC = () => {
   const ITEMS_PER_PAGE = 20;
 
   const [listCurrentPage, setListCurrentPage] = useState(1);
+  const [listSearchTerm, setListSearchTerm] = useState("");
+  const [listStatusFilter, setListStatusFilter] = useState("T?t c?");
+  const [listStartDate, setListStartDate] = useState("");
+  const [listEndDate, setListEndDate] = useState("");
   const LIST_ITEMS_PER_PAGE = 10;
 
   // Reset pagination when search or filters change
@@ -240,8 +246,9 @@ const InventoryAuditSection: React.FC = () => {
     return searchString.includes(searchTerm.toLowerCase());
   }) : [];
 
-  const totalPages = Math.ceil(filteredAuditItems.length / ITEMS_PER_PAGE) || 1;
-  const paginatedItems = filteredAuditItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const { items: sortedAuditItems, requestSort: requestAuditItemSort, sortConfig: auditItemSortConfig } = useSortableData(filteredAuditItems, { key: "productName", direction: "asc" });
+  const totalPages = Math.ceil(sortedAuditItems.length / ITEMS_PER_PAGE) || 1;
+  const paginatedItems = sortedAuditItems.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   if (selectedAudit) {
     return (
@@ -379,11 +386,11 @@ const InventoryAuditSection: React.FC = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sản phẩm</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Tồn hệ thống</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Tồn thực tế</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Chênh lệch</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ghi chú (Lý do)</th>
+                <SortableHeader label="S?n ph?m" sortKey="productName" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <SortableHeader label="T?n h? th?ng" sortKey="systemQuantity" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <SortableHeader label="T?n th?c t?" sortKey="actualQuantity" currentSort={auditItemSortConfig} onRequestSort={requestAuditItemSort} className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100 select-none" />
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ch�nh l?ch</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ghi ch� (L� do)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -625,8 +632,20 @@ const InventoryAuditSection: React.FC = () => {
     );
   }
 
-  const totalListPages = Math.ceil(inventoryAudits.length / LIST_ITEMS_PER_PAGE) || 1;
-  const paginatedAudits = inventoryAudits.slice((listCurrentPage - 1) * LIST_ITEMS_PER_PAGE, listCurrentPage * LIST_ITEMS_PER_PAGE);
+  const filteredAudits = useMemo(() => {
+    return inventoryAudits.filter(audit => {
+      const matchesSearch = audit.title.toLowerCase().includes(listSearchTerm.toLowerCase()) || 
+                            audit.createdBy.toLowerCase().includes(listSearchTerm.toLowerCase());
+      const matchesStatus = listStatusFilter === "T?t c?" || audit.status === listStatusFilter;
+      const matchesStart = listStartDate ? new Date(audit.createdAt) >= new Date(listStartDate) : true;
+      const matchesEnd = listEndDate ? new Date(audit.createdAt) <= new Date(listEndDate + "T23:59:59") : true;
+      return matchesSearch && matchesStatus && matchesStart && matchesEnd;
+    });
+  }, [inventoryAudits, listSearchTerm, listStatusFilter, listStartDate, listEndDate]);
+
+  const { items: sortedAudits, requestSort: requestListSort, sortConfig: listSortConfig } = useSortableData(filteredAudits, { key: "createdAt", direction: "desc" });
+  const totalListPages = Math.ceil(sortedAudits.length / LIST_ITEMS_PER_PAGE) || 1;
+  const paginatedAudits = sortedAudits.slice((listCurrentPage - 1) * LIST_ITEMS_PER_PAGE, listCurrentPage * LIST_ITEMS_PER_PAGE);
 
   return (
     <div className="flex flex-col flex-1 bg-white p-6 rounded-lg shadow-sm border border-gray-200 no-print">
@@ -671,11 +690,11 @@ const InventoryAuditSection: React.FC = () => {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên đợt</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày tạo</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Người tạo</th>
-              <th className="relative px-6 py-3"><span className="sr-only">Hành động</span></th>
+              <SortableHeader label="T�n d?t" sortKey="title" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <SortableHeader label="Ng�y t?o" sortKey="createdAt" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <SortableHeader label="Tr?ng th�i" sortKey="status" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <SortableHeader label="Ngu?i t?o" sortKey="createdBy" currentSort={listSortConfig} onRequestSort={requestListSort} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 select-none" />
+              <th className="relative px-6 py-3"><span className="sr-only">H�nh d?ng</span></th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
