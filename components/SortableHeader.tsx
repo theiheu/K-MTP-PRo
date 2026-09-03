@@ -21,7 +21,7 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
 
   return (
     <th className={className} onClick={() => onRequestSort(sortKey)}>
-      <div className="flex items-center gap-1">
+      <div className={`flex items-center gap-1 ${className.includes('text-center') ? 'justify-center' : className.includes('text-right') ? 'justify-end' : 'justify-start'}`}>
         <span>{label}</span>
         <span className="inline-flex flex-col w-3 h-3 text-gray-400">
           <svg
