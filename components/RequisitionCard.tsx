@@ -57,6 +57,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
         <div className="mt-4 border-t border-gray-200 pt-4 space-y-3">
             <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Người yêu cầu:</span> {form.requesterName}</p>
             <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Mục đích:</span> {form.purpose}</p>
+
             {uniqueCategories.length > 0 && (
                 <div className="flex items-start">
                     <span className="font-medium text-gray-800 text-sm flex-shrink-0 mr-2">Danh mục:</span>
@@ -124,6 +125,27 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
                           </ul>
                         </div>
                       )}
+                    {item.isExchange && (
+                      <div className="mt-2 bg-red-50 p-2 rounded border border-red-100">
+                        <p className="text-xs text-red-700 font-bold flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                          </svg>
+                          Cấp đổi (Thu hồi đồ cũ)
+                        </p>
+                        {item.defectNotes && <p className="text-xs text-red-600 mt-1"><span className="font-medium">Lỗi:</span> {item.defectNotes}</p>}
+                        {item.defectImages && item.defectImages.length > 0 && (
+                          <div className="mt-1 flex gap-1 overflow-x-auto">
+                            {item.defectImages.map((src, idx) => (
+                              <img key={idx} src={src} alt="Defect" className="h-8 w-8 object-cover rounded cursor-pointer border border-red-200" onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(src, '_blank');
+                              }}/>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right flex-shrink-0">
                       <p className="font-medium text-gray-900">SL: {item.quantity} {item.variant.unit}</p>

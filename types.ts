@@ -14,14 +14,39 @@ export interface VariantBatch {
 
 export interface Variant {
   id: string;
-  attributes: { [key: string]: string }; // e.g., { "Màu sắc": "Đen", "Kích cỡ": "L" }
-  stock: number; // Computed total stock
-  batches?: VariantBatch[]; // Added for batch management
+  attributes: { [key: string]: string };
+  stock: number;
+  defective_stock?: number;
+  repairing_stock?: number;
+  batches?: VariantBatch[];
   price?: number;
-  images?: string[]; // Specific images for this variant
+  images?: string[];
   unit?: string;
   components?: ChildComponent[];
   sku?: string;
+}
+
+export type InventoryTransactionType = 'RETURN' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL';
+
+export interface InventoryTransactionItem {
+  variantId: string;
+  quantity: number;
+  reason?: string;
+  // For display
+  productName?: string;
+  variantAttributes?: { [key: string]: string };
+  unit?: string;
+}
+
+export interface InventoryTransaction {
+  id: string;
+  type: InventoryTransactionType;
+  status: string;
+  items: InventoryTransactionItem[];
+  createdBy: string;
+  createdAt: string;
+  notes?: string;
+  referenceId?: string;
 }
 
 export interface Product {
@@ -43,6 +68,9 @@ export interface CartItem {
   product: Product;
   variant: Variant;
   quantity: number;
+  isExchange?: boolean;
+  defectNotes?: string;
+  defectImages?: string[];
 }
 
 export type Status = "Đang chờ xử lý" | "Đã duyệt yêu cầu" | "Đã hoàn thành" | "Đã huỷ";
@@ -127,7 +155,7 @@ export interface GoodsReceiptNote {
   linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
 }
 
-export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits";
+export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits" | "defects";
 
 // --- START: Thêm mới cho Phiếu Giao Nhận ---
 export type DeliveryStatus = "pending" | "verified" | "rejected";

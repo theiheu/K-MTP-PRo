@@ -4,7 +4,6 @@ import { Toaster, toast } from 'react-hot-toast';
 
 import Header from './components/Header';
 import ProductList from './components/ProductList';
-import Cart from './components/Cart';
 import BottomNav from './components/BottomNav';
 import DesktopNav from './components/DesktopNav';
 import LoginPage from './components/LoginPage';
@@ -20,7 +19,7 @@ import { useDataStore } from './store/dataStore';
 import { AdminTab } from './types';
 
 const RequisitionListPage = lazy(() => import('./components/RequisitionListPage'));
-const CreateRequisitionPage = lazy(() => import('./components/CreateRequisitionPage'));
+const CreateRequisitionModal = lazy(() => import('./components/CreateRequisitionModal'));
 const AdminPage = lazy(() => import('./components/AdminPage'));
 const CreateReceiptPage = lazy(() => import('./components/CreateReceiptPage'));
 const ReceiptList = lazy(() => import('./components/ReceiptList'));
@@ -37,10 +36,10 @@ const App: React.FC = () => {
 
   // Auth Store
   const { user, login, logout, checkSession } = useAuthStore();
-  
+
   // Cart Store
-  const { cart, isCartOpen, setIsCartOpen, addToCart, removeFromCart, updateCartItem } = useCartStore();
-  
+  const { cart, isCartOpen, setIsCartOpen, addToCart, removeFromCart, updateCartItem, updateCartItemDetails } = useCartStore();
+
   // Data Store
   const {
     products, categories, zones, requisitions, receipts, deliveries, users,
@@ -61,7 +60,7 @@ const App: React.FC = () => {
   const [editingReceipt, setEditingReceipt] = useState<any>(null);
   const [productCurrentPage, setProductCurrentPage] = useState(1);
   const [adminInitialTab, setAdminInitialTab] = useState<AdminTab>('products');
-  
+
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -120,8 +119,8 @@ const App: React.FC = () => {
   const filteredAndSortedProducts = useMemo(() => {
     let temp = products;
     if (searchTerm) {
-      temp = temp.filter(p => 
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      temp = temp.filter(p =>
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -129,14 +128,14 @@ const App: React.FC = () => {
     return temp;
   }, [searchTerm, category, products]);
 
-  const paginatedProducts = useMemo(() => 
+  const paginatedProducts = useMemo(() =>
     filteredAndSortedProducts.slice((productCurrentPage - 1) * PRODUCTS_PER_PAGE, productCurrentPage * PRODUCTS_PER_PAGE),
   [filteredAndSortedProducts, productCurrentPage]);
 
   const totalPages = Math.ceil(filteredAndSortedProducts.length / PRODUCTS_PER_PAGE);
 
   const allCategoriesForNav = useMemo(() => [{ name: 'Tất cả', icon: '' }, ...categories], [categories]);
-  
+
   const popularProducts = useMemo(() => {
     if (!requisitions || requisitions.length === 0) return [];
     const freq: Record<string, number> = {};
@@ -145,7 +144,7 @@ const App: React.FC = () => {
         freq[item.product.id] = (freq[item.product.id] || 0) + 1;
       });
     });
-    
+
     const sorted = [...products].sort((a, b) => (freq[b.id] || 0) - (freq[a.id] || 0));
     return sorted.filter(p => freq[p.id] > 0).slice(0, 8);
   }, [products, requisitions]);
@@ -171,6 +170,11 @@ const App: React.FC = () => {
     }
   }, [navigate]);
 
+  const handleNavigateToCreateRequisition = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsCartOpen(true);
+  }, [setIsCartOpen]);
+
   const handleAddToCart = useCallback((product: any, variant: any, quantity: number) => {
     addToCart(product, variant, quantity);
     toast.success(`Đã thêm ${product.name} (${quantity})`);
@@ -184,20 +188,13 @@ const App: React.FC = () => {
     try {
       await createRequisition(details, cart);
       useCartStore.getState().clearCart();
+      setIsCartOpen(false);
       toast.success(details.isCompleted ? 'Đã tạo và hoàn thành phiếu yêu cầu!' : 'Đã tạo phiếu yêu cầu thành công!');
       navigate('/requisitions');
     } catch (e: any) {
       alert(e.message || 'Lỗi');
     }
-  }, [cart, createRequisition, navigate]);
-
-  const handleNavigateToCreateRequisition = useCallback(() => {
-    if (cartItemCount === 0) {
-      alert('Vui lòng thêm vật tư vào phiếu trước khi tạo.');
-      return;
-    }
-    navigate('/requisitions/create');
-  }, [cartItemCount, navigate]);
+  }, [cart, createRequisition, navigate, setIsCartOpen]);
 
   const handleFulfillRequisition = useCallback(async (formId: string, details: any) => {
     try {
@@ -273,7 +270,7 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-16 sm:pb-0 flex flex-col">
       <Toaster containerStyle={{ top: 80, right: 20 }} />
-      
+
       {isActionLoading && (
         <div className="fixed inset-0 z-[9999] bg-black bg-opacity-30 flex flex-col items-center justify-center">
           <div className="bg-white px-6 py-4 rounded-lg shadow-xl flex items-center space-x-3">
@@ -292,7 +289,7 @@ const App: React.FC = () => {
           user={user}
           onLogout={logout}
         />
-        
+
         {showDesktopNav && <DesktopNav onNavigate={handleNavigate} currentView={currentView} user={user} />}
       </div>
 
@@ -318,7 +315,7 @@ const App: React.FC = () => {
                   <SearchBar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
                 </div>
               </div>
-              
+
               <CategoryNav categories={allCategoriesForNav} activeCategory={category} onSelectCategory={setCategory} />
               <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col min-h-[calc(100vh-24rem)]">
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Danh sách vật tư</h2>
@@ -337,7 +334,7 @@ const App: React.FC = () => {
               </div>
             </>
           } />
-          
+
           <Route path="/requisitions" element={
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
               <RequisitionListPage
@@ -356,35 +353,21 @@ const App: React.FC = () => {
               />
             </main>
           } />
-          
+
           <Route path="/receipts" element={
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
-              <ReceiptList 
-                receipts={receipts} 
-                products={products} 
-                onNavigate={handleNavigate} 
-                isReadOnly={user?.role === 'auditor'} 
+              <ReceiptList
+                receipts={receipts}
+                products={products}
+                onNavigate={handleNavigate}
+                isReadOnly={user?.role === 'auditor'}
                 onEditReceipt={handleEditReceipt}
                 onDeleteReceipt={handleDeleteReceipt}
               />
             </main>
           } />
-          
-          <Route path="/requisitions/create" element={
-            <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
-              <CreateRequisitionPage zones={zones}
-                user={user}
-                users={users}
-                allProducts={products}
-                cartItems={cart}
-                onSubmit={handleCreateRequisition}
-                onCancel={() => navigate('/')}
-                onUpdateItem={handleUpdateCartItem}
-                onRemoveItem={removeFromCart}
-              />
-            </main>
-          } />
-          
+
+
           <Route path="/admin" element={
             !["manager", "auditor"].includes(user?.role || "") ? <Navigate to="/" replace /> :
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
@@ -411,7 +394,7 @@ const App: React.FC = () => {
               />
             </main>
           } />
-          
+
           <Route path="/receipts/create" element={
             user?.role !== "manager" ? <Navigate to="/" replace /> :
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
@@ -425,13 +408,13 @@ const App: React.FC = () => {
               />
             </main>
           } />
-          
+
           <Route path="/deliveries" element={
             !["manager", "auditor"].includes(user?.role || "") ? <Navigate to="/" replace /> :
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
-              <DeliveryNoteList 
-                deliveryNotes={deliveries} 
-                products={products} 
+              <DeliveryNoteList
+                deliveryNotes={deliveries}
+                products={products}
                 currentUser={user}
                 onNavigate={handleNavigate}
                 createDeliveryNote={handleCreateDeliveryNoteWrapper as any}
@@ -441,7 +424,7 @@ const App: React.FC = () => {
               />
             </main>
           } />
-          
+
           <Route path="/deliveries/create" element={
             user?.role !== "manager" ? <Navigate to="/" replace /> :
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">
@@ -454,7 +437,7 @@ const App: React.FC = () => {
               />
             </main>
           } />
-          
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -472,36 +455,21 @@ const App: React.FC = () => {
         />
       )}
 
-      {isCartOpen && (
-        <div className="relative z-50">
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75" onClick={() => setIsCartOpen(false)}></div>
-          <div className="fixed inset-0 overflow-hidden">
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
-                <div className="pointer-events-auto w-screen max-w-md bg-white shadow-xl flex flex-col">
-                  <div className="flex items-start justify-between px-4 py-6 sm:px-6">
-                    <h2 className="text-lg font-medium text-gray-900">Phiếu Yêu Cầu Tạm Thời</h2>
-                    <button onClick={() => setIsCartOpen(false)} className="text-gray-400 hover:text-gray-500">
-                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto px-4 sm:px-6">
-                    <Cart
-                      cartItems={cart}
-                      allProducts={products}
-                      onRemove={removeFromCart}
-                      onUpdateItem={handleUpdateCartItem}
-                      onCreateRequisition={() => { setIsCartOpen(false); handleNavigateToCreateRequisition(); }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Suspense fallback={null}>
+        <CreateRequisitionModal
+          isOpen={isCartOpen}
+          zones={zones}
+          user={user}
+          users={users}
+          allProducts={products}
+          cartItems={cart}
+          onSubmit={handleCreateRequisition}
+          onCancel={() => setIsCartOpen(false)}
+          onUpdateItem={handleUpdateCartItem}
+          onUpdateDetails={updateCartItemDetails}
+          onRemoveItem={removeFromCart}
+        />
+      </Suspense>
     </div>
   );
 };

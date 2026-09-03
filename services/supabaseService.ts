@@ -11,6 +11,7 @@ import type {
   CartItem,
   InventoryAudit,
   InventoryAuditItem,
+  InventoryTransaction
 } from '../types';
 
 // =====================================================
@@ -23,7 +24,7 @@ export const productsService = {
       .from('products')
       .select(`
         *,
-        category:categories(name, icon),
+        category:categories(name),
         variants(
           *,
           variant_batches(*)
@@ -45,6 +46,8 @@ export const productsService = {
         id: v.id,
         attributes: v.attributes || {},
         stock: v.stock || 0,
+        defective_stock: v.defective_stock || 0,
+        repairing_stock: v.repairing_stock || 0,
         price: v.price,
         images: v.images,
         unit: v.unit,
@@ -88,6 +91,8 @@ export const productsService = {
       product_id: newProduct.id,
       attributes: v.attributes,
       stock: v.stock,
+      defective_stock: v.defective_stock || 0,
+      repairing_stock: v.repairing_stock || 0,
       price: v.price,
       images: v.images,
       unit: v.unit,
@@ -108,7 +113,7 @@ export const productsService = {
         batch_code: 'DEFAULT',
         stock: v.stock
       }));
-      
+
     if (batchesToInsert.length > 0) {
       const { error: batchError } = await supabase
         .from('variant_batches')
@@ -127,6 +132,8 @@ export const productsService = {
         id: v.id,
         attributes: v.attributes || {},
         stock: v.stock || 0,
+        defective_stock: v.defective_stock || 0,
+        repairing_stock: v.repairing_stock || 0,
         price: v.price,
         images: v.images,
         unit: v.unit,
@@ -165,6 +172,8 @@ export const productsService = {
       product_id: product.id,
       attributes: v.attributes,
       stock: v.stock,
+      defective_stock: v.defective_stock || 0,
+      repairing_stock: v.repairing_stock || 0,
       price: v.price,
       images: v.images,
       unit: v.unit,
@@ -223,9 +232,18 @@ export const productsService = {
     if (error) throw error;
   },
 
+  async updateVariantDefectStock(variantId: string, defectiveStock: number, repairingStock: number): Promise<void> {
+    const { error } = await supabase
+      .from('variants')
+      .update({ defective_stock: defectiveStock, repairing_stock: repairingStock })
+      .eq('id', variantId);
+
+    if (error) throw error;
+  },
+
   async createOrUpdateBatch(variantId: string, quantity: number, batchCode?: string, expiryDate?: string): Promise<void> {
     const defaultBatchCode = batchCode || 'DEFAULT';
-    
+
     // Check if batch exists
     let query = supabase.from('variant_batches').select('*').eq('variant_id', variantId).eq('batch_code', defaultBatchCode);
     if (expiryDate) {
@@ -449,9 +467,13 @@ export const requisitionsService = {
       .select(`
         *,
         requisition_items(
-          *,
-          product:products(*, category:categories(name, icon)),
-          variant:variants(*)
+          id,
+          quantity,
+          is_exchange,
+          defect_notes,
+          defect_images,
+          product:products(id, name, description, images, options, category:categories(name)),
+          variant:variants(id, attributes, stock, price, images, unit)
         )
       `)
       .order('created_at', { ascending: false });
@@ -491,6 +513,9 @@ export const requisitionsService = {
           unit: item.variant.unit,
         },
         quantity: item.quantity,
+        isExchange: item.is_exchange,
+        defectNotes: item.defect_notes,
+        defectImages: item.defect_images,
       })),
     }));
   },
@@ -522,6 +547,9 @@ export const requisitionsService = {
       product_id: item.product.id,
       variant_id: item.variant.id,
       quantity: item.quantity,
+      is_exchange: item.isExchange,
+      defect_notes: item.defectNotes,
+      defect_images: item.defectImages,
     }));
 
     const { error: itemsError } = await supabase
@@ -577,6 +605,9 @@ export const requisitionsService = {
         product_id: item.product.id,
         variant_id: item.variant.id,
         quantity: item.quantity,
+        is_exchange: item.isExchange,
+        defect_notes: item.defectNotes,
+        defect_images: item.defectImages,
       }));
 
       const { error: itemsError } = await supabase
@@ -648,9 +679,12 @@ export const receiptsService = {
       .select(`
         *,
         receipt_items(
-          *,
-          product:products(*),
-          variant:variants(*)
+          id,
+          product_id,
+          variant_id,
+          quantity,
+          product:products(id, name),
+          variant:variants(id, attributes, unit)
         )
       `)
       .order('created_at', { ascending: false });
@@ -737,9 +771,22 @@ export const deliveryNotesService = {
       .select(`
         *,
         delivery_items(
-          *,
-          product:products(*),
-          variant:variants(*)
+          id,
+          product_id,
+          variant_id,
+          quantity,
+          actual_quantity,
+          quality_issue,
+          issue_notes,
+          expected_delivery_date,
+          received_date,
+          condition,
+          damage_description,
+          replacement_needed,
+          quality_checks,
+          tracking_info,
+          product:products(id, name),
+          variant:variants(id, attributes, unit)
         )
       `)
       .order('created_at', { ascending: false });
@@ -868,9 +915,15 @@ export const inventoryAuditsService = {
       .select(`
         *,
         inventory_audit_items(
-          *,
-          product:products(*),
-          variant:variants(*)
+          id,
+          audit_id,
+          product_id,
+          variant_id,
+          system_quantity,
+          actual_quantity,
+          reason,
+          product:products(id, name),
+          variant:variants(id, attributes)
         )
       `)
       .order('created_at', { ascending: false });
@@ -937,9 +990,15 @@ export const inventoryAuditsService = {
       .select(`
         *,
         inventory_audit_items(
-          *,
-          product:products(*),
-          variant:variants(*)
+          id,
+          audit_id,
+          product_id,
+          variant_id,
+          system_quantity,
+          actual_quantity,
+          reason,
+          product:products(id, name),
+          variant:variants(id, attributes)
         )
       `)
       .eq('id', id)
@@ -1130,3 +1189,57 @@ export const usersService = {
 
 
 
+
+// =====================================================
+// INVENTORY TRANSACTIONS SERVICE
+// =====================================================
+
+export const inventoryTransactionsService = {
+  async getAll(): Promise<InventoryTransaction[]> {
+    const { data, error } = await supabase
+      .from('inventory_transactions')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((t: any) => ({
+      id: t.id,
+      type: t.type,
+      status: t.status,
+      items: typeof t.items === 'string' ? JSON.parse(t.items) : t.items,
+      createdBy: t.created_by,
+      createdAt: t.created_at,
+      notes: t.notes,
+      referenceId: t.reference_id
+    }));
+  },
+
+  async create(transaction: Omit<InventoryTransaction, 'id' | 'createdAt'>): Promise<InventoryTransaction> {
+    const { data, error } = await supabase
+      .from('inventory_transactions')
+      .insert({
+        type: transaction.type,
+        status: transaction.status,
+        items: transaction.items,
+        created_by: transaction.createdBy,
+        notes: transaction.notes,
+        reference_id: transaction.referenceId
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      type: data.type,
+      status: data.status,
+      items: typeof data.items === 'string' ? JSON.parse(data.items) : data.items,
+      createdBy: data.created_by,
+      createdAt: data.created_at,
+      notes: data.notes,
+      referenceId: data.reference_id
+    };
+  }
+};

@@ -12,6 +12,7 @@ interface CartItemProps {
     quantity: number,
     oldVariantId?: string
   ) => void;
+  onUpdateDetails?: (variantId: string, details: Partial<CartItemType>) => void;
   onImageClick?: (images: string[], startIndex: number) => void;
   onReplace?: (variantId: string) => void;
 }
@@ -21,6 +22,7 @@ const CartItem: React.FC<CartItemProps> = ({
   allProducts,
   onRemove,
   onUpdateItem,
+  onUpdateDetails,
   onImageClick,
   onReplace,
 }) => {
@@ -109,9 +111,10 @@ const CartItem: React.FC<CartItemProps> = ({
 
   return (
     <>
-      <li className="flex py-6">
+      <li className="py-5 sm:py-6">
+        <div className="flex gap-3 sm:gap-4">
         <div
-          className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 cursor-pointer hover:opacity-75 transition-opacity"
+          className="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 cursor-pointer hover:opacity-75 transition-opacity"
           onClick={() => {
             if (onImageClick) {
               // Collect all available images
@@ -137,10 +140,10 @@ const CartItem: React.FC<CartItemProps> = ({
           />
         </div>
 
-        <div className="ml-4 flex flex-1 flex-col min-w-0">
+        <div className="flex flex-1 flex-col min-w-0">
           <div>
             <div className="flex justify-between text-base font-medium text-gray-900">
-              <h3 className="truncate">{item.product.name}</h3>
+              <h3 className="min-w-0 break-words pr-2">{item.product.name}</h3>
             </div>
             {item.product.options.length > 0 && (
               <div className="mt-3 space-y-2">
@@ -270,10 +273,102 @@ const CartItem: React.FC<CartItemProps> = ({
             </div>
           </div>
         </div>
+        </div>
+
+        {onUpdateDetails && (
+          <div className="mt-4 sm:ml-28 rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4">
+            <div className="flex items-start gap-2">
+              <input
+                id={`exchange-${item.variant.id}`}
+                type="checkbox"
+                checked={item.isExchange || false}
+                onChange={(e) => onUpdateDetails(item.variant.id, { isExchange: e.target.checked })}
+                className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-gray-300 text-red-600 focus:ring-red-600 cursor-pointer"
+              />
+              <label htmlFor={`exchange-${item.variant.id}`} className="block min-w-0 text-sm leading-5 text-gray-700 cursor-pointer">
+                Cấp đổi vật tư này (Có thu hồi đồ cũ)
+              </label>
+            </div>
+
+            {item.isExchange && (
+              <div className="mt-3 rounded-md border border-red-100 bg-red-50 p-3 space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Tình trạng/Lý do hỏng hóc
+                  </label>
+                  <input
+                    type="text"
+                    value={item.defectNotes || ""}
+                    onChange={(e) => onUpdateDetails(item.variant.id, { defectNotes: e.target.value })}
+                    placeholder="VD: Cháy cuộn dây, vỡ vỏ bọc..."
+                    className="block w-full rounded-md border-0 px-2 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-red-600 sm:text-xs"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Hình ảnh đồ hỏng (Tuỳ chọn)
+                  </label>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label
+                      htmlFor={`defect-images-${item.variant.id}`}
+                      className="inline-flex w-fit cursor-pointer items-center justify-center rounded bg-red-100 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-200"
+                    >
+                      Chọn tệp
+                    </label>
+                    <span className="text-xs text-gray-500">
+                      {item.defectImages?.length ? `${item.defectImages.length} ảnh đã chọn` : "Chưa có tệp nào được chọn"}
+                    </span>
+                  </div>
+                  <input
+                    id={`defect-images-${item.variant.id}`}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => {
+                      const files = e.target.files;
+                      if (files) {
+                        const newImages = [...(item.defectImages || [])];
+                        Array.from(files).forEach((file) => {
+                          const reader = new FileReader();
+                          reader.readAsDataURL(file);
+                          reader.onload = () => {
+                            newImages.push(reader.result as string);
+                            onUpdateDetails(item.variant.id, { defectImages: newImages });
+                          };
+                        });
+                      }
+                    }}
+                    className="sr-only"
+                  />
+
+                  {item.defectImages && item.defectImages.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {item.defectImages.map((src, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={src} alt="Defect" className="h-12 w-12 object-cover rounded border border-gray-200" />
+                          <button
+                            type="button"
+                            onClick={() => onUpdateDetails(item.variant.id, { defectImages: item.defectImages!.filter((_, i) => i !== idx) })}
+                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </li>
     </>
   );
 };
 
 export default CartItem;
-

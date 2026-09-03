@@ -6,6 +6,7 @@ import { Product, Category, Variant, AdminTab, Zone, User } from "../types";
 import ProductFormModal from "./ProductFormModal";
 import ConfirmationModal from "./ConfirmationModal";
 import ImageGalleryModal from "./ImageGalleryModal";
+import DefectManagement from "./DefectManagement";
 import CategoryFormModal from "./CategoryFormModal";
 import ImageWithPlaceholder from "./ImageWithPlaceholder";
 import { calculateVariantStock } from "../utils/stockCalculator";
@@ -13,6 +14,7 @@ import ReceiptList from "./ReceiptList";
 import ZoneListSection from "./ZoneListSection";
 import UserManagement from "./UserManagement";
 import { useAuthStore } from "../store/authStore";
+import { useDataStore } from "../store/dataStore";
 import Dashboard from "./Dashboard";
 import InventoryAuditSection from "./InventoryAuditSection";
 import Pagination from "./Pagination";
@@ -134,6 +136,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
   onDeleteUser,
 }) => {
   const { user } = useAuthStore();
+  const inventoryTransactions = useDataStore(s => s.inventoryTransactions);
+  const createInventoryTransaction = useDataStore(s => s.createInventoryTransaction);
   const isReadOnly = user?.role !== "manager";
 
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
@@ -405,6 +409,17 @@ const AdminPage: React.FC<AdminPageProps> = ({
               Kiểm kê hàng hoá
             </button>
             <button
+              onClick={() => setActiveTab("defects")}
+              aria-current={activeTab === "defects" ? "page" : undefined}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "defects"
+                  ? "border-yellow-500 text-yellow-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Sự cố & Sửa chữa
+            </button>
+            <button
               onClick={() => setActiveTab("dashboard")}
               aria-current={activeTab === "dashboard" ? "page" : undefined}
               className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
@@ -502,7 +517,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                             </button>
                         </div>
                     </div>
-                    
+
                     <div className="hidden lg:flex lg:flex-row gap-4">
                         <div className="w-48">
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Tồn kho</label>
@@ -516,7 +531,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 ))}
                             </select>
                         </div>
-                        
+
                         <div className="w-48">
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Danh mục</label>
                             <select
@@ -547,7 +562,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
                                 </svg>
                             </button>
                         </div>
-                        
+
                         <div className="space-y-6 overflow-y-auto max-h-[70vh] pb-4">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-3">Tồn kho</label>
@@ -586,8 +601,8 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
                             <div className="pt-4 flex gap-3">
                                 <button
-                                    onClick={() => { 
-                                        setStockFilter('all'); 
+                                    onClick={() => {
+                                        setStockFilter('all');
                                         setCategoryFilter('all');
                                     }}
                                     className="flex-1 py-3.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
@@ -918,6 +933,17 @@ const AdminPage: React.FC<AdminPageProps> = ({
         {activeTab === "dashboard" && (
           <div role="tabpanel" id="dashboard-panel">
             <Dashboard />
+          </div>
+        )}
+
+        {activeTab === "defects" && (
+          <div role="tabpanel" id="defects-panel">
+            <DefectManagement
+              products={products}
+              transactions={inventoryTransactions}
+              onCreateTransaction={createInventoryTransaction}
+              currentUser={user}
+            />
           </div>
         )}
       </div>

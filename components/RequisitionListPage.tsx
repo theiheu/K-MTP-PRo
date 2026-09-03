@@ -5,7 +5,7 @@ import FulfillRequisitionModal from "./FulfillRequisitionModal";
 import ImageGalleryModal from "./ImageGalleryModal";
 import Pagination from "./Pagination";
 import EditRequisitionPage from './EditRequisitionPage';
-import Cart from "./Cart";
+
 import { printPhieuXuatKho } from '../utils/printUtils';
 import { useSortableData } from '../hooks/useSortableData';
 import SortableHeader from './SortableHeader';
@@ -146,7 +146,7 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                   </tbody>
                 </table>
               </div>
-              
+
               <div className="mt-4 flex flex-col sm:flex-row justify-between sm:items-start gap-4 bg-gray-50 p-3 rounded border border-gray-200">
                 <div className="space-y-1">
                   <div className="text-xs text-gray-600">
@@ -166,7 +166,7 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                     </div>
                   )}
                 </div>
-                
+
                 <button
                   onClick={() => printPhieuXuatKho(req)}
                   className="inline-flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
@@ -376,17 +376,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
         </button>
       </div>
 
-      {cartItems.length > 0 && (
-        <div className="mb-6">
-          <Cart
-            cartItems={cartItems}
-            allProducts={allProducts}
-            onRemove={onCartRemove}
-            onUpdateItem={onCartUpdateItem}
-            onCreateRequisition={onCreateRequisition}
-          />
-        </div>
-      )}
+
 
       <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
         <div className="flex flex-col lg:flex-row gap-4">
@@ -417,7 +407,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
                 </button>
             </div>
           </div>
-          
+
           <div className="hidden lg:flex lg:flex-row gap-4">
             <div className="w-48">
               <label className="block text-sm font-semibold text-gray-700 mb-1">Trạng thái</label>
@@ -468,7 +458,7 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
                 </svg>
               </button>
             </div>
-            
+
             <div className="space-y-6 overflow-y-auto max-h-[70vh] pb-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Trạng thái</label>
@@ -546,14 +536,14 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {paginatedForms.map(req => (
-                    <RequisitionTableRow 
-                      key={req.id} 
-                      req={req} 
-                      currentUser={currentUser} 
-                      handleInitiateFulfillment={handleInitiateFulfillment} 
-                      onDeleteRequisition={onDeleteRequisition} 
-                      onConfirmReceipt={onConfirmReceipt} 
-                      handleEdit={handleEdit} 
+                    <RequisitionTableRow
+                      key={req.id}
+                      req={req}
+                      currentUser={currentUser}
+                      handleInitiateFulfillment={handleInitiateFulfillment}
+                      onDeleteRequisition={onDeleteRequisition}
+                      onConfirmReceipt={onConfirmReceipt}
+                      handleEdit={handleEdit}
                       allProducts={allProducts}
                     />
                   ))}
@@ -592,6 +582,3 @@ const RequisitionListPage: React.FC<RequisitionListPageProps> = ({
 };
 
 export default RequisitionListPage;
-
-
-

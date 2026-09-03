@@ -25,22 +25,25 @@ const CategoryNav: React.FC<CategoryNavProps> = ({ categories, activeCategory, o
                 return (
                   <button
                     key={category.name}
+                    title={category.name}
                     onClick={() => onSelectCategory(category.name)}
                     aria-pressed={activeCategory === category.name}
-                    className={`flex flex-col items-center justify-center p-2 rounded-2xl min-w-[5rem] h-20 transition-all duration-300 ease-in-out border-2 ${
+                    className={`flex min-w-[6.75rem] sm:min-w-[7.5rem] h-28 flex-col items-center justify-start p-2 rounded-2xl transition-all duration-300 ease-in-out border-2 ${
                       activeCategory === category.name
                         ? 'border-amber-500 bg-amber-50 text-amber-900 shadow-sm'
                         : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   >
-                    <div className={`p-2 rounded-xl mb-1 ${activeCategory === category.name ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
+                    <div className={`p-2 rounded-xl mb-2 shrink-0 ${activeCategory === category.name ? 'bg-amber-100 text-amber-600' : 'bg-gray-100 text-gray-500'}`}>
                         {category.name === 'Tất cả' ? (
                         <AllIcon className="w-5 h-5" />
                         ) : (
                         <img src={category.icon} alt={category.name} className="w-5 h-5 object-contain" />
                         )}
                     </div>
-                    <span className="text-[10px] sm:text-xs font-semibold text-center leading-tight line-clamp-2">{category.name}</span>
+                    <span className="w-full text-[10px] sm:text-xs font-semibold text-center leading-snug whitespace-normal break-words">
+                      {category.name}
+                    </span>
                   </button>
                 );
               })}

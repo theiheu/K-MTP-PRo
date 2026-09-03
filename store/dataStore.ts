@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-  Product, Category, Zone, RequisitionForm, GoodsReceiptNote, DeliveryNote, User, InventoryAudit, InventoryAuditItem
+  Product, Category, Zone, RequisitionForm, GoodsReceiptNote, DeliveryNote, User, InventoryAudit, InventoryAuditItem, InventoryTransaction
 } from '../types';
 import {
   productsService,
@@ -11,10 +11,36 @@ import {
   receiptsService,
   deliveryNotesService,
   usersService,
-  inventoryAuditsService
+  inventoryAuditsService,
+  inventoryTransactionsService
 } from '../services/supabaseService';
 import { cloneProductList } from '../utils/productUtils';
 import { calculateVariantStock } from '../utils/stockCalculator';
+
+let latestInitialFetchId = 0;
+
+const INITIAL_DATA_RETRY_COUNT = 1;
+const RETRY_DELAY_MS = 600;
+
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const loadWithRetry = async <T>(label: string, loader: () => Promise<T>): Promise<T> => {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt <= INITIAL_DATA_RETRY_COUNT; attempt += 1) {
+    try {
+      return await loader();
+    } catch (error) {
+      lastError = error;
+      console.warn(`Lỗi khi tải ${label}, lần ${attempt + 1}:`, error);
+      if (attempt < INITIAL_DATA_RETRY_COUNT) {
+        await delay(RETRY_DELAY_MS);
+      }
+    }
+  }
+
+  throw lastError;
+};
 
 interface DataState {
   products: Product[];
@@ -24,7 +50,8 @@ interface DataState {
   receipts: GoodsReceiptNote[];
   deliveries: DeliveryNote[];
   users: User[];
-  
+  inventoryTransactions: InventoryTransaction[];
+
   isFetchingInitialData: boolean;
   isActionLoading: boolean;
   fetchInitialData: () => Promise<void>;
@@ -74,6 +101,9 @@ interface DataState {
   updateInventoryAudit: (auditId: string, updates: Partial<{ title: string, notes: string }>) => Promise<void>;
   deleteInventoryAudit: (auditId: string) => Promise<void>;
   completeInventoryAudit: (auditId: string) => Promise<{ success: boolean; message?: string }>;
+
+  // Inventory Transactions
+  createInventoryTransaction: (transaction: Omit<InventoryTransaction, 'id' | 'createdAt'>) => Promise<void>;
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -85,47 +115,55 @@ export const useDataStore = create<DataState>((set, get) => ({
   deliveries: [],
   users: [],
   inventoryAudits: [],
+  inventoryTransactions: [],
 
   isFetchingInitialData: false,
   isActionLoading: false,
 
   fetchInitialData: async () => {
+    const fetchId = ++latestInitialFetchId;
     set({ isFetchingInitialData: true });
-    try {
-      const [
-        productsData,
-        categoriesData,
-        zonesData,
-        requisitionsData,
-        receiptsData,
-        deliveriesData,
-        usersData,
-        inventoryAuditsData
-      ] = await Promise.all([
-        productsService.getAll(),
-        categoriesService.getAll(),
-        zonesService.getAll(),
-        requisitionsService.getAll(),
-        receiptsService.getAll(),
-        deliveryNotesService.getAll(),
-        usersService.getAll(),
-        inventoryAuditsService.getAll()
-      ]);
 
-      set({
-        products: productsData,
-        categories: categoriesData,
-        zones: zonesData,
-        requisitions: requisitionsData,
-        receipts: receiptsData,
-        deliveries: deliveriesData,
-        users: usersData,
-        inventoryAudits: inventoryAuditsData,
-        isFetchingInitialData: false
-      });
-    } catch (error) {
-      console.error("Lỗi khi lấy dữ liệu từ Supabase:", error);
-      set({ isFetchingInitialData: false });
+    const loaders = {
+      products: () => productsService.getAll(),
+      categories: () => categoriesService.getAll(),
+      zones: () => zonesService.getAll(),
+      requisitions: () => requisitionsService.getAll(),
+      receipts: () => receiptsService.getAll(),
+      deliveries: () => deliveryNotesService.getAll(),
+      users: () => usersService.getAll(),
+      inventoryAudits: () => inventoryAuditsService.getAll(),
+      inventoryTransactions: () => inventoryTransactionsService.getAll(),
+    } as const;
+
+    const entries = Object.entries(loaders) as Array<[
+      keyof typeof loaders,
+      (typeof loaders)[keyof typeof loaders]
+    ]>;
+
+    const results = await Promise.allSettled(
+      entries.map(([key, loader]) => loadWithRetry(key, loader))
+    );
+
+    if (fetchId !== latestInitialFetchId) return;
+
+    const nextState: Partial<DataState> = { isFetchingInitialData: false };
+    const failedLoads: string[] = [];
+
+    results.forEach((result, index) => {
+      const key = entries[index][0];
+      if (result.status === 'fulfilled') {
+        (nextState as Record<string, unknown>)[key] = result.value;
+      } else {
+        failedLoads.push(key);
+        console.error(`Lỗi khi lấy dữ liệu ${key} từ Supabase:`, result.reason);
+      }
+    });
+
+    set(nextState);
+
+    if (failedLoads.length > 0) {
+      toast.error(`Một phần dữ liệu tải chưa xong: ${failedLoads.join(', ')}. Bấm tải lại nếu cần.`);
     }
   },
 
@@ -162,7 +200,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       set(state => ({ products: [newProduct, ...state.products] }));
     } finally { set({ isActionLoading: false }); }
   },
-  
+
   updateProduct: async (updatedProduct) => {
     set({ isActionLoading: true });
     try {
@@ -219,16 +257,16 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ isActionLoading: true });
     try {
       await categoriesService.delete(categoryName);
-      
+
       const state = get();
       const hasFallback = state.categories.some(c => c.name === 'Vật tư Khác');
-      const fallbackCategories = hasFallback 
-        ? state.categories 
+      const fallbackCategories = hasFallback
+        ? state.categories
         : [...state.categories, { name: 'Vật tư Khác', icon: '' }];
 
-      set(s => ({ 
+      set(s => ({
         categories: fallbackCategories.filter(c => c.name !== categoryName),
-        products: s.products.map(p => 
+        products: s.products.map(p =>
           p.category === categoryName ? { ...p, category: 'Vật tư Khác' } : p
         )
       }));
@@ -293,7 +331,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         const workingProducts = cloneProductList(state.products);
         let stockSufficient = true;
         const stockErrors: string[] = [];
-        
+
         for (const item of cart) {
           const currentStock = calculateVariantStock(item.variant, workingProducts);
           if (currentStock < item.quantity) {
@@ -302,7 +340,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             stockSufficient = false;
           }
         }
-        
+
         if (!stockSufficient) {
           throw new Error("Không thể tạo phiếu hoàn thành:\n" + stockErrors.join("\n"));
         }
@@ -330,7 +368,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           const pIndex = workingProducts.findIndex((p: any) => p.id === item.product.id);
           if (pIndex === -1) continue;
           const isComposite = item.variant.components && item.variant.components.length > 0;
-          
+
           const deductVariant = async (vId: string, quantityToDeduct: number, pIdx: number, vIdx: number) => {
             const batches = await productsService.getBatchesForVariant(vId);
             let remainingToDeduct = quantityToDeduct;
@@ -360,6 +398,41 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
 
         set(s => ({ products: workingProducts, requisitions: [newForm, ...s.requisitions] }));
+
+        const exchangeItems = cart.filter(item => item.isExchange);
+        if (exchangeItems.length > 0) {
+          await get().createInventoryTransaction({
+            type: 'RETURN',
+            status: 'COMPLETED',
+            createdBy: managerName,
+            notes: `Thu hồi từ phiếu yêu cầu cấp đổi ${newForm.id}`,
+            items: exchangeItems.flatMap(item => {
+              const isComposite = item.variant.components && item.variant.components.length > 0;
+              if (isComposite) {
+                return item.variant.components.map((c: any) => {
+                  const compProduct = workingProducts.find(p => p.variants.some((v: any) => v.id === c.variantId));
+                  const compVariant = compProduct?.variants.find((v: any) => v.id === c.variantId);
+                  return {
+                    variantId: c.variantId,
+                    quantity: item.quantity * c.quantity,
+                    reason: item.defectNotes,
+                    productName: compProduct?.name || item.product.name,
+                    variantAttributes: compVariant?.attributes,
+                    unit: compVariant?.unit || item.variant.unit
+                  };
+                });
+              }
+              return [{
+                variantId: item.variant.id,
+                quantity: item.quantity,
+                reason: item.defectNotes,
+                productName: item.product.name,
+                variantAttributes: item.variant.attributes,
+                unit: item.variant.unit
+              }];
+            })
+          });
+        }
       } else {
         const newForm = await requisitionsService.create({
           ...details,
@@ -386,7 +459,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       set(s => ({ requisitions: s.requisitions.filter(f => f.id !== formId) }));
     } finally { set({ isActionLoading: false }); }
   },
-  
+
   fulfillRequisition: async (formId, details) => {
     const state = get();
     const formToFulfill = state.requisitions.find(f => f.id === formId);
@@ -420,18 +493,18 @@ export const useDataStore = create<DataState>((set, get) => ({
         const pIndex = workingProducts.findIndex(p => p.id === item.product.id);
         if (pIndex === -1) continue;
         const isComposite = item.variant.components && item.variant.components.length > 0;
-        
+
         const deductVariant = async (vId: string, quantityToDeduct: number, pIdx: number, vIdx: number) => {
           const batches = await productsService.getBatchesForVariant(vId);
           let remainingToDeduct = quantityToDeduct;
-          
+
           for (const batch of batches) {
             if (remainingToDeduct <= 0) break;
             const deductAmount = Math.min(batch.stock, remainingToDeduct);
             await productsService.updateBatchStock(batch.id, batch.stock - deductAmount);
             remainingToDeduct -= deductAmount;
           }
-          
+
           // Trừ trên workingProducts để update UI
           const newStock = workingProducts[pIdx].variants[vIdx].stock - quantityToDeduct;
           workingProducts[pIdx].variants[vIdx].stock = newStock;
@@ -459,6 +532,42 @@ export const useDataStore = create<DataState>((set, get) => ({
           fulfillmentNotes: details.notes, fulfilledAt: new Date().toISOString()
         } : f)
       }));
+
+      const exchangeItems = formToFulfill.items.filter(item => item.isExchange);
+      if (exchangeItems.length > 0) {
+        await get().createInventoryTransaction({
+          type: 'RETURN',
+          status: 'COMPLETED',
+          createdBy: details.fulfillerName,
+          notes: `Thu hồi từ phiếu yêu cầu cấp đổi ${formId}`,
+          items: exchangeItems.flatMap(item => {
+            const isComposite = item.variant.components && item.variant.components.length > 0;
+            if (isComposite) {
+              return item.variant.components.map((c: any) => {
+                const compProduct = workingProducts.find(p => p.variants.some((v: any) => v.id === c.variantId));
+                const compVariant = compProduct?.variants.find((v: any) => v.id === c.variantId);
+                return {
+                  variantId: c.variantId,
+                  quantity: item.quantity * c.quantity,
+                  reason: item.defectNotes,
+                  productName: compProduct?.name || item.product.name,
+                  variantAttributes: compVariant?.attributes,
+                  unit: compVariant?.unit || item.variant.unit
+                };
+              });
+            }
+            return [{
+              variantId: item.variant.id,
+              quantity: item.quantity,
+              reason: item.defectNotes,
+              productName: item.product.name,
+              variantAttributes: item.variant.attributes,
+              unit: item.variant.unit
+            }];
+          })
+        });
+      }
+
       return { success: true };
     } catch (error: any) {
       return { success: false, message: "Lỗi hệ thống: " + error.message };
@@ -484,10 +593,10 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ isActionLoading: true });
     try {
       const newReceipt = await receiptsService.create(receiptData);
-      
+
       const state = get();
       let workingProducts = cloneProductList(state.products);
-      
+
       for (const item of receiptData.items) {
         const pIndex = workingProducts.findIndex(p => p.id === item.productId);
         if (pIndex !== -1) {
@@ -499,7 +608,7 @@ export const useDataStore = create<DataState>((set, get) => ({
           }
         }
       }
-      
+
       const fulfilledReqIds: string[] = [];
       const pendingReqs = state.requisitions
         .filter(f => f.status === "Đang chờ xử lý")
@@ -527,7 +636,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const receipt = get().receipts.find(r => r.id === id);
       if (!receipt) return;
-      
+
       const state = get();
       let workingProducts = cloneProductList(state.products);
 
@@ -542,12 +651,12 @@ export const useDataStore = create<DataState>((set, get) => ({
           }
         }
       }
-      
+
       await receiptsService.delete(id);
-      
-      set(s => ({ 
+
+      set(s => ({
         products: workingProducts,
-        receipts: s.receipts.filter(r => r.id !== id) 
+        receipts: s.receipts.filter(r => r.id !== id)
       }));
       toast.success('Đã xoá phiếu nhập kho');
     } catch (error: any) {
@@ -560,9 +669,9 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const existing = get().receipts.find(r => r.id === id);
       if (!existing) return;
-      
+
       let workingProducts = cloneProductList(get().products);
-      
+
       // If items changed, revert old and apply new
       if (updates.items && JSON.stringify(updates.items) !== JSON.stringify(existing.items)) {
         // Revert old
@@ -576,7 +685,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             }
           }
         }
-        
+
         // Apply new
         for (const item of updates.items) {
           const pIndex = workingProducts.findIndex(p => p.id === item.productId);
@@ -589,12 +698,12 @@ export const useDataStore = create<DataState>((set, get) => ({
           }
         }
       }
-      
+
       await receiptsService.update(id, updates);
-      
-      set(s => ({ 
+
+      set(s => ({
         products: workingProducts,
-        receipts: s.receipts.map(r => r.id === id ? { ...r, ...updates } : r) 
+        receipts: s.receipts.map(r => r.id === id ? { ...r, ...updates } : r)
       }));
       toast.success('Đã cập nhật phiếu nhập kho');
     } catch (error: any) {
@@ -612,7 +721,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       set(s => ({ deliveries: [newNote, ...s.deliveries] }));
     } finally { set({ isActionLoading: false }); }
   },
-  
+
   verifyDelivery: async (noteId, verifierName, verificationNotes = "") => {
     set({ isActionLoading: true });
     try {
@@ -671,7 +780,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       await inventoryAuditsService.update(auditId, updates);
       set(state => ({
-        inventoryAudits: state.inventoryAudits.map(a => 
+        inventoryAudits: state.inventoryAudits.map(a =>
           a.id === auditId ? { ...a, ...updates } : a
         )
       }));
@@ -701,7 +810,7 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       // Update variant stocks based on actualQuantity
       const productsToUpdate = cloneProductList(state.products);
-      
+
       for (const item of audit.items) {
         if (item.actualQuantity !== undefined && item.actualQuantity !== item.systemQuantity) {
           const pIndex = productsToUpdate.findIndex(p => p.id === item.productId);
@@ -709,7 +818,7 @@ export const useDataStore = create<DataState>((set, get) => ({
             const vIndex = productsToUpdate[pIndex].variants.findIndex(v => v.id === item.variantId);
             if (vIndex !== -1) {
               const diff = item.actualQuantity - item.systemQuantity;
-              
+
               if (diff > 0) {
                 // Nhập kho điều chỉnh
                 await productsService.createOrUpdateBatch(item.variantId, diff, 'ADJUSTMENT');
@@ -732,7 +841,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       await inventoryAuditsService.complete(auditId);
-      
+
       set(s => ({
         products: productsToUpdate,
         inventoryAudits: s.inventoryAudits.map(a => a.id === auditId ? { ...a, status: 'Hoàn thành', completedAt: new Date().toISOString() } : a)
@@ -743,6 +852,68 @@ export const useDataStore = create<DataState>((set, get) => ({
       return { success: false, message: e.message };
     } finally { set({ isActionLoading: false }); }
   },
+
+  // --- Inventory Transactions ---
+  createInventoryTransaction: async (transaction) => {
+    set({ isActionLoading: true });
+    try {
+      const state = get();
+      const workingProducts = cloneProductList(state.products);
+
+      // Update defective_stock and repairing_stock in DB
+      for (const item of transaction.items) {
+        const pIndex = workingProducts.findIndex(p => p.variants.some(v => v.id === item.variantId));
+        if (pIndex === -1) continue;
+
+        const vIndex = workingProducts[pIndex].variants.findIndex(v => v.id === item.variantId);
+        if (vIndex === -1) continue;
+
+        const variant = workingProducts[pIndex].variants[vIndex];
+        let defStock = variant.defective_stock || 0;
+        let repStock = variant.repairing_stock || 0;
+
+        if (transaction.type === 'RETURN') {
+          defStock += item.quantity;
+        } else if (transaction.type === 'REPAIR_EXPORT') {
+          defStock -= item.quantity;
+          repStock += item.quantity;
+        } else if (transaction.type === 'REPAIR_IMPORT') {
+          repStock -= item.quantity;
+          variant.stock += item.quantity;
+          await productsService.createOrUpdateBatch(item.variantId, item.quantity, 'REPAIR_RETURN');
+        } else if (transaction.type === 'DISPOSAL') {
+          if (defStock >= item.quantity) {
+             defStock -= item.quantity;
+          } else {
+             repStock -= item.quantity;
+          }
+        }
+
+        if (defStock < 0 || repStock < 0) {
+          throw new Error('Số lượng tồn kho hỏng/đang sửa không đủ hợp lệ để thực hiện thao tác.');
+        }
+
+        // Update working products
+        variant.defective_stock = defStock;
+        variant.repairing_stock = repStock;
+
+        // Update in DB
+        await productsService.updateVariantDefectStock(variant.id, defStock, repStock);
+      }
+
+      // Create transaction record
+      const newTx = await inventoryTransactionsService.create(transaction);
+
+      set(s => ({
+        products: workingProducts,
+        inventoryTransactions: [newTx, ...s.inventoryTransactions]
+      }));
+
+    } catch (e: any) {
+      console.error(e);
+      throw e;
+    } finally {
+      set({ isActionLoading: false });
+    }
+  },
 }));
-
-
