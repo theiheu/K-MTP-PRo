@@ -27,7 +27,7 @@ const ReceiptList = lazy(() => import('./components/ReceiptList'));
 const DeliveryNoteList = lazy(() => import('./components/DeliveryNoteList'));
 const CreateDeliveryNote = lazy(() => import('./components/CreateDeliveryNote'));
 
-const PRODUCTS_PER_PAGE = 10;
+const PRODUCTS_PER_PAGE = 12;
 
 type ViewKey = 'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt' | 'deliveries' | 'create-delivery';
 
