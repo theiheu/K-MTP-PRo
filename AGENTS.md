@@ -170,6 +170,18 @@ The main database entities include:
 - `goods_receipt_notes`
 - `delivery_notes`
 
+Warehouse rebuild core ledger (single source of truth for stock):
+
+- `suppliers`
+- `warehouses`
+- `inventory_documents` / `inventory_document_items`
+- `stock_movements` (immutable stock ledger)
+- `stock_balances` (current stock snapshot per `balance_state`)
+- `document_events`
+- `document_sequences`
+
+All stock changes must go through `stock_movements` via the inventory RPCs (see `services/inventoryCoreService.ts`), not through direct `variants.stock` updates.
+
 The actual database schema is authoritative. Never assume a field exists.
 
 Before database work:
@@ -210,6 +222,8 @@ The frontend may use:
 Do not introduce service-role keys, database passwords, or private API keys into frontend code.
 
 Never weaken RLS merely to make a feature work. If permissions are required, determine both UI-level behavior and database-level security. Client-side role checks are not a substitute for database security.
+
+Note (warehouse rebuild): the core ledger tables currently use permissive placeholder RLS policies (`FOR ALL USING (true)`) on purpose during the transition, because the app still authenticates through the legacy demo login rather than Supabase Auth. Before production hardening, migrate authentication to Supabase Auth (JWT + role claims) and tighten these policies. See Phase 12 in `docs/warehouse-system-rebuild-plan.md`.
 
 ## 12. Gemini / AI
 
@@ -551,6 +565,8 @@ For the warehouse-system rebuild documented in `docs/warehouse-system-rebuild-pl
 Allowed cleanup includes obsolete debug/import/setup/report files, generated build output, duplicated legacy UI, old services, old report/export code, and old inventory workflows after a replacement exists.
 
 As of 2026-09-04, the repository owner confirmed Supabase migrations `015_inventory_core`, `016_inventory_legacy_backfill`, `017_inventory_stock_issue_rpc`, and `018_inventory_stock_adjustment_rpc` have been applied successfully. Future rebuild work may proceed directly against the core warehouse ledger and does not need to preserve legacy workflows merely as migration scaffolding.
+
+Migration `019_inventory_defect_repair_rpc` adds `create_defective_return`, `create_repair_issue`, `create_repair_return`, and `create_disposal`; apply it on Supabase before using the core defective/repair UI (`CoreDefectManagement`).
 
 Do not delete secrets, environment examples, package/lock/config files, Supabase migrations, production data assumptions, or source still imported by the app unless a replacement and migration path are implemented in the same task.
 
