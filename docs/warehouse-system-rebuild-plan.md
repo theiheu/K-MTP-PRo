@@ -1358,6 +1358,10 @@ Implement Phase 1 inventory core schema in a new Supabase migration. Add supplie
 - Chuyển tab admin `Kiểm kê hàng hoá` sang màn kiểm kê core.
 - Chuyển sync xuất kho từ legacy `fulfillRequisition` sang RPC atomic `create_stock_issue`, không còn tạo document rồi post từng movement từ frontend.
 - Chuyển sync điều chỉnh kiểm kê legacy sang RPC atomic `create_stock_adjustment`.
+- Thêm `services/reportsService.ts` đọc trực tiếp từ `stock_movements`, `stock_balances` và view `inventory_stock_on_hand`.
+- Thêm màn `InventoryCoreReports` với tab admin `Báo cáo kho`: báo cáo xuất nhập tồn, tồn hiện tại, cảnh báo tồn thấp, thẻ kho vật tư, tiêu hao theo khu + xuất Excel.
+- Thêm lịch sử kiểm kê/điều chỉnh trong màn kiểm kê core (`CoreInventoryAuditSection`).
+- Thêm liên kết phiếu xuất liên quan trong chi tiết phiếu yêu cầu core (`CoreRequisitionListPage`).
 
 Trạng thái hiện tại:
 
@@ -1374,11 +1378,14 @@ Trạng thái hiện tại:
 - Danh sách yêu cầu chính trong navigation đã ưu tiên core ledger.
 - Kiểm kê chính trong admin đã ưu tiên core ledger, dùng RPC điều chỉnh thay vì luồng legacy.
 - Luồng legacy vẫn còn tồn tại trong app, nhưng nhập/xuất core đã có đường thao tác trực tiếp để thay thế dần.
+- Báo cáo kho core (xuất nhập tồn, tồn hiện tại, tồn thấp, thẻ kho, tiêu hao theo khu) đã đọc từ sổ kho mới và có xuất Excel.
 
 Việc nên làm tiếp:
 
 - Dùng view `inventory_legacy_stock_reconciliation` để rà lệch `variants.stock` với `stock_balances`.
 - Nếu còn lệch lớn sau backfill, viết script xử lý từng case trước khi bỏ legacy stock.
-- Bổ sung liên kết phiếu xuất liên quan trong chi tiết phiếu yêu cầu core.
-- Bổ sung lịch sử phiếu kiểm kê/điều chỉnh trong màn kiểm kê core.
-- Tạo dashboard/report đọc từ `inventory_stock_on_hand`, `low_stock_items`, `stock_movements`.
+- Bổ sung liên kết phiếu xuất liên quan trong chi tiết phiếu yêu cầu core. (đã xong)
+- Bổ sung lịch sử phiếu kiểm kê/điều chỉnh trong màn kiểm kê core. (đã xong)
+- Tạo dashboard/report đọc từ `inventory_stock_on_hand`, `low_stock_items`, `stock_movements`. (đã xong - tab Báo cáo kho)
+- Triển khai Phase 8: luồng hàng hỏng/đổi mới/sửa chữa/thanh lý trên core ledger (RPC + UI).
+- Triển khai Phase 11/12: UX polish, rà RLS và dọn legacy dần.

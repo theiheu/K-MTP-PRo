@@ -122,6 +122,7 @@ const CoreRequisitionListPage: React.FC = () => {
   const navigate = useNavigate();
   const user = useAuthStore(state => state.user);
   const [documents, setDocuments] = useState<InventoryDocument[]>([]);
+  const [issueDocuments, setIssueDocuments] = useState<InventoryDocument[]>([]);
   const [balances, setBalances] = useState<StockBalance[]>([]);
   const [selectedDocument, setSelectedDocument] = useState<InventoryDocument | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -138,12 +139,14 @@ const CoreRequisitionListPage: React.FC = () => {
     setErrorMessage('');
 
     try {
-      const [nextDocuments, nextBalances] = await Promise.all([
+      const [nextDocuments, nextBalances, nextIssues] = await Promise.all([
         inventoryDocumentsCoreService.getByType('requisition'),
         stockCoreService.getBalances(),
+        inventoryDocumentsCoreService.getByType('stock_issue'),
       ]);
       setDocuments(nextDocuments);
       setBalances(nextBalances);
+      setIssueDocuments(nextIssues);
     } catch (error) {
       console.warn('Không tải được phiếu yêu cầu core:', error);
       setErrorMessage('Không tải được phiếu yêu cầu từ sổ kho mới.');
@@ -419,6 +422,25 @@ const CoreRequisitionListPage: React.FC = () => {
               {selectedDocument.notes && (
                 <div className="mt-4 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
                   {selectedDocument.notes}
+                </div>
+              )}
+
+              {issueDocuments.filter(issue =>
+                issue.legacyId === selectedDocument.id ||
+                String(issue.metadata?.requisitionDocumentId || '') === selectedDocument.id
+              ).length > 0 && (
+                <div className="mt-4 rounded-md bg-yellow-50 p-3 text-sm">
+                  <p className="font-semibold text-yellow-800">Phiếu xuất liên quan</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {issueDocuments.filter(issue =>
+                      issue.legacyId === selectedDocument.id ||
+                      String(issue.metadata?.requisitionDocumentId || '') === selectedDocument.id
+                    ).map(issue => (
+                      <span key={issue.id} className="rounded-full bg-white px-2 py-1 text-xs font-medium text-yellow-700 ring-1 ring-yellow-200">
+                        {issue.documentCode}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { inventoryDocumentsCoreService, stockCoreService, warehousesCoreService } from '../services/inventoryCoreService';
 import { useAuthStore } from '../store/authStore';
-import type { StockBalance } from '../types/inventory';
+import { INVENTORY_DOCUMENT_TYPE_LABELS } from '../types/inventory';
+import type { InventoryDocument, StockBalance } from '../types/inventory';
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(value);
@@ -32,6 +33,7 @@ const CoreInventoryAuditSection: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [history, setHistory] = useState<InventoryDocument[]>([]);
 
   const loadBalances = async () => {
     setIsLoading(true);
@@ -48,8 +50,26 @@ const CoreInventoryAuditSection: React.FC = () => {
     }
   };
 
+  const loadHistory = async () => {
+    try {
+      const [adjustments, audits] = await Promise.all([
+        inventoryDocumentsCoreService.getByType('stock_adjustment'),
+        inventoryDocumentsCoreService.getByType('stock_audit'),
+      ]);
+
+      setHistory(
+        [...adjustments, ...audits]
+          .sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1))
+          .slice(0, 30)
+      );
+    } catch (error) {
+      console.warn('Không tải được lịch sử kiểm kê core:', error);
+    }
+  };
+
   useEffect(() => {
     loadBalances();
+    loadHistory();
   }, []);
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -286,6 +306,46 @@ const CoreInventoryAuditSection: React.FC = () => {
             );
           })}
         </div>
+      )}
+
+      {history.length > 0 && (
+        <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-gray-900">Lịch sử kiểm kê / điều chỉnh</h3>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-gray-50 text-left text-xs uppercase text-gray-600">
+                  <th className="border border-gray-200 px-3 py-2">Mã phiếu</th>
+                  <th className="border border-gray-200 px-3 py-2">Loại</th>
+                  <th className="border border-gray-200 px-3 py-2">Ngày</th>
+                  <th className="border border-gray-200 px-3 py-2">Người lập</th>
+                  <th className="border border-gray-200 px-3 py-2 text-right">Dòng lệch</th>
+                  <th className="border border-gray-200 px-3 py-2">Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map(document => {
+                  const deltaRows = (document.items || []).filter(item => {
+                    const delta = Number(item.metadata?.adjustmentDelta || 0);
+                    return delta !== 0;
+                  });
+                  const actorName = (document.events || []).find(event => event.actorName)?.actorName || '-';
+
+                  return (
+                    <tr key={document.id} className="odd:bg-white even:bg-gray-50">
+                      <td className="border border-gray-200 px-3 py-2 font-medium text-gray-900">{document.documentCode}</td>
+                      <td className="border border-gray-200 px-3 py-2">{INVENTORY_DOCUMENT_TYPE_LABELS[document.documentType] || document.documentType}</td>
+                      <td className="border border-gray-200 px-3 py-2 whitespace-nowrap">{formatDate(document.documentDate)}</td>
+                      <td className="border border-gray-200 px-3 py-2">{actorName}</td>
+                      <td className="border border-gray-200 px-3 py-2 text-right">{formatNumber(deltaRows.length)}</td>
+                      <td className="border border-gray-200 px-3 py-2 text-gray-600">{document.notes || '-'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       <div className="sticky bottom-16 z-20 rounded-lg border border-gray-200 bg-white p-3 shadow-lg sm:bottom-4">
