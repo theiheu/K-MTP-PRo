@@ -324,6 +324,57 @@ export interface PostStockMovementInput {
   allowNegative?: boolean;
 }
 
+export interface CreateDefectiveReturnInput {
+  warehouseId?: string;
+  createdBy?: string;
+  createdByName?: string;
+  documentDate?: string;
+  notes?: string;
+  metadata?: Record<string, unknown>;
+  legacyTable?: string;
+  legacyId?: string;
+  items: Array<InventoryDocumentItemInput & { quantity: number }>;
+}
+
+export interface CreateRepairIssueInput {
+  warehouseId?: string;
+  destinationLocationId?: string;
+  createdBy?: string;
+  createdByName?: string;
+  documentDate?: string;
+  notes?: string;
+  metadata?: Record<string, unknown>;
+  legacyTable?: string;
+  legacyId?: string;
+  items: Array<InventoryDocumentItemInput & { quantity: number }>;
+}
+
+export interface CreateRepairReturnInput {
+  warehouseId?: string;
+  sourceLocationId?: string;
+  createdBy?: string;
+  createdByName?: string;
+  documentDate?: string;
+  notes?: string;
+  metadata?: Record<string, unknown>;
+  legacyTable?: string;
+  legacyId?: string;
+  items: Array<InventoryDocumentItemInput & { quantity: number }>;
+}
+
+export interface CreateDisposalInput {
+  warehouseId?: string;
+  sourceState?: 'available' | 'defective';
+  createdBy?: string;
+  createdByName?: string;
+  documentDate?: string;
+  notes?: string;
+  metadata?: Record<string, unknown>;
+  legacyTable?: string;
+  legacyId?: string;
+  items: Array<InventoryDocumentItemInput & { quantity: number }>;
+}
+
 export interface InventoryMovementReportRow {
   productId: string;
   variantId: string;

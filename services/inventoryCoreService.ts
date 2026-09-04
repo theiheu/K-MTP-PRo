@@ -1,6 +1,10 @@
 import { supabase } from '../lib/supabase';
 import type {
+  CreateDefectiveReturnInput,
+  CreateDisposalInput,
   CreateInventoryDocumentInput,
+  CreateRepairIssueInput,
+  CreateRepairReturnInput,
   CreateStockAdjustmentInput,
   CreateStockIssueInput,
   CreateStockReceiptInput,
@@ -401,6 +405,81 @@ export const inventoryDocumentsCoreService = {
       p_legacy_table: input.legacyTable,
       p_legacy_id: input.legacyId,
       p_allow_negative: input.allowNegative ?? true,
+    });
+
+    if (error) throw error;
+    return this.getById(documentId);
+  },
+
+  async createDefectiveReturn(input: CreateDefectiveReturnInput): Promise<InventoryDocument> {
+    const documentDate = input.documentDate || new Date().toISOString().slice(0, 10);
+    const { data: documentId, error } = await supabase.rpc('create_defective_return', {
+      p_warehouse_id: input.warehouseId,
+      p_created_by: input.createdBy,
+      p_created_by_name: input.createdByName,
+      p_document_date: documentDate,
+      p_notes: input.notes,
+      p_metadata: input.metadata || {},
+      p_items: input.items,
+      p_legacy_table: input.legacyTable,
+      p_legacy_id: input.legacyId,
+    });
+
+    if (error) throw error;
+    return this.getById(documentId);
+  },
+
+  async createRepairIssue(input: CreateRepairIssueInput): Promise<InventoryDocument> {
+    const documentDate = input.documentDate || new Date().toISOString().slice(0, 10);
+    const { data: documentId, error } = await supabase.rpc('create_repair_issue', {
+      p_warehouse_id: input.warehouseId,
+      p_destination_location_id: input.destinationLocationId,
+      p_created_by: input.createdBy,
+      p_created_by_name: input.createdByName,
+      p_document_date: documentDate,
+      p_notes: input.notes,
+      p_metadata: input.metadata || {},
+      p_items: input.items,
+      p_legacy_table: input.legacyTable,
+      p_legacy_id: input.legacyId,
+    });
+
+    if (error) throw error;
+    return this.getById(documentId);
+  },
+
+  async createRepairReturn(input: CreateRepairReturnInput): Promise<InventoryDocument> {
+    const documentDate = input.documentDate || new Date().toISOString().slice(0, 10);
+    const { data: documentId, error } = await supabase.rpc('create_repair_return', {
+      p_warehouse_id: input.warehouseId,
+      p_source_location_id: input.sourceLocationId,
+      p_created_by: input.createdBy,
+      p_created_by_name: input.createdByName,
+      p_document_date: documentDate,
+      p_notes: input.notes,
+      p_metadata: input.metadata || {},
+      p_items: input.items,
+      p_legacy_table: input.legacyTable,
+      p_legacy_id: input.legacyId,
+    });
+
+    if (error) throw error;
+    return this.getById(documentId);
+  },
+
+  async createDisposal(input: CreateDisposalInput): Promise<InventoryDocument> {
+    const documentDate = input.documentDate || new Date().toISOString().slice(0, 10);
+    const { data: documentId, error } = await supabase.rpc('create_disposal', {
+      p_warehouse_id: input.warehouseId,
+      p_source_state: input.sourceState || 'defective',
+      p_created_by: input.createdBy,
+      p_created_by_name: input.createdByName,
+      p_document_date: documentDate,
+      p_notes: input.notes,
+      p_metadata: input.metadata || {},
+      p_items: input.items,
+      p_legacy_table: input.legacyTable,
+      p_legacy_id: input.legacyId,
     });
 
     if (error) throw error;
