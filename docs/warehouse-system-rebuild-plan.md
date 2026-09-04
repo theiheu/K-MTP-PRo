@@ -1364,6 +1364,7 @@ Implement Phase 1 inventory core schema in a new Supabase migration. Add supplie
 - Thêm liên kết phiếu xuất liên quan trong chi tiết phiếu yêu cầu core (`CoreRequisitionListPage`).
 - Thêm migration `supabase/migrations/019_inventory_defect_repair_rpc.sql` với RPC `create_defective_return`, `create_repair_issue`, `create_repair_return`, `create_disposal`.
 - Thêm màn `CoreDefectManagement` (tab Sự cố & Sửa chữa) ghi trả hàng hỏng / xuất sửa / nhập sau sửa / thanh lý vào core ledger, kèm tổng hợp tồn theo trạng thái.
+- Phase 12: bỏ theo dõi `.env` trong git (chứa Gemini key), cập nhật `env.example` và `AGENTS.md` (core ledger, RLS placeholder, migration 019).
 
 Trạng thái hiện tại:
 
@@ -1382,6 +1383,7 @@ Trạng thái hiện tại:
 - Luồng legacy vẫn còn tồn tại trong app, nhưng nhập/xuất core đã có đường thao tác trực tiếp để thay thế dần.
 - Báo cáo kho core (xuất nhập tồn, tồn hiện tại, tồn thấp, thẻ kho, tiêu hao theo khu) đã đọc từ sổ kho mới và có xuất Excel.
 - Phase 8 (hàng hỏng/sửa/thanh lý) đã có RPC + UI core; migration `019` cần được apply trên Supabase để dùng được.
+- `.env` không còn bị git track (tránh lộ Gemini key về sau); key cũ vẫn nằm trong lịch sử git — nên xoay (rotate) key Gemini.
 
 Việc nên làm tiếp:
 
