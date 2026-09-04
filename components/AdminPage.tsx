@@ -16,6 +16,7 @@ const Dashboard = lazy(() => import("./Dashboard"));
 const DefectManagement = lazy(() => import("./DefectManagement"));
 const CoreInventoryAuditSection = lazy(() => import("./CoreInventoryAuditSection"));
 const InventoryCoreWorkspace = lazy(() => import("./InventoryCoreWorkspace"));
+const InventoryCoreReports = lazy(() => import("./InventoryCoreReports"));
 const ProductFormModal = lazy(() => import("./ProductFormModal"));
 const ReceiptList = lazy(() => import("./ReceiptList"));
 const UserManagement = lazy(() => import("./UserManagement"));
@@ -419,6 +420,17 @@ const AdminPage: React.FC<AdminPageProps> = ({
               }`}
             >
               Sổ kho mới
+            </button>
+            <button
+              onClick={() => setActiveTab("reports")}
+              aria-current={activeTab === "reports" ? "page" : undefined}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "reports"
+                  ? "border-yellow-500 text-yellow-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Báo cáo kho
             </button>
             <button
               onClick={() => setActiveTab("inventory_audits")}
@@ -957,6 +969,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
         {activeTab === "warehouse_core" && (
           <div role="tabpanel" id="warehouse-core-panel">
             <InventoryCoreWorkspace />
+          </div>
+        )}
+
+        {activeTab === "reports" && (
+          <div role="tabpanel" id="reports-panel">
+            <InventoryCoreReports />
           </div>
         )}
 

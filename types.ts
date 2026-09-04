@@ -235,7 +235,7 @@ export interface GoodsReceiptNote {
   linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
 }
 
-export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits" | "defects" | "warehouse_core";
+export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits" | "defects" | "warehouse_core" | "reports";
 
 // --- START: Thêm mới cho Phiếu Giao Nhận ---
 export type DeliveryStatus = "pending" | "verified" | "rejected";

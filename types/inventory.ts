@@ -340,6 +340,37 @@ export interface InventoryMovementReportRow {
   closingQuantity: number;
 }
 
+export interface StockOnHandRow {
+  warehouseId: string;
+  warehouseName: string;
+  warehouseType: WarehouseType;
+  productId: string;
+  productName: string;
+  variantId: string;
+  variantAttributes: Record<string, string>;
+  sku?: string;
+  unit?: string;
+  itemType: InventoryItemType;
+  minStock: number;
+  maxStock?: number;
+  balanceState: StockBalanceState;
+  batchCode?: string;
+  expiryDate?: string;
+  quantity: number;
+  updatedAt: string;
+}
+
+export interface StockCardEntry {
+  balance: Array<{
+    balanceState: StockBalanceState;
+    quantity: number;
+    warehouseId: string;
+    batchCode?: string;
+    expiryDate?: string;
+  }>;
+  movements: StockMovement[];
+}
+
 export const INVENTORY_DOCUMENT_TYPE_LABELS: Record<InventoryDocumentType, string> = {
   stock_receipt: 'Phiếu nhập kho',
   stock_issue: 'Phiếu xuất kho',
