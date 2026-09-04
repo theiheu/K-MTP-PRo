@@ -344,6 +344,29 @@ const VariantRowContent: React.FC<{
                 />
             </td>
             <td className="px-2 py-2">
+                <input
+                    type="number"
+                    min="0"
+                    value={variant.min_stock ?? ''}
+                    onChange={e => handleVariantChange(index, 'min_stock', e.target.value)}
+                    placeholder="0"
+                    title="Cảnh báo khi tồn khả dụng <= mức này"
+                    className="w-20 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-amber-500 focus:ring-amber-500"
+                />
+            </td>
+            <td className="px-2 py-2">
+                <select
+                    value={variant.item_type || 'consumable'}
+                    onChange={e => handleVariantChange(index, 'item_type', e.target.value)}
+                    className="w-28 rounded-md border-gray-300 shadow-sm px-2 py-1.5 text-center sm:text-sm focus:border-amber-500 focus:ring-amber-500"
+                >
+                    <option value="consumable">Dùng một lần</option>
+                    <option value="returnable">Thu hồi được</option>
+                    <option value="repairable">Sửa được</option>
+                    <option value="asset">Tài sản</option>
+                </select>
+            </td>
+            <td className="px-2 py-2">
                 <button
                     type="button"
                     onClick={() => setEditingVariantIndex(index)}
@@ -630,7 +653,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
         const newVariants = [...prevVariants];
         const variant = { ...newVariants[index] };
 
-        if (field === 'stock' || field === 'price') {
+        if (field === 'stock' || field === 'price' || field === 'min_stock' || field === 'max_stock') {
             (variant as any)[field] = Number(value);
         } else {
             (variant as any)[field] = value;
@@ -968,6 +991,8 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ isOpen, onClose, on
                                         <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Tồn kho</th>
                                         <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Giá</th>
                                         <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Đơn vị</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Tồn tối thiểu</th>
+                                        <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Loại</th>
                                         <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Thành phần</th>
                                         <th className="px-2 py-2 text-left font-medium text-gray-500 text-xs uppercase">Ảnh & Hành động</th>
                                     </tr>

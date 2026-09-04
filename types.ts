@@ -24,6 +24,9 @@ export interface Variant {
   unit?: string;
   components?: ChildComponent[];
   sku?: string;
+  min_stock?: number;
+  max_stock?: number;
+  item_type?: string;
 }
 
 export type InventoryTransactionType = 'RETURN' | 'RETURN_DEFECTIVE' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL';

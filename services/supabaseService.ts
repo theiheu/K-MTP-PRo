@@ -54,6 +54,10 @@ export const productsService = {
         price: v.price,
         images: v.images,
         unit: v.unit,
+        sku: v.sku,
+        min_stock: v.min_stock,
+        max_stock: v.max_stock,
+        item_type: v.item_type,
         batches: (v.variant_batches || []).map((b: any) => ({
           id: b.id,
           variantId: b.variant_id,
@@ -99,6 +103,10 @@ export const productsService = {
       price: v.price,
       images: v.images,
       unit: v.unit,
+      sku: v.sku,
+      min_stock: v.min_stock || 0,
+      max_stock: v.max_stock,
+      item_type: v.item_type || 'consumable',
     }));
 
     const { data: newVariants, error: variantsError } = await supabase
@@ -140,6 +148,10 @@ export const productsService = {
         price: v.price,
         images: v.images,
         unit: v.unit,
+        sku: v.sku,
+        min_stock: v.min_stock,
+        max_stock: v.max_stock,
+        item_type: v.item_type,
       })),
     };
   },
@@ -180,6 +192,10 @@ export const productsService = {
       price: v.price,
       images: v.images,
       unit: v.unit,
+      sku: v.sku,
+      min_stock: v.min_stock || 0,
+      max_stock: v.max_stock,
+      item_type: v.item_type || 'consumable',
     }));
 
     const { data: newVariants, error: variantsError } = await supabase
