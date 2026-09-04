@@ -185,6 +185,53 @@ const syncLegacyAuditAdjustmentToInventoryCore = async (
   });
 };
 
+const syncLegacyReceiptDeltaToInventoryCore = async (
+  receiptId: string,
+  deltas: Array<{
+    productId: string;
+    variantId: string;
+    adjustmentDelta: number;
+    unit?: string;
+    batchCode?: string;
+    expiryDate?: string;
+    reason?: string;
+  }>,
+  notes: string,
+  adjustedBy?: User | null
+) => {
+  try {
+    const mainWarehouse = await warehousesCoreService.getMainWarehouse();
+    if (!mainWarehouse) return;
+
+    const nonZeroDeltas = deltas.filter(delta => delta.adjustmentDelta !== 0);
+    if (nonZeroDeltas.length === 0) return;
+
+    await inventoryDocumentsCoreService.createStockAdjustment({
+      warehouseId: mainWarehouse.id,
+      createdBy: adjustedBy?.id,
+      createdByName: adjustedBy?.name,
+      documentDate: new Date().toISOString().slice(0, 10),
+      notes,
+      legacyTable: 'goods_receipt_notes:adjustment',
+      legacyId: receiptId,
+      metadata: { legacyReceiptId: receiptId, reason: 'receipt_mutation_sync' },
+      items: nonZeroDeltas.map((delta, index) => ({
+        productId: delta.productId,
+        variantId: delta.variantId,
+        adjustmentDelta: delta.adjustmentDelta,
+        unit: delta.unit,
+        batchCode: delta.batchCode,
+        expiryDate: delta.expiryDate,
+        reason: delta.reason,
+        displayOrder: index,
+      })),
+      allowNegative: true,
+    });
+  } catch (error) {
+    console.warn('Tồn legacy đã đổi nhưng chưa ghi được vào sổ kho mới:', error);
+  }
+};
+
 const loadWithRetry = async <T>(label: string, loader: () => Promise<T>): Promise<T> => {
   let lastError: unknown;
 
@@ -918,6 +965,21 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       await receiptsService.delete(id);
 
+      await syncLegacyReceiptDeltaToInventoryCore(
+        id,
+        receipt.items.map(item => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          adjustmentDelta: -item.quantity,
+          unit: item.unit,
+          batchCode: item.batchCode,
+          expiryDate: item.expiryDate,
+          reason: 'Xoá phiếu nhập kho legacy',
+        })),
+        `Hoàn trả tồn khi xoá phiếu nhập kho ${id}`,
+        useAuthStore.getState().user
+      );
+
       set(s => ({
         products: workingProducts,
         receipts: s.receipts.filter(r => r.id !== id)
@@ -964,6 +1026,34 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
 
       await receiptsService.update(id, updates);
+
+      if (updates.items && JSON.stringify(updates.items) !== JSON.stringify(existing.items)) {
+        await syncLegacyReceiptDeltaToInventoryCore(
+          id,
+          [
+            ...existing.items.map(item => ({
+              productId: item.productId,
+              variantId: item.variantId,
+              adjustmentDelta: -item.quantity,
+              unit: item.unit,
+              batchCode: item.batchCode,
+              expiryDate: item.expiryDate,
+              reason: 'Cập nhật phiếu nhập (hoàn trả dòng cũ)',
+            })),
+            ...updates.items.map(item => ({
+              productId: item.productId,
+              variantId: item.variantId,
+              adjustmentDelta: item.quantity,
+              unit: item.unit,
+              batchCode: item.batchCode,
+              expiryDate: item.expiryDate,
+              reason: 'Cập nhật phiếu nhập (thêm dòng mới)',
+            })),
+          ],
+          `Đồng bộ tồn khi cập nhật phiếu nhập kho ${id}`,
+          useAuthStore.getState().user
+        );
+      }
 
       set(s => ({
         products: workingProducts,
