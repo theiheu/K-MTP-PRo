@@ -1366,6 +1366,7 @@ Implement Phase 1 inventory core schema in a new Supabase migration. Add supplie
 - Thêm màn `CoreDefectManagement` (tab Sự cố & Sửa chữa) ghi trả hàng hỏng / xuất sửa / nhập sau sửa / thanh lý vào core ledger, kèm tổng hợp tồn theo trạng thái.
 - Phase 12: bỏ theo dõi `.env` trong git (chứa Gemini key), cập nhật `env.example` và `AGENTS.md` (core ledger, RLS placeholder, migration 019).
 - Phase 2 (bổ sung): lộ `sku`, `min_stock`, `max_stock`, `item_type` của biến thể ra form sản phẩm (`ProductFormModal`) và map đủ trong `types.ts` + `supabaseService` để báo cáo tồn thấp hoạt động.
+- Thêm migration `020_inventory_opening_balance_backfill.sql`: đồng bộ `stock_balances.available` về đúng `variants.stock` (backfill `016` bỏ sót tồn đầu kỳ được seed thẳng vào `variants.stock`).
 
 Trạng thái hiện tại:
 
@@ -1386,6 +1387,7 @@ Trạng thái hiện tại:
 - Phase 8 (hàng hỏng/sửa/thanh lý) đã có RPC + UI core; migration `019` cần được apply trên Supabase để dùng được.
 - `.env` không còn bị git track (tránh lộ Gemini key về sau); key cũ vẫn nằm trong lịch sử git — nên xoay (rotate) key Gemini.
 - Đã xác minh trực tiếp Supabase: migration `015–018` đã apply (view/tables/RPC `create_stock_receipt` hoạt động), `019` chưa apply. Toàn bộ 937 biến thể đang `min_stock=0` và `item_type='consumable'` nên `low_stock_items` trống — cần đặt `min_stock`/`item_type` qua form sản phẩm để kích hoạt cảnh báo tồn thấp và ngữ nghĩa hỏng/sửa.
+- Đã đồng bộ tồn đầu kỳ (qua RPC `create_stock_adjustment`, 31 biến thể): `stock_balances.available` giờ = 1863 khớp `variants.stock`, `inventory_legacy_stock_reconciliation` còn 0 dòng lệch, hết dòng âm. Báo cáo kho mới giờ hiển thị đúng số liệu vật tư như bản cũ.
 
 Việc nên làm tiếp:
 
