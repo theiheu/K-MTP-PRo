@@ -17,6 +17,7 @@ const DefectManagement = lazy(() => import("./DefectManagement"));
 const CoreInventoryAuditSection = lazy(() => import("./CoreInventoryAuditSection"));
 const InventoryCoreWorkspace = lazy(() => import("./InventoryCoreWorkspace"));
 const InventoryCoreReports = lazy(() => import("./InventoryCoreReports"));
+const CoreDefectManagement = lazy(() => import("./CoreDefectManagement"));
 const ProductFormModal = lazy(() => import("./ProductFormModal"));
 const ReceiptList = lazy(() => import("./ReceiptList"));
 const UserManagement = lazy(() => import("./UserManagement"));
@@ -986,8 +987,17 @@ const AdminPage: React.FC<AdminPageProps> = ({
         )}
 
         {activeTab === "defects" && (
-          <div role="tabpanel" id="defects-panel">
-            <DefectManagement
+          <div role="tabpanel" id="defects-panel" className="space-y-6">
+            <Suspense fallback={<AdminSectionFallback />}>
+              <CoreDefectManagement />
+            </Suspense>
+
+            <details className="rounded-lg border border-gray-200 bg-white">
+              <summary className="cursor-pointer select-none p-4 text-sm font-semibold text-gray-700">
+                Quản lý hỏng/sửa kiểu cũ (legacy)
+              </summary>
+              <div className="border-t border-gray-200 p-4">
+                <DefectManagement
               products={products}
               transactions={inventoryTransactions}
               defectiveItems={defectiveItems}
@@ -996,8 +1006,10 @@ const AdminPage: React.FC<AdminPageProps> = ({
               onCreateRepairBatch={createRepairBatch}
               onReceiveRepairBatchItems={receiveRepairBatchItems}
               onDisposeDefectiveItems={disposeDefectiveItems}
-              currentUser={user}
-            />
+                currentUser={user}
+                />
+              </div>
+            </details>
           </div>
         )}
         </Suspense>
