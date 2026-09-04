@@ -21,6 +21,8 @@ import { AdminTab } from './types';
 const RequisitionListPage = lazy(() => import('./components/RequisitionListPage'));
 const CreateRequisitionModal = lazy(() => import('./components/CreateRequisitionModal'));
 const AdminPage = lazy(() => import('./components/AdminPage'));
+const CoreRequisitionPage = lazy(() => import('./components/CoreRequisitionPage'));
+const CoreRequisitionListPage = lazy(() => import('./components/CoreRequisitionListPage'));
 const CreateReceiptPage = lazy(() => import('./components/CreateReceiptPage'));
 const ReceiptList = lazy(() => import('./components/ReceiptList'));
 const DeliveryNoteList = lazy(() => import('./components/DeliveryNoteList'));
@@ -28,7 +30,7 @@ const CreateDeliveryNote = lazy(() => import('./components/CreateDeliveryNote'))
 const EditReceiptModal = lazy(() => import('./components/EditReceiptModal'));
 const PRODUCTS_PER_PAGE = 12;
 
-type ViewKey = 'shop' | 'requisitions' | 'receipts' | 'create-requisition' | 'admin' | 'create-receipt' | 'deliveries' | 'create-delivery';
+type ViewKey = 'shop' | 'requisitions' | 'warehouse-requisitions' | 'receipts' | 'create-requisition' | 'warehouse-request' | 'admin' | 'create-receipt' | 'deliveries' | 'create-delivery';
 
 const App: React.FC = () => {
   const navigate = useNavigate();
@@ -78,8 +80,10 @@ const App: React.FC = () => {
   const currentView = useMemo(() => {
     const path = location.pathname;
     if (path === '/') return 'shop';
+    if (path === '/warehouse/requisitions') return 'warehouse-requisitions';
     if (path === '/requisitions') return 'requisitions';
     if (path === '/requisitions/create') return 'create-requisition';
+    if (path === '/warehouse/request') return 'warehouse-request';
     if (path === '/receipts') return 'receipts';
     if (path === '/receipts/create') return 'create-receipt';
     if (path === '/deliveries') return 'deliveries';
@@ -163,7 +167,9 @@ const App: React.FC = () => {
     if (view === 'admin' && tab) setAdminInitialTab(tab);
     switch (view) {
       case 'shop': navigate('/'); break;
+      case 'warehouse-requisitions': navigate('/warehouse/requisitions'); break;
       case 'create-requisition': navigate('/requisitions/create'); break;
+      case 'warehouse-request': navigate('/warehouse/request'); break;
       case 'create-receipt': navigate('/receipts/create'); break;
       case 'create-delivery': navigate('/deliveries/create'); break;
       default: navigate(`/${view}`); break;
@@ -177,16 +183,79 @@ const App: React.FC = () => {
 
   const handleAddToCart = useCallback((product: any, variant: any, quantity: number) => {
     addToCart(product, variant, quantity);
-    toast.success(`Đã thêm ${product.name} (${quantity})`);
-  }, [addToCart]);
+    const variantLabel = Object.values(variant.attributes || {}).filter(Boolean).join(' / ');
+    const totalCartItems = useCartStore.getState().cart.reduce((total, item) => total + item.quantity, 0);
+
+    toast.custom((toastItem) => (
+      <div
+        className={`pointer-events-auto w-[calc(100vw-1rem)] max-w-[20rem] overflow-hidden rounded-lg bg-white shadow-lg ring-1 ring-black/10 transition-all sm:max-w-sm ${
+          toastItem.visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+        }`}
+      >
+        <div className="p-3 sm:p-4">
+          <div className="flex items-start gap-2.5 sm:gap-3">
+            <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 sm:h-9 sm:w-9">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.42 0L3.296 9.22a1 1 0 111.414-1.414l4.034 4.034 6.543-6.543a1 1 0 011.417-.006z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-green-700 sm:text-sm sm:normal-case sm:tracking-normal sm:text-gray-900">Đã thêm</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-gray-900">{product.name}</p>
+              <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-gray-500">
+                {variantLabel && <span className="max-w-full truncate">{variantLabel}</span>}
+                <span className="flex-shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700">
+                  {quantity} {variant.unit || ''}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">Phiếu hiện có {totalCartItems} vật tư.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => toast.dismiss(toastItem.id)}
+              className="flex-shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              aria-label="Đóng thông báo"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          </div>
+          <div className="mt-2 flex gap-2 pl-9 sm:mt-3 sm:pl-12">
+            <button
+              type="button"
+              onClick={() => {
+                toast.dismiss(toastItem.id);
+                setIsCartOpen(true);
+              }}
+              className="rounded-md bg-amber-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-700 sm:px-3"
+            >
+              Mở phiếu
+            </button>
+            <button
+              type="button"
+              onClick={() => toast.dismiss(toastItem.id)}
+              className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-200 sm:px-3"
+            >
+              Tiếp tục
+            </button>
+          </div>
+        </div>
+      </div>
+    ), {
+      duration: 3500,
+      position: 'top-right',
+    });
+  }, [addToCart, setIsCartOpen]);
 
   const handleUpdateCartItem = useCallback((variantId: string, quantity: number, oldVariantId?: string) => {
     updateCartItem(variantId, quantity, oldVariantId);
   }, [updateCartItem]);
 
-  const handleCreateRequisition = useCallback(async (details: any) => {
+  const handleCreateRequisition = useCallback(async (details: any, cartOverride?: any[]) => {
     try {
-      await createRequisition(details, cart);
+      const finalCart = cartOverride || cart;
+      await createRequisition(details, finalCart);
       useCartStore.getState().clearCart();
       setIsCartOpen(false);
       toast.success(details.isCompleted ? 'Đã tạo và hoàn thành phiếu yêu cầu!' : 'Đã tạo phiếu yêu cầu thành công!');
@@ -252,7 +321,7 @@ const App: React.FC = () => {
     }
   }, [createDelivery, navigate, user]);
 
-  const showDesktopNav = ['shop', 'requisitions', 'receipts', 'admin', 'deliveries', 'create-delivery'].includes(currentView);
+  const showDesktopNav = ['shop', 'warehouse-requisitions', 'requisitions', 'warehouse-request', 'receipts', 'admin', 'deliveries', 'create-delivery'].includes(currentView);
 
   if (!user) return <LoginPage />;
 
@@ -353,6 +422,10 @@ const App: React.FC = () => {
               />
             </main>
           } />
+
+          <Route path="/warehouse/requisitions" element={<CoreRequisitionListPage />} />
+
+          <Route path="/warehouse/request" element={<CoreRequisitionPage />} />
 
           <Route path="/receipts" element={
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col flex-1">

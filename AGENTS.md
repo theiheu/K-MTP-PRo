@@ -385,6 +385,18 @@ The application targets mobile and desktop.
 
 When modifying UI, check both. Do not solve desktop layouts in a way that breaks mobile. Do not introduce fixed widths without checking small screens.
 
+## 29A. Mobile-First UI Rule
+
+K-MTP-PRo must be designed mobile-first.
+
+When creating or changing any user interface:
+
+1. Design and validate the phone layout first.
+2. Prioritize compact controls, short labels, touch-friendly spacing, bottom-sheet/modal ergonomics, and readable content on narrow screens.
+3. Avoid desktop-first tables, wide cards, dense side-by-side panels, and oversized popups unless they collapse cleanly on phones.
+4. After the mobile layout works, progressively enhance for tablet and desktop with wider grids, extra columns, and richer spacing.
+5. For every meaningful UI change, consider the common phone viewport before desktop polish. If a tradeoff is required, choose the mobile experience unless the user explicitly requests a desktop-only workflow.
+
 ## 30. Performance
 
 Do not optimize blindly.
@@ -532,7 +544,19 @@ Notes:
 
 Do not provide a long essay unless explicitly requested.
 
-## 39. Golden Rule
+## 39A. Warehouse Rebuild Cleanup Authorization
+
+For the warehouse-system rebuild documented in `docs/warehouse-system-rebuild-plan.md`, the repository owner explicitly allows deleting old files and legacy code that are no longer needed.
+
+Allowed cleanup includes obsolete debug/import/setup/report files, generated build output, duplicated legacy UI, old services, old report/export code, and old inventory workflows after a replacement exists.
+
+As of 2026-09-04, the repository owner confirmed Supabase migrations `015_inventory_core`, `016_inventory_legacy_backfill`, `017_inventory_stock_issue_rpc`, and `018_inventory_stock_adjustment_rpc` have been applied successfully. Future rebuild work may proceed directly against the core warehouse ledger and does not need to preserve legacy workflows merely as migration scaffolding.
+
+Do not delete secrets, environment examples, package/lock/config files, Supabase migrations, production data assumptions, or source still imported by the app unless a replacement and migration path are implemented in the same task.
+
+Before deleting source, run a targeted reference search. After deleting runtime code, run `npm run build`.
+
+## 40. Golden Rule
 
 For K-MTP-PRo:
 

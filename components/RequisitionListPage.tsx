@@ -6,7 +6,6 @@ import ImageGalleryModal from "./ImageGalleryModal";
 import Pagination from "./Pagination";
 import EditRequisitionPage from './EditRequisitionPage';
 
-import { printPhieuXuatKho } from '../utils/printUtils';
 import { useSortableData } from '../hooks/useSortableData';
 import SortableHeader from './SortableHeader';
 
@@ -33,8 +32,27 @@ type DateFilterOption = "all" | "today" | "thisWeek" | "thisMonth" | "custom";
 
 const REQUISITIONS_PER_PAGE = 5;
 
+const printRequisition = async (req: RequisitionForm) => {
+  const { printPhieuXuatKho } = await import('../utils/printUtils');
+  printPhieuXuatKho(req);
+};
+
 const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDeleteRequisition, onConfirmReceipt, handleEdit, allProducts }: any) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const exchangeCount = req.items.filter((item: any) => item.isExchange).length;
+  const requisitionGroups = req.groups && req.groups.length > 0
+    ? req.groups
+    : Array.from(new Map(req.items.map((item: any) => [
+      item.groupId || 'general-purpose',
+      {
+        id: item.groupId || 'general-purpose',
+        name: item.groupName || 'Mục đích chung',
+        purposeType: item.purposeType || 'regular_use',
+        notes: item.groupNotes,
+        neededBy: item.neededBy,
+      },
+    ])).values());
+  const getItemGroup = (item: any) => requisitionGroups.find((group: any) => group.id === item.groupId);
   return (
     <React.Fragment>
       <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
@@ -49,7 +67,16 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">{req.requesterName}</td>
         <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">{req.zone}</td>
         <td className="px-4 py-3 text-sm text-gray-600 max-w-[200px] truncate">{req.purpose}</td>
-        <td className="px-4 py-3 whitespace-nowrap text-sm text-center font-semibold text-gray-700">{req.items.length}</td>
+        <td className="px-4 py-3 whitespace-nowrap text-center">
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-sm font-semibold text-gray-700">{req.items.length}</span>
+            {exchangeCount > 0 && (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                {exchangeCount} đổi
+              </span>
+            )}
+          </div>
+        </td>
         <td className="px-4 py-3 whitespace-nowrap text-center">
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.status === 'Đang chờ xử lý' ? 'bg-amber-100 text-amber-800' : req.status === 'Đã duyệt yêu cầu' ? 'bg-blue-100 text-blue-800' : req.status === 'Đã hoàn thành' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
             {req.status}
@@ -99,6 +126,25 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
           <td colSpan={9} className="px-0 py-0">
             <div className="bg-gray-50 border-t border-b border-gray-200 p-4">
               <h4 className="text-sm font-semibold text-gray-700 mb-2">Chi tiết vật tư yêu cầu</h4>
+              {requisitionGroups.length > 0 && (
+                <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                  {requisitionGroups.map((group: any) => {
+                    const count = req.items.filter((item: any) => item.groupId === group.id || (!item.groupId && group.id === 'general-purpose')).length;
+                    return (
+                      <div key={group.id} className="rounded-md border border-gray-200 bg-white p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm font-semibold text-gray-900">{group.name}</p>
+                          <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+                            {count}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs font-medium text-gray-500">{group.neededBy || 'Chưa ghi thời gian cần'}</p>
+                        {group.notes && <p className="mt-2 text-xs text-gray-600">{group.notes}</p>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               <div className="overflow-x-auto rounded border border-gray-200 bg-white">
                 <table className="w-full text-left">
                   <thead className="bg-gray-50 text-xs text-gray-500">
@@ -108,6 +154,8 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                       <th className="px-4 py-2 font-medium">Tên vật tư</th>
                       <th className="px-4 py-2 font-medium">Phân loại</th>
                       <th className="px-4 py-2 font-medium text-right">Số lượng</th>
+                      <th className="px-4 py-2 font-medium">Hạng mục/Mục đích sử dụng</th>
+                      <th className="px-4 py-2 font-medium">Thời gian cần</th>
                       <th className="px-4 py-2 font-medium text-right">Tồn kho</th>
                       <th className="px-4 py-2 font-medium">Đơn vị</th>
                     </tr>
@@ -117,30 +165,91 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                       const product = allProducts?.find((p: any) => p.id === item.product.id);
                       const variant = product?.variants.find((v: any) => v.id === item.variant.id);
                       const stock = variant?.stock || 0;
+                      const group = getItemGroup(item);
                       return (
-                        <tr key={idx}>
-                          <td className="px-4 py-2 text-xs text-gray-400 text-center">{idx + 1}</td>
-                          <td className="px-4 py-2 text-center">
-                            {product?.images && product.images.length > 0 ? (
-                              <img
-                                src={product.images[0]}
-                                alt={product.name}
-                                className="w-10 h-10 object-cover rounded border border-gray-200 inline-block"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center border border-gray-200 inline-flex">
-                                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
+                        <React.Fragment key={`${item.product.id}-${item.variant.id}-${idx}`}>
+                          <tr>
+                            <td className="px-4 py-2 text-xs text-gray-400 text-center">{idx + 1}</td>
+                            <td className="px-4 py-2 text-center">
+                              {product?.images && product.images.length > 0 ? (
+                                <img
+                                  src={product.images[0]}
+                                  alt={product.name}
+                                  className="w-10 h-10 object-cover rounded border border-gray-200 inline-block"
+                                />
+                              ) : (
+                                <div className="w-10 h-10 rounded bg-gray-100 flex items-center justify-center border border-gray-200 inline-flex">
+                                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-2 text-sm font-medium text-gray-800">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{item.product.name}</span>
+                                {item.groupName && (
+                                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-700">
+                                    {item.groupName}
+                                  </span>
+                                )}
+                                {item.isExchange && (
+                                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
+                                    Cấp đổi
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-sm font-medium text-gray-800">{item.product.name}</td>
-                          <td className="px-4 py-2 text-sm text-gray-500">{Object.values(item.variant.attributes).join(' / ') || 'Mặc định'}</td>
-                          <td className="px-4 py-2 text-sm text-right font-semibold text-amber-600">{item.quantity}</td>
-                          <td className={`px-4 py-2 text-sm text-right font-semibold ${stock < item.quantity ? 'text-red-600' : 'text-green-600'}`}>{stock}</td>
-                          <td className="px-4 py-2 text-sm text-gray-500">{item.variant.unit || 'Cái'}</td>
-                        </tr>
+                            </td>
+                            <td className="px-4 py-2 text-sm text-gray-500">{Object.values(item.variant.attributes).join(' / ') || 'Mặc định'}</td>
+                            <td className="px-4 py-2 text-sm text-right font-semibold text-amber-600">{item.quantity}</td>
+                            <td className="px-4 py-2 text-sm text-gray-700">{group?.name || item.groupName || 'Mục đích chung'}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500">{group?.neededBy || item.neededBy || '-'}</td>
+                            <td className={`px-4 py-2 text-sm text-right font-semibold ${stock < item.quantity ? 'text-red-600' : 'text-green-600'}`}>{stock}</td>
+                            <td className="px-4 py-2 text-sm text-gray-500">{item.variant.unit || 'Cái'}</td>
+                          </tr>
+                          {item.isExchange && (
+                            <tr>
+                              <td className="bg-amber-50 px-4 py-3" colSpan={9}>
+                                <div className="ml-0 rounded-md border border-amber-200 bg-white p-3 sm:ml-16">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                                      {['Đã duyệt yêu cầu', 'Đã hoàn thành'].includes(req.status)
+                                        ? 'Đã đổi và ghi nhận kho hỏng'
+                                        : 'Chờ duyệt cấp đổi'}
+                                    </span>
+                                    {item.exchangedAt && (
+                                      <span className="text-xs text-gray-500">
+                                        Ngày đổi: {new Date(item.exchangedAt).toLocaleDateString('vi-VN')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 grid grid-cols-1 gap-2 text-sm text-gray-700 lg:grid-cols-3">
+                                    <p><span className="font-semibold text-gray-900">Tình trạng:</span> {item.defectNotes || 'Chưa ghi'}</p>
+                                    <p><span className="font-semibold text-gray-900">Mô tả hỏng:</span> {item.defectDescription || 'Không ghi'}</p>
+                                    <p><span className="font-semibold text-gray-900">Cần sửa:</span> {item.repairNeeds || 'Không ghi'}</p>
+                                  </div>
+                                  {item.defectImages && item.defectImages.length > 0 && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                      {item.defectImages.map((src: string, imageIndex: number) => (
+                                        <button
+                                          key={imageIndex}
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.open(src, '_blank');
+                                          }}
+                                          className="h-14 w-14 overflow-hidden rounded border border-amber-200"
+                                        >
+                                          <img src={src} alt="Ảnh vật tư hỏng" className="h-full w-full object-cover" />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
@@ -168,7 +277,7 @@ const RequisitionTableRow = ({ req, currentUser, handleInitiateFulfillment, onDe
                 </div>
 
                 <button
-                  onClick={() => printPhieuXuatKho(req)}
+                  onClick={() => { void printRequisition(req); }}
                   className="inline-flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

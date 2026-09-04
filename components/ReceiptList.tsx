@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { GoodsReceiptNote, Product, AdminTab } from '../types';
 import ReceiptCard from './ReceiptCard';
-import { exportReceiptsToExcel } from '../utils/excelExport';
 import { useSortableData } from '../hooks/useSortableData';
 import SortableHeader from './SortableHeader';
 import Pagination from './Pagination';
@@ -27,7 +26,10 @@ interface ReceiptListProps {
     onDeleteReceipt?: (receiptId: string) => void;
 }
 
-import { printPhieuNhapKho } from '../utils/printUtils';
+const printReceipt = async (receipt: GoodsReceiptNote, allProducts: Product[]) => {
+  const { printPhieuNhapKho } = await import('../utils/printUtils');
+  printPhieuNhapKho(receipt, allProducts);
+};
 
 const ReceiptTableRow = ({ receipt, allProducts, onEdit, onDelete, isReadOnly }: any) => {
   const [isExpanded, setIsExpanded] = React.useState(false);
@@ -124,7 +126,7 @@ const ReceiptTableRow = ({ receipt, allProducts, onEdit, onDelete, isReadOnly }:
                 </div>
                 
                 <button
-                  onClick={() => printPhieuNhapKho(receipt, allProducts)}
+                  onClick={() => { void printReceipt(receipt, allProducts); }}
                   className="inline-flex flex-shrink-0 items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -193,7 +195,8 @@ const ReceiptList: React.FC<ReceiptListProps> = ({ receipts, products, onNavigat
         onNavigate('create-receipt');
     }
 
-    const handleExportExcel = () => {
+    const handleExportExcel = async () => {
+        const { exportReceiptsToExcel } = await import('../utils/excelExport');
         exportReceiptsToExcel(filteredAndSortedReceipts, products);
     };
 

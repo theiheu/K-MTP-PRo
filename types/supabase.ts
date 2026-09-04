@@ -122,6 +122,8 @@ export interface Database {
           product_id: string
           attributes: Json
           stock: number
+          defective_stock: number
+          repairing_stock: number
           price: number | null
           images: string[] | null
           unit: string | null
@@ -133,6 +135,8 @@ export interface Database {
           product_id: string
           attributes?: Json
           stock?: number
+          defective_stock?: number
+          repairing_stock?: number
           price?: number | null
           images?: string[] | null
           unit?: string | null
@@ -144,6 +148,8 @@ export interface Database {
           product_id?: string
           attributes?: Json
           stock?: number
+          defective_stock?: number
+          repairing_stock?: number
           price?: number | null
           images?: string[] | null
           unit?: string | null
@@ -212,29 +218,82 @@ export interface Database {
           updated_at?: string
         }
       }
-      requisition_items: {
+      requisition_groups: {
         Row: {
           id: string
           requisition_id: string
-          product_id: string
-          variant_id: string
-          quantity: number
+          name: string
+          purpose_type: 'regular_use' | 'exchange' | 'farm_repair' | 'supplement' | 'other'
+          notes: string | null
+          needed_by: string | null
+          display_order: number
           created_at: string
         }
         Insert: {
           id?: string
           requisition_id: string
-          product_id: string
-          variant_id: string
-          quantity: number
+          name: string
+          purpose_type?: 'regular_use' | 'exchange' | 'farm_repair' | 'supplement' | 'other'
+          notes?: string | null
+          needed_by?: string | null
+          display_order?: number
           created_at?: string
         }
         Update: {
           id?: string
           requisition_id?: string
+          name?: string
+          purpose_type?: 'regular_use' | 'exchange' | 'farm_repair' | 'supplement' | 'other'
+          notes?: string | null
+          needed_by?: string | null
+          display_order?: number
+          created_at?: string
+        }
+      }
+      requisition_items: {
+        Row: {
+          id: string
+          requisition_id: string
+          group_id: string | null
+          product_id: string
+          variant_id: string
+          quantity: number
+          is_exchange: boolean
+          defect_notes: string | null
+          defect_description: string | null
+          repair_needs: string | null
+          defect_exchanged_at: string | null
+          defect_images: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          requisition_id: string
+          group_id?: string | null
+          product_id: string
+          variant_id: string
+          quantity: number
+          is_exchange?: boolean
+          defect_notes?: string | null
+          defect_description?: string | null
+          repair_needs?: string | null
+          defect_exchanged_at?: string | null
+          defect_images?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          requisition_id?: string
+          group_id?: string | null
           product_id?: string
           variant_id?: string
           quantity?: number
+          is_exchange?: boolean
+          defect_notes?: string | null
+          defect_description?: string | null
+          repair_needs?: string | null
+          defect_exchanged_at?: string | null
+          defect_images?: Json | null
           created_at?: string
         }
       }
@@ -498,6 +557,161 @@ export interface Database {
           created_at?: string
         }
       }
+      inventory_transactions: {
+        Row: {
+          id: string
+          type: 'RETURN' | 'RETURN_DEFECTIVE' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL'
+          status: string
+          items: Json
+          created_by: string
+          created_at: string
+          notes: string | null
+          reference_id: string | null
+        }
+        Insert: {
+          id?: string
+          type: 'RETURN' | 'RETURN_DEFECTIVE' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL'
+          status?: string
+          items: Json
+          created_by: string
+          created_at?: string
+          notes?: string | null
+          reference_id?: string | null
+        }
+        Update: {
+          id?: string
+          type?: 'RETURN' | 'RETURN_DEFECTIVE' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL'
+          status?: string
+          items?: Json
+          created_by?: string
+          created_at?: string
+          notes?: string | null
+          reference_id?: string | null
+        }
+      }
+      defective_items: {
+        Row: {
+          id: string
+          source_requisition_id: string | null
+          source_requisition_item_id: string | null
+          product_id: string
+          variant_id: string
+          quantity: number
+          exchanged_at: string | null
+          defect_status: string
+          defect_description: string | null
+          repair_needs: string | null
+          images: Json
+          current_state: 'waiting_repair' | 'sent_to_repair' | 'repaired' | 'disposed'
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          source_requisition_id?: string | null
+          source_requisition_item_id?: string | null
+          product_id: string
+          variant_id: string
+          quantity: number
+          exchanged_at?: string | null
+          defect_status: string
+          defect_description?: string | null
+          repair_needs?: string | null
+          images?: Json
+          current_state?: 'waiting_repair' | 'sent_to_repair' | 'repaired' | 'disposed'
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          source_requisition_id?: string | null
+          source_requisition_item_id?: string | null
+          product_id?: string
+          variant_id?: string
+          quantity?: number
+          exchanged_at?: string | null
+          defect_status?: string
+          defect_description?: string | null
+          repair_needs?: string | null
+          images?: Json
+          current_state?: 'waiting_repair' | 'sent_to_repair' | 'repaired' | 'disposed'
+          created_by?: string
+          created_at?: string
+        }
+      }
+      repair_batches: {
+        Row: {
+          id: string
+          code: string
+          repair_vendor: string | null
+          sent_at: string
+          expected_return_at: string | null
+          status: 'draft' | 'sent' | 'partially_returned' | 'completed' | 'cancelled'
+          notes: string | null
+          created_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          code: string
+          repair_vendor?: string | null
+          sent_at: string
+          expected_return_at?: string | null
+          status?: 'draft' | 'sent' | 'partially_returned' | 'completed' | 'cancelled'
+          notes?: string | null
+          created_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          code?: string
+          repair_vendor?: string | null
+          sent_at?: string
+          expected_return_at?: string | null
+          status?: 'draft' | 'sent' | 'partially_returned' | 'completed' | 'cancelled'
+          notes?: string | null
+          created_by?: string
+          created_at?: string
+        }
+      }
+      repair_batch_items: {
+        Row: {
+          id: string
+          repair_batch_id: string
+          defective_item_id: string
+          variant_id: string
+          quantity_sent: number
+          quantity_returned: number
+          quantity_disposed: number
+          return_notes: string | null
+          returned_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          repair_batch_id: string
+          defective_item_id: string
+          variant_id: string
+          quantity_sent: number
+          quantity_returned?: number
+          quantity_disposed?: number
+          return_notes?: string | null
+          returned_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          repair_batch_id?: string
+          defective_item_id?: string
+          variant_id?: string
+          quantity_sent?: number
+          quantity_returned?: number
+          quantity_disposed?: number
+          return_notes?: string | null
+          returned_at?: string | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -510,4 +724,3 @@ export interface Database {
     }
   }
 }
-

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, CartItem as CartItemType, Product } from "../types";
+import { User, CartItem as CartItemType, Product, RequisitionGroup } from "../types";
 import CartItem from "./CartItem";
 import ConfirmationModal from "./ConfirmationModal";
 
@@ -15,10 +15,8 @@ interface CreateRequisitionModalProps {
     zone: string;
     purpose: string;
     isCompleted?: boolean;
-    isExchange?: boolean;
-    defectNotes?: string;
-    defectImages?: string[];
-  }) => void;
+    groups?: RequisitionGroup[];
+  }, cartOverride?: CartItemType[]) => void;
   onCancel: () => void;
   onUpdateItem: (variantId: string, quantity: number) => void;
   onUpdateDetails: (variantId: string, details: Partial<CartItemType>) => void;
@@ -38,12 +36,65 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
   onUpdateDetails,
   onRemoveItem,
 }) => {
+  const defaultGroups: RequisitionGroup[] = [
+    { id: 'general-purpose', name: 'Mục đích chung', purposeType: 'regular_use', displayOrder: 0 },
+  ];
+
   const [requesterName, setRequesterName] = useState(user.name);
   const [zone, setZone] = useState(user.zone || (zones && zones.length > 0 ? zones[0].name : ""));
   const [purpose, setPurpose] = useState("");
   const [itemToRemove, setItemToRemove] = useState<CartItemType | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groups, setGroups] = useState<RequisitionGroup[]>(defaultGroups);
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupNeededBy, setNewGroupNeededBy] = useState("");
+
+  const getGroupForItem = (item: CartItemType) => {
+    return groups.find(group => group.id === item.groupId) || groups[0];
+  };
+
+  const cartWithGroups = cartItems.map(item => {
+    const group = getGroupForItem(item);
+    return {
+      ...item,
+      groupId: group.id,
+      groupName: group.name,
+      purposeType: group.purposeType,
+      groupNotes: group.notes,
+      neededBy: group.neededBy,
+    };
+  });
+
+  const addCustomGroup = () => {
+    const trimmedName = newGroupName.trim();
+    if (!trimmedName) return;
+    const id = `custom-${Date.now()}`;
+    setGroups(current => [
+      ...current,
+      {
+        id,
+        name: trimmedName,
+        purposeType: 'other',
+        neededBy: newGroupNeededBy.trim() || undefined,
+        displayOrder: current.length,
+      },
+    ]);
+    setNewGroupName("");
+    setNewGroupNeededBy("");
+  };
+
+  const updateGroupNotes = (groupId: string, notes: string) => {
+    setGroups(current => current.map(group => group.id === groupId ? { ...group, notes } : group));
+  };
+
+  const updateGroupName = (groupId: string, name: string) => {
+    setGroups(current => current.map(group => group.id === groupId ? { ...group, name } : group));
+  };
+
+  const updateGroupNeededBy = (groupId: string, neededBy: string) => {
+    setGroups(current => current.map(group => group.id === groupId ? { ...group, neededBy } : group));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,22 +104,21 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
       setError("Vui lòng điền tên người yêu cầu");
       return;
     }
-    if (!purpose.trim()) {
-      setError("Vui lòng điền Mục đích");
-      return;
-    }
     if (cartItems.length === 0) {
       setError("Không thể tạo phiếu yêu cầu trống");
       return;
     }
-    // Check if any item in cart isExchange but missing defectNotes
-    const missingNotes = cartItems.find(item => item.isExchange && !item.defectNotes?.trim());
+    if (groups.some(group => !group.name.trim())) {
+      setError("Vui lòng nhập hạng mục/mục đích sử dụng cho từng nhóm");
+      return;
+    }
+    const missingNotes = cartWithGroups.find(item => item.isExchange && !item.defectNotes?.trim());
     if (missingNotes) {
       setError(`Vui lòng nhập lý do/tình trạng hỏng hóc cho vật tư: ${missingNotes.product.name}`);
       return;
     }
-
-    onSubmit({ requesterName, zone, purpose, isCompleted });
+    const purposeSummary = purpose.trim() || groups.map(group => group.name.trim()).filter(Boolean).join("; ");
+    onSubmit({ requesterName, zone, purpose: purposeSummary, isCompleted, groups }, cartWithGroups);
   };
 
   const handleRequestRemove = (variantId: string) => {
@@ -92,6 +142,7 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
   const isManager = user.role === "manager";
 
   const totalItems = cartItems.reduce((acc, item) => acc + item.quantity, 0);
+  const exchangeCount = cartWithGroups.filter(item => item.isExchange).length;
 
   if (!isOpen) return null;
 
@@ -124,9 +175,100 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
               <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 items-start xl:grid-cols-5 xl:gap-6">
                 {/* Left side: Item List */}
                 <div className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-200 xl:col-span-3">
-                  <h2 className="text-lg font-semibold text-gray-800 border-b pb-3">
-                    Vật tư Yêu cầu ({totalItems})
-                  </h2>
+                  <div className="border-b pb-3">
+                    <h2 className="text-lg font-semibold text-gray-800">
+                      Vật tư Yêu cầu ({totalItems})
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-500">Gom vật tư theo hạng mục/mục đích sử dụng và thời gian cần như phiếu giấy.</p>
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    <div className={`rounded-md border p-3 ${
+                      exchangeCount > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50'
+                    }`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">Vật tư đổi hỏng</p>
+                          <p className="mt-0.5 text-xs text-gray-500">Chỉ dùng khi dòng vật tư cần thu hồi đồ cũ.</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-200">
+                          {exchangeCount} vật tư
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+                      {groups.map(group => {
+                        const count = cartWithGroups.filter(item => item.groupId === group.id).length;
+                        return (
+                          <div key={group.id} className="min-w-[128px] rounded-md bg-gray-50 px-3 py-2 shadow-sm ring-1 ring-gray-200">
+                            <p className="truncate text-xs font-semibold text-gray-800">{group.name}</p>
+                            <p className="mt-0.5 text-xs text-gray-500">{count} vật tư{group.neededBy ? ` - ${group.neededBy}` : ''}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <details className="rounded-md border border-gray-200 bg-gray-50">
+                      <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-gray-800">
+                        Quản lý nhóm mục đích
+                      </summary>
+                      <div className="space-y-3 border-t border-gray-200 p-3">
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px_auto]">
+                          <input
+                            value={newGroupName}
+                            onChange={(e) => setNewGroupName(e.target.value)}
+                            placeholder="Hạng mục/mục đích: VD cho xe cộ các khu..."
+                            className="rounded-md border-0 px-3 py-2 text-sm shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-amber-600"
+                          />
+                          <input
+                            value={newGroupNeededBy}
+                            onChange={(e) => setNewGroupNeededBy(e.target.value)}
+                            placeholder="Thời gian cần"
+                            className="rounded-md border-0 px-3 py-2 text-sm shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-amber-600"
+                          />
+                          <button
+                            type="button"
+                            onClick={addCustomGroup}
+                            className="rounded-md bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700"
+                          >
+                            Thêm
+                          </button>
+                        </div>
+                        {groups.map(group => (
+                          <div key={group.id} className="rounded-md border border-gray-200 bg-white p-3">
+                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_140px]">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600">Hạng mục/Mục đích sử dụng</label>
+                                <input
+                                  value={group.name}
+                                  onChange={(e) => updateGroupName(group.id, e.target.value)}
+                                  className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-sm shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-amber-600"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600">Thời gian cần</label>
+                                <input
+                                  value={group.neededBy || ''}
+                                  onChange={(e) => updateGroupNeededBy(group.id, e.target.value)}
+                                  placeholder="VD: càng sớm"
+                                  className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-sm shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-amber-600"
+                                />
+                              </div>
+                            </div>
+                            <label className="mt-2 block text-xs font-medium text-gray-600">Ghi chú nhóm</label>
+                            <input
+                              value={group.notes || ''}
+                              onChange={(e) => updateGroupNotes(group.id, e.target.value)}
+                              placeholder="VD: sửa máng nước khu B"
+                              className="mt-1 block w-full rounded-md border-0 px-3 py-2 text-sm shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-amber-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  </div>
+
                   {cartItems.length > 0 ? (
                     <ul role="list" className="divide-y divide-gray-100 mt-2">
                       {cartItems.map((item) => (
@@ -137,6 +279,8 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
                           onRemove={handleRequestRemove}
                           onUpdateItem={onUpdateItem}
                           onUpdateDetails={onUpdateDetails}
+                          groups={groups}
+                          useGroupWorkflow
                         />
                       ))}
                     </ul>
@@ -238,7 +382,7 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
 
                     <div>
                       <label htmlFor="purpose" className="block text-sm font-medium leading-6 text-gray-900">
-                        Mục đích
+                        Ghi chú chung
                       </label>
                       <div className="mt-1">
                         <textarea
@@ -248,8 +392,7 @@ const CreateRequisitionModal: React.FC<CreateRequisitionModalProps> = ({
                           value={purpose}
                           onChange={(e) => setPurpose(e.target.value)}
                           className="block w-full rounded-md border-0 px-3 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-amber-600 sm:text-sm"
-                          placeholder="Vd: Sửa chữa máy cho gà ăn"
-                          required
+                          placeholder="Ghi chú chung nếu cần"
                         ></textarea>
                       </div>
                     </div>

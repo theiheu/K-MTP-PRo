@@ -16,8 +16,6 @@ import {
   getConsumedMaterials,
   getReceivedMaterials
 } from '../utils/reportUtils';
-import { exportFullReportToExcel, exportRequisitionsToExcel, exportReportToExcel, exportPhieuXuatKho } from '../utils/excelExport';
-import { printPhieuXuatKho } from '../utils/printUtils';
 
 const COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16'];
 const STATUS_COLORS: Record<string, string> = {
@@ -139,6 +137,31 @@ const Dashboard: React.FC = () => {
   const handleHistorySort = (field: typeof historySortField) => {
     if (historySortField === field) setHistorySortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setHistorySortField(field); setHistorySortDir('desc'); }
+  };
+
+  const handleExportRequisitions = async () => {
+    const { exportRequisitionsToExcel } = await import('../utils/excelExport');
+    exportRequisitionsToExcel(requisitions, reportPeriod, periodLabel, startDate, endDate);
+  };
+
+  const handleExportFullReport = async () => {
+    const { exportFullReportToExcel } = await import('../utils/excelExport');
+    exportFullReportToExcel(requisitions, products, receipts, reportPeriod, periodLabel, startDate, endDate);
+  };
+
+  const handleExportSimpleReport = async () => {
+    const { exportReportToExcel } = await import('../utils/excelExport');
+    exportReportToExcel(consumedData, receivedData, periodLabel);
+  };
+
+  const handleExportPhieuXuatKho = async (req: RequisitionForm) => {
+    const { exportPhieuXuatKho } = await import('../utils/excelExport');
+    exportPhieuXuatKho(req);
+  };
+
+  const handlePrintPhieuXuatKho = async (req: RequisitionForm) => {
+    const { printPhieuXuatKho } = await import('../utils/printUtils');
+    printPhieuXuatKho(req);
   };
 
   const SortIcon = ({ field }: { field: typeof historySortField }) => {
@@ -442,7 +465,7 @@ const Dashboard: React.FC = () => {
                     </button>
                   )}
                 </div>
-                <button onClick={() => exportRequisitionsToExcel(requisitions, reportPeriod, periodLabel, startDate, endDate)}
+                <button onClick={handleExportRequisitions}
                   className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-green-700">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                   Xuất Excel
@@ -497,7 +520,7 @@ const Dashboard: React.FC = () => {
                           <td className="px-4 py-3 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center gap-2">
                               <button
-                                onClick={(e) => { e.stopPropagation(); exportPhieuXuatKho(req); }}
+                                onClick={(e) => { e.stopPropagation(); void handleExportPhieuXuatKho(req); }}
                                 className="inline-flex items-center gap-1 rounded bg-amber-100 text-amber-700 hover:bg-amber-200 px-2 py-1 text-xs font-medium"
                                 title="Xuất phiếu xuất kho theo mẫu"
                               >
@@ -505,7 +528,7 @@ const Dashboard: React.FC = () => {
                                 Xuất PXK
                               </button>
                               <button
-                                onClick={(e) => { e.stopPropagation(); printPhieuXuatKho(req); }}
+                                onClick={(e) => { e.stopPropagation(); void handlePrintPhieuXuatKho(req); }}
                                 className="inline-flex items-center gap-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 text-xs font-medium"
                                 title="In phiếu xuất kho"
                               >
@@ -552,13 +575,13 @@ const Dashboard: React.FC = () => {
                                 )}
                                 <div className="mt-3 flex justify-end gap-2">
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); exportPhieuXuatKho(req); }}
+                                    onClick={(e) => { e.stopPropagation(); void handleExportPhieuXuatKho(req); }}
                                     className="inline-flex items-center gap-1.5 rounded-md bg-amber-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-amber-600 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>
                                     Xuất Phiếu Xuất Kho
                                   </button>
                                   <button
-                                    onClick={(e) => { e.stopPropagation(); printPhieuXuatKho(req); }}
+                                    onClick={(e) => { e.stopPropagation(); void handlePrintPhieuXuatKho(req); }}
                                     className="inline-flex items-center gap-1.5 rounded-md bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-600 transition-colors">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0v2.798c0 .197.161.357.357.357h9.786c.196 0 .357-.16.357-.357V9.083Z" /></svg>
                                     In Phiếu Xuất Kho
@@ -758,7 +781,7 @@ const Dashboard: React.FC = () => {
           <div className="bg-white shadow rounded-xl p-6 border border-gray-100">
             <h3 className="text-base font-semibold text-gray-900 mb-4">📥 Xuất file báo cáo Excel</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <button onClick={() => exportFullReportToExcel(requisitions, products, receipts, reportPeriod, periodLabel, startDate, endDate)}
+              <button onClick={handleExportFullReport}
                 className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:border-amber-400 transition-all group">
                 <div className="w-12 h-12 rounded-full bg-amber-500 text-white flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📊</div>
                 <div className="text-center">
@@ -766,7 +789,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-amber-600 mt-1">6 sheet: Phiếu YC, Top VT, Danh mục, Zone, Xuất/Nhập kho</p>
                 </div>
               </button>
-              <button onClick={() => exportRequisitionsToExcel(requisitions, reportPeriod, periodLabel, startDate, endDate)}
+              <button onClick={handleExportRequisitions}
                 className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:border-blue-400 transition-all group">
                 <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📋</div>
                 <div className="text-center">
@@ -774,7 +797,7 @@ const Dashboard: React.FC = () => {
                   <p className="text-xs text-blue-600 mt-1">2 sheet: Danh sách phiếu + Chi tiết vật tư</p>
                 </div>
               </button>
-              <button onClick={() => exportReportToExcel(consumedData, receivedData, periodLabel)}
+              <button onClick={handleExportSimpleReport}
                 className="flex flex-col items-center gap-3 p-5 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-400 transition-all group">
                 <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center text-xl group-hover:scale-110 transition-transform">📦</div>
                 <div className="text-center">

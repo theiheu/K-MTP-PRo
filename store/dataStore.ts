@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-  Product, Category, Zone, RequisitionForm, GoodsReceiptNote, DeliveryNote, User, InventoryAudit, InventoryAuditItem, InventoryTransaction
+  Product, Category, Zone, RequisitionForm, GoodsReceiptNote, DeliveryNote, User, InventoryAudit, InventoryAuditItem, InventoryTransaction,
+  DefectiveItem, RepairBatch, RepairBatchStatus
 } from '../types';
 import {
   productsService,
@@ -12,10 +13,17 @@ import {
   deliveryNotesService,
   usersService,
   inventoryAuditsService,
-  inventoryTransactionsService
+  inventoryTransactionsService,
+  defectiveItemsService,
+  repairBatchesService
 } from '../services/supabaseService';
+import {
+  inventoryDocumentsCoreService,
+  warehousesCoreService
+} from '../services/inventoryCoreService';
 import { cloneProductList } from '../utils/productUtils';
 import { calculateVariantStock } from '../utils/stockCalculator';
+import { useAuthStore } from './authStore';
 
 let latestInitialFetchId = 0;
 
@@ -23,6 +31,159 @@ const INITIAL_DATA_RETRY_COUNT = 1;
 const RETRY_DELAY_MS = 600;
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const syncLegacyRequisitionToInventoryCore = async (
+  form: RequisitionForm,
+  cart: CartItem[],
+  zones: Zone[],
+  createdBy?: User | null
+) => {
+  const zoneId = zones.find(zone => zone.name === form.zone)?.id;
+
+  await inventoryDocumentsCoreService.createDraft({
+    documentType: 'requisition',
+    status: form.status === 'Đang chờ xử lý'
+      ? 'submitted'
+      : form.status === 'Đã hoàn thành'
+        ? 'received'
+        : form.status === 'Đã huỷ'
+          ? 'cancelled'
+          : 'approved',
+    zoneId,
+    requesterName: form.requesterName,
+    createdBy: createdBy?.id,
+    documentDate: form.createdAt?.slice(0, 10),
+    notes: form.purpose,
+    legacyTable: 'requisition_forms',
+    legacyId: form.id,
+    metadata: {
+      legacyStatus: form.status,
+      fulfilledBy: form.fulfilledBy,
+      fulfilledAt: form.fulfilledAt,
+      receivedBy: form.receivedBy,
+      receivedAt: form.receivedAt,
+    },
+    items: cart.map((item, index) => ({
+      productId: item.product.id,
+      variantId: item.variant.id,
+      quantityRequested: item.quantity,
+      quantityApproved: form.status === 'Đang chờ xử lý' ? undefined : item.quantity,
+      quantityIssued: form.fulfilledAt ? item.quantity : undefined,
+      quantityReceived: form.receivedAt ? item.quantity : undefined,
+      unit: item.variant.unit,
+      purposeType: item.purposeType,
+      reason: item.defectNotes,
+      notes: item.groupNotes,
+      displayOrder: index,
+      metadata: {
+        groupId: item.groupId,
+        groupName: item.groupName,
+        isExchange: item.isExchange,
+        defectDescription: item.defectDescription,
+        repairNeeds: item.repairNeeds,
+        exchangedAt: item.exchangedAt,
+        defectImages: item.defectImages || [],
+      },
+    })),
+  });
+};
+
+const syncLegacyIssueToInventoryCore = async (
+  form: RequisitionForm,
+  items: CartItem[],
+  zones: Zone[],
+  issuedBy?: User | null,
+  notes?: string
+) => {
+  const mainWarehouse = await warehousesCoreService.getMainWarehouse();
+  if (!mainWarehouse) {
+    throw new Error('Không tìm thấy kho chính trong hệ thống kho mới.');
+  }
+
+  const zoneId = zones.find(zone => zone.name === form.zone)?.id;
+
+  await inventoryDocumentsCoreService.createStockIssue({
+    sourceLocationId: mainWarehouse.id,
+    zoneId,
+    createdBy: issuedBy?.id,
+    createdByName: issuedBy?.name,
+    requesterName: form.requesterName,
+    documentDate: new Date().toISOString().slice(0, 10),
+    notes,
+    legacyTable: 'requisition_forms:issue',
+    legacyId: form.id,
+    metadata: {
+      requisitionId: form.id,
+      requisitionStatus: form.status,
+      fulfilledBy: form.fulfilledBy,
+      fulfilledAt: form.fulfilledAt,
+    },
+    items: items.map((item, index) => ({
+      productId: item.product.id,
+      variantId: item.variant.id,
+      quantity: item.quantity,
+      quantityRequested: item.quantity,
+      quantityApproved: item.quantity,
+      quantityIssued: item.quantity,
+      unit: item.variant.unit,
+      purposeType: item.purposeType,
+      reason: item.defectNotes,
+      notes: item.groupNotes,
+      displayOrder: index,
+      metadata: {
+        sourceRequisitionId: form.id,
+        groupId: item.groupId,
+        groupName: item.groupName,
+        isExchange: item.isExchange,
+      },
+    })),
+  });
+};
+
+const syncLegacyAuditAdjustmentToInventoryCore = async (
+  audit: InventoryAudit,
+  adjustedItems: InventoryAuditItem[],
+  adjustedBy?: User | null
+) => {
+  const mainWarehouse = await warehousesCoreService.getMainWarehouse();
+  if (!mainWarehouse) {
+    throw new Error('Không tìm thấy kho chính trong hệ thống kho mới.');
+  }
+
+  await inventoryDocumentsCoreService.createStockAdjustment({
+    warehouseId: mainWarehouse.id,
+    createdBy: adjustedBy?.id,
+    createdByName: adjustedBy?.name,
+    documentDate: new Date().toISOString().slice(0, 10),
+    notes: `Điều chỉnh từ phiếu kiểm kê ${audit.title}`,
+    legacyTable: 'inventory_audits:adjustment',
+    legacyId: audit.id,
+    metadata: {
+      auditId: audit.id,
+      auditTitle: audit.title,
+      completedAt: audit.completedAt,
+    },
+    items: adjustedItems.map((item, index) => {
+      const actualQuantity = item.actualQuantity ?? item.systemQuantity;
+      const diff = actualQuantity - item.systemQuantity;
+      return {
+        productId: item.productId,
+        variantId: item.variantId,
+        adjustmentDelta: diff,
+        reason: item.reason,
+        notes: `Hệ thống: ${item.systemQuantity}; Thực tế: ${actualQuantity}`,
+        displayOrder: index,
+        metadata: {
+          auditItemId: item.id,
+          systemQuantity: item.systemQuantity,
+          actualQuantity,
+          adjustmentDelta: diff,
+        },
+      };
+    }),
+    allowNegative: true,
+  });
+};
 
 const loadWithRetry = async <T>(label: string, loader: () => Promise<T>): Promise<T> => {
   let lastError: unknown;
@@ -51,6 +212,8 @@ interface DataState {
   deliveries: DeliveryNote[];
   users: User[];
   inventoryTransactions: InventoryTransaction[];
+  defectiveItems: DefectiveItem[];
+  repairBatches: RepairBatch[];
 
   isFetchingInitialData: boolean;
   isActionLoading: boolean;
@@ -104,6 +267,11 @@ interface DataState {
 
   // Inventory Transactions
   createInventoryTransaction: (transaction: Omit<InventoryTransaction, 'id' | 'createdAt'>) => Promise<void>;
+
+  // Defects & Repairs
+  createRepairBatch: (details: { code?: string; repairVendor?: string; sentAt: string; expectedReturnAt?: string; notes?: string; createdBy: string }, items: Array<{ defectiveItemId: string; quantity: number }>) => Promise<void>;
+  receiveRepairBatchItems: (batchId: string, items: Array<{ repairBatchItemId: string; quantityReturned: number; returnNotes?: string }>, receivedBy: string) => Promise<void>;
+  disposeDefectiveItems: (items: Array<{ defectiveItemId: string; quantity: number; source?: 'waiting' | 'repairing' }>, reason: string, disposedBy: string) => Promise<void>;
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -116,6 +284,8 @@ export const useDataStore = create<DataState>((set, get) => ({
   users: [],
   inventoryAudits: [],
   inventoryTransactions: [],
+  defectiveItems: [],
+  repairBatches: [],
 
   isFetchingInitialData: false,
   isActionLoading: false,
@@ -134,6 +304,8 @@ export const useDataStore = create<DataState>((set, get) => ({
       users: () => usersService.getAll(),
       inventoryAudits: () => inventoryAuditsService.getAll(),
       inventoryTransactions: () => inventoryTransactionsService.getAll(),
+      defectiveItems: () => defectiveItemsService.getAll(),
+      repairBatches: () => repairBatchesService.getAll(),
     } as const;
 
     const entries = Object.entries(loaders) as Array<[
@@ -346,7 +518,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         }
 
         // Direct complete creation
-        const { useAuthStore } = await import('./authStore');
         const currentUser = useAuthStore.getState().user;
         const managerName = currentUser?.name || 'Quản trị viên';
         const now = new Date().toISOString();
@@ -399,10 +570,28 @@ export const useDataStore = create<DataState>((set, get) => ({
 
         set(s => ({ products: workingProducts, requisitions: [newForm, ...s.requisitions] }));
 
+        try {
+          await syncLegacyRequisitionToInventoryCore(newForm, cart, state.zones, currentUser);
+        } catch (ledgerError) {
+          console.warn('Phiếu yêu cầu legacy đã tạo nhưng chưa ghi được vào hệ thống kho mới:', ledgerError);
+        }
+
+        try {
+          await syncLegacyIssueToInventoryCore(
+            newForm,
+            cart,
+            state.zones,
+            currentUser,
+            `Cấp phát trực tiếp từ phiếu yêu cầu ${newForm.id}`
+          );
+        } catch (ledgerError) {
+          console.warn('Phiếu xuất legacy đã xử lý nhưng chưa ghi được vào sổ kho mới:', ledgerError);
+        }
+
         const exchangeItems = cart.filter(item => item.isExchange);
         if (exchangeItems.length > 0) {
           await get().createInventoryTransaction({
-            type: 'RETURN',
+            type: 'RETURN_DEFECTIVE',
             status: 'COMPLETED',
             createdBy: managerName,
             notes: `Thu hồi từ phiếu yêu cầu cấp đổi ${newForm.id}`,
@@ -416,6 +605,12 @@ export const useDataStore = create<DataState>((set, get) => ({
                     variantId: c.variantId,
                     quantity: item.quantity * c.quantity,
                     reason: item.defectNotes,
+                    productId: compProduct?.id || item.product.id,
+                    exchangedAt: item.exchangedAt || newForm.createdAt,
+                    defectDescription: item.defectDescription,
+                    repairNeeds: item.repairNeeds,
+                    defectImages: item.defectImages,
+                    sourceRequisitionId: newForm.id,
                     productName: compProduct?.name || item.product.name,
                     variantAttributes: compVariant?.attributes,
                     unit: compVariant?.unit || item.variant.unit
@@ -426,6 +621,12 @@ export const useDataStore = create<DataState>((set, get) => ({
                 variantId: item.variant.id,
                 quantity: item.quantity,
                 reason: item.defectNotes,
+                productId: item.product.id,
+                exchangedAt: item.exchangedAt || newForm.createdAt,
+                defectDescription: item.defectDescription,
+                repairNeeds: item.repairNeeds,
+                defectImages: item.defectImages,
+                sourceRequisitionId: newForm.id,
                 productName: item.product.name,
                 variantAttributes: item.variant.attributes,
                 unit: item.variant.unit
@@ -439,6 +640,12 @@ export const useDataStore = create<DataState>((set, get) => ({
           items: cart,
           status: "Đang chờ xử lý"
         });
+        const currentUser = useAuthStore.getState().user;
+        try {
+          await syncLegacyRequisitionToInventoryCore(newForm, cart, get().zones, currentUser);
+        } catch (ledgerError) {
+          console.warn('Phiếu yêu cầu legacy đã tạo nhưng chưa ghi được vào hệ thống kho mới:', ledgerError);
+        }
         set(s => ({ requisitions: [newForm, ...s.requisitions] }));
       }
     } finally { set({ isActionLoading: false }); }
@@ -533,10 +740,28 @@ export const useDataStore = create<DataState>((set, get) => ({
         } : f)
       }));
 
+      try {
+        await syncLegacyIssueToInventoryCore(
+          {
+            ...formToFulfill,
+            status: "Đã duyệt yêu cầu",
+            fulfilledBy: details.fulfillerName,
+            fulfillmentNotes: details.notes,
+            fulfilledAt: new Date().toISOString(),
+          },
+          formToFulfill.items,
+          state.zones,
+          useAuthStore.getState().user,
+          details.notes
+        );
+      } catch (ledgerError) {
+        console.warn('Phiếu xuất legacy đã xử lý nhưng chưa ghi được vào sổ kho mới:', ledgerError);
+      }
+
       const exchangeItems = formToFulfill.items.filter(item => item.isExchange);
       if (exchangeItems.length > 0) {
         await get().createInventoryTransaction({
-          type: 'RETURN',
+          type: 'RETURN_DEFECTIVE',
           status: 'COMPLETED',
           createdBy: details.fulfillerName,
           notes: `Thu hồi từ phiếu yêu cầu cấp đổi ${formId}`,
@@ -546,13 +771,19 @@ export const useDataStore = create<DataState>((set, get) => ({
               return item.variant.components.map((c: any) => {
                 const compProduct = workingProducts.find(p => p.variants.some((v: any) => v.id === c.variantId));
                 const compVariant = compProduct?.variants.find((v: any) => v.id === c.variantId);
-                return {
-                  variantId: c.variantId,
-                  quantity: item.quantity * c.quantity,
-                  reason: item.defectNotes,
-                  productName: compProduct?.name || item.product.name,
-                  variantAttributes: compVariant?.attributes,
-                  unit: compVariant?.unit || item.variant.unit
+                  return {
+                    variantId: c.variantId,
+                    quantity: item.quantity * c.quantity,
+                    reason: item.defectNotes,
+                    productId: compProduct?.id || item.product.id,
+                    exchangedAt: item.exchangedAt || new Date().toISOString(),
+                    defectDescription: item.defectDescription,
+                    repairNeeds: item.repairNeeds,
+                    defectImages: item.defectImages,
+                    sourceRequisitionId: formId,
+                    productName: compProduct?.name || item.product.name,
+                    variantAttributes: compVariant?.attributes,
+                    unit: compVariant?.unit || item.variant.unit
                 };
               });
             }
@@ -560,6 +791,12 @@ export const useDataStore = create<DataState>((set, get) => ({
               variantId: item.variant.id,
               quantity: item.quantity,
               reason: item.defectNotes,
+              productId: item.product.id,
+              exchangedAt: item.exchangedAt || new Date().toISOString(),
+              defectDescription: item.defectDescription,
+              repairNeeds: item.repairNeeds,
+              defectImages: item.defectImages,
+              sourceRequisitionId: formId,
               productName: item.product.name,
               variantAttributes: item.variant.attributes,
               unit: item.variant.unit
@@ -593,6 +830,33 @@ export const useDataStore = create<DataState>((set, get) => ({
     set({ isActionLoading: true });
     try {
       const newReceipt = await receiptsService.create(receiptData);
+      const currentUser = useAuthStore.getState().user;
+
+      try {
+        await inventoryDocumentsCoreService.createStockReceipt({
+          supplierName: receiptData.supplier,
+          createdBy: currentUser?.id,
+          createdByName: receiptData.createdBy,
+          notes: receiptData.notes,
+          legacyTable: 'goods_receipt_notes',
+          legacyId: newReceipt.id,
+          metadata: {
+            linkedRequisitionIds: receiptData.linkedRequisitionIds || [],
+            legacyReceiptId: newReceipt.id,
+          },
+          items: receiptData.items.map(item => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity,
+            quantityReceived: item.quantity,
+            unit: item.unit,
+            batchCode: item.batchCode,
+            expiryDate: item.expiryDate,
+          })),
+        });
+      } catch (ledgerError) {
+        console.warn('Phiếu nhập legacy đã tạo nhưng chưa ghi được vào sổ kho mới:', ledgerError);
+      }
 
       const state = get();
       let workingProducts = cloneProductList(state.products);
@@ -842,6 +1106,22 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       await inventoryAuditsService.complete(auditId);
 
+      const adjustedItems = audit.items.filter(item =>
+        item.actualQuantity !== undefined && item.actualQuantity !== item.systemQuantity
+      );
+
+      if (adjustedItems.length > 0) {
+        try {
+          await syncLegacyAuditAdjustmentToInventoryCore(
+            audit,
+            adjustedItems,
+            useAuthStore.getState().user
+          );
+        } catch (ledgerError) {
+          console.warn('Phiếu kiểm kê legacy đã hoàn thành nhưng chưa ghi được điều chỉnh vào sổ kho mới:', ledgerError);
+        }
+      }
+
       set(s => ({
         products: productsToUpdate,
         inventoryAudits: s.inventoryAudits.map(a => a.id === auditId ? { ...a, status: 'Hoàn thành', completedAt: new Date().toISOString() } : a)
@@ -872,7 +1152,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         let defStock = variant.defective_stock || 0;
         let repStock = variant.repairing_stock || 0;
 
-        if (transaction.type === 'RETURN') {
+        if (transaction.type === 'RETURN' || transaction.type === 'RETURN_DEFECTIVE') {
           defStock += item.quantity;
         } else if (transaction.type === 'REPAIR_EXPORT') {
           defStock -= item.quantity;
@@ -903,15 +1183,224 @@ export const useDataStore = create<DataState>((set, get) => ({
 
       // Create transaction record
       const newTx = await inventoryTransactionsService.create(transaction);
+      const newDefectiveItems = transaction.type === 'RETURN_DEFECTIVE'
+        ? await defectiveItemsService.createMany(transaction.items.map(item => {
+            const variantInfo = workingProducts
+              .flatMap(product => product.variants.map(variant => ({ product, variant })))
+              .find(entry => entry.variant.id === item.variantId);
+
+            return {
+              sourceRequisitionId: item.sourceRequisitionId,
+              sourceRequisitionItemId: undefined,
+              productId: item.productId || variantInfo?.product.id || '',
+              variantId: item.variantId,
+              quantity: item.quantity,
+              exchangedAt: item.exchangedAt || newTx.createdAt,
+              defectStatus: item.reason || 'Hỏng',
+              defectDescription: item.defectDescription,
+              repairNeeds: item.repairNeeds,
+              images: item.defectImages || [],
+              currentState: 'waiting_repair',
+              createdBy: transaction.createdBy,
+              productName: item.productName,
+              variantAttributes: item.variantAttributes,
+              unit: item.unit,
+            };
+          }).filter(item => item.productId))
+        : [];
 
       set(s => ({
         products: workingProducts,
-        inventoryTransactions: [newTx, ...s.inventoryTransactions]
+        inventoryTransactions: [newTx, ...s.inventoryTransactions],
+        defectiveItems: [...newDefectiveItems, ...s.defectiveItems]
       }));
 
     } catch (e: any) {
       console.error(e);
       throw e;
+    } finally {
+      set({ isActionLoading: false });
+    }
+  },
+
+  createRepairBatch: async (details, items) => {
+    set({ isActionLoading: true });
+    try {
+      const state = get();
+      const selectedItems = items.map(item => {
+        const defectiveItem = state.defectiveItems.find(defect => defect.id === item.defectiveItemId);
+        if (!defectiveItem) throw new Error('Không tìm thấy vật tư hỏng cần gửi sửa.');
+        if (defectiveItem.currentState !== 'waiting_repair') throw new Error('Chỉ được gửi sửa vật tư đang chờ sửa.');
+        if (item.quantity !== defectiveItem.quantity) throw new Error('Hiện tại mỗi dòng vật tư hỏng cần được gửi sửa nguyên số lượng.');
+        return { defectiveItem, quantity: item.quantity };
+      });
+
+      const code = details.code?.trim() || `SC-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Date.now().toString().slice(-5)}`;
+      const newBatch = await repairBatchesService.create({
+        code,
+        repairVendor: details.repairVendor,
+        sentAt: details.sentAt,
+        expectedReturnAt: details.expectedReturnAt,
+        status: 'sent',
+        notes: details.notes,
+        createdBy: details.createdBy,
+      }, selectedItems.map(({ defectiveItem, quantity }) => ({
+        defectiveItemId: defectiveItem.id,
+        variantId: defectiveItem.variantId,
+        quantitySent: quantity,
+      })));
+
+      for (const { defectiveItem } of selectedItems) {
+        await defectiveItemsService.updateState(defectiveItem.id, 'sent_to_repair');
+      }
+
+      await get().createInventoryTransaction({
+        type: 'REPAIR_EXPORT',
+        status: 'COMPLETED',
+        createdBy: details.createdBy,
+        notes: `Phiếu xuất sửa ${code}${details.repairVendor ? ` - ${details.repairVendor}` : ''}${details.notes ? `\n${details.notes}` : ''}`,
+        referenceId: newBatch.id,
+        items: selectedItems.map(({ defectiveItem, quantity }) => ({
+          variantId: defectiveItem.variantId,
+          productId: defectiveItem.productId,
+          quantity,
+          reason: defectiveItem.defectStatus,
+          exchangedAt: defectiveItem.exchangedAt,
+          defectDescription: defectiveItem.defectDescription,
+          repairNeeds: defectiveItem.repairNeeds,
+          defectImages: defectiveItem.images,
+          sourceRequisitionId: defectiveItem.sourceRequisitionId,
+          productName: defectiveItem.productName,
+          variantAttributes: defectiveItem.variantAttributes,
+          unit: defectiveItem.unit,
+        })),
+      });
+
+      const [defectiveItems, repairBatches] = await Promise.all([
+        defectiveItemsService.getAll(),
+        repairBatchesService.getAll(),
+      ]);
+
+      set({ defectiveItems, repairBatches });
+    } finally {
+      set({ isActionLoading: false });
+    }
+  },
+
+  receiveRepairBatchItems: async (batchId, items, receivedBy) => {
+    set({ isActionLoading: true });
+    try {
+      const state = get();
+      const batch = state.repairBatches.find(item => item.id === batchId);
+      if (!batch) throw new Error('Không tìm thấy phiếu sửa chữa.');
+
+      const transactionItems = items.map(item => {
+        const batchItem = batch.items.find(line => line.id === item.repairBatchItemId);
+        if (!batchItem) throw new Error('Không tìm thấy dòng vật tư trong phiếu sửa.');
+
+        const remaining = batchItem.quantitySent - batchItem.quantityReturned - batchItem.quantityDisposed;
+        if (item.quantityReturned < 1 || item.quantityReturned > remaining) {
+          throw new Error(`Số lượng nhập lại không hợp lệ cho ${batchItem.productName || 'vật tư'}.`);
+        }
+
+        return { batchItem, quantityReturned: item.quantityReturned, returnNotes: item.returnNotes };
+      });
+
+      const returnedAt = new Date().toISOString();
+      for (const { batchItem, quantityReturned, returnNotes } of transactionItems) {
+        const nextReturned = batchItem.quantityReturned + quantityReturned;
+        await repairBatchesService.updateItem(batchItem.id, {
+          quantityReturned: nextReturned,
+          quantityDisposed: batchItem.quantityDisposed,
+          returnNotes,
+          returnedAt,
+        });
+
+        if (nextReturned + batchItem.quantityDisposed >= batchItem.quantitySent) {
+          await defectiveItemsService.updateState(batchItem.defectiveItemId, 'repaired');
+        }
+      }
+
+      await get().createInventoryTransaction({
+        type: 'REPAIR_IMPORT',
+        status: 'COMPLETED',
+        createdBy: receivedBy,
+        notes: `Nhập vật tư đã sửa từ phiếu ${batch.code}`,
+        referenceId: batch.id,
+        items: transactionItems.map(({ batchItem, quantityReturned, returnNotes }) => ({
+          variantId: batchItem.variantId,
+          productId: batchItem.defectiveItem?.productId,
+          quantity: quantityReturned,
+          reason: returnNotes || batchItem.defectiveItem?.defectStatus,
+          exchangedAt: batchItem.defectiveItem?.exchangedAt,
+          defectDescription: batchItem.defectiveItem?.defectDescription,
+          repairNeeds: batchItem.defectiveItem?.repairNeeds,
+          defectImages: batchItem.defectiveItem?.images,
+          sourceRequisitionId: batchItem.defectiveItem?.sourceRequisitionId,
+          productName: batchItem.productName || batchItem.defectiveItem?.productName,
+          variantAttributes: batchItem.variantAttributes || batchItem.defectiveItem?.variantAttributes,
+          unit: batchItem.unit || batchItem.defectiveItem?.unit,
+        })),
+      });
+
+      const refreshedBatches = await repairBatchesService.getAll();
+      const refreshedBatch = refreshedBatches.find(item => item.id === batchId);
+      if (refreshedBatch) {
+        const hasOpenItems = refreshedBatch.items.some(item => item.quantityReturned + item.quantityDisposed < item.quantitySent);
+        const hasReturnedItems = refreshedBatch.items.some(item => item.quantityReturned > 0);
+        const status: RepairBatchStatus = hasOpenItems ? (hasReturnedItems ? 'partially_returned' : 'sent') : 'completed';
+        await repairBatchesService.updateStatus(batchId, status);
+      }
+
+      const [defectiveItems, repairBatches] = await Promise.all([
+        defectiveItemsService.getAll(),
+        repairBatchesService.getAll(),
+      ]);
+
+      set({ defectiveItems, repairBatches });
+    } finally {
+      set({ isActionLoading: false });
+    }
+  },
+
+  disposeDefectiveItems: async (items, reason, disposedBy) => {
+    set({ isActionLoading: true });
+    try {
+      const state = get();
+      const selectedItems = items.map(item => {
+        const defectiveItem = state.defectiveItems.find(defect => defect.id === item.defectiveItemId);
+        if (!defectiveItem) throw new Error('Không tìm thấy vật tư hỏng cần thanh lý.');
+        if (item.quantity !== defectiveItem.quantity) throw new Error('Hiện tại mỗi dòng vật tư hỏng cần được thanh lý nguyên số lượng.');
+        return { defectiveItem, quantity: item.quantity };
+      });
+
+      for (const { defectiveItem } of selectedItems) {
+        await defectiveItemsService.updateState(defectiveItem.id, 'disposed');
+      }
+
+      await get().createInventoryTransaction({
+        type: 'DISPOSAL',
+        status: 'COMPLETED',
+        createdBy: disposedBy,
+        notes: reason,
+        items: selectedItems.map(({ defectiveItem, quantity }) => ({
+          variantId: defectiveItem.variantId,
+          productId: defectiveItem.productId,
+          quantity,
+          reason,
+          exchangedAt: defectiveItem.exchangedAt,
+          defectDescription: defectiveItem.defectDescription,
+          repairNeeds: defectiveItem.repairNeeds,
+          defectImages: defectiveItem.images,
+          sourceRequisitionId: defectiveItem.sourceRequisitionId,
+          productName: defectiveItem.productName,
+          variantAttributes: defectiveItem.variantAttributes,
+          unit: defectiveItem.unit,
+        })),
+      });
+
+      const defectiveItems = await defectiveItemsService.getAll();
+      set({ defectiveItems });
     } finally {
       set({ isActionLoading: false });
     }

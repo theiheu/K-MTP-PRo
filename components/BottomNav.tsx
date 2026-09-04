@@ -6,6 +6,8 @@ interface BottomNavProps {
     view:
       | "shop"
       | "requisitions"
+      | "warehouse-requisitions"
+      | "warehouse-request"
       | "receipts"
       | "admin"
       | "deliveries"
@@ -15,8 +17,10 @@ interface BottomNavProps {
   currentView:
     | "shop"
     | "requisitions"
+    | "warehouse-requisitions"
     | "receipts"
     | "create-requisition"
+    | "warehouse-request"
     | "admin"
     | "create-receipt"
     | "deliveries"
@@ -117,15 +121,26 @@ const BottomNav: React.FC<BottomNavProps> = ({
           Kho vật tư
         </button>
         <button
-          onClick={() => onNavigate("requisitions")}
+          onClick={() => onNavigate("warehouse-requisitions")}
           className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
-            currentView === "requisitions"
+            ["warehouse-requisitions", "requisitions"].includes(currentView)
               ? "text-amber-600"
               : "text-gray-500 hover:text-amber-600"
           }`}
         >
           <ListBulletIcon className="w-6 h-6 mb-1" />
           Phiếu yêu cầu
+        </button>
+        <button
+          onClick={() => onNavigate("warehouse-request")}
+          className={`flex flex-col items-center justify-center w-full h-full text-[10px] text-center font-medium transition-colors ${
+            currentView === "warehouse-request"
+              ? "text-amber-600"
+              : "text-gray-500 hover:text-amber-600"
+          }`}
+        >
+          <ArchiveBoxArrowDownIcon className="w-6 h-6 mb-1 rotate-180" />
+          Tạo yêu cầu
         </button>
         {["manager", "auditor"].includes(user.role) && (
           <>

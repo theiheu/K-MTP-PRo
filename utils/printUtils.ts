@@ -1,5 +1,5 @@
 import { Product, RequisitionForm, GoodsReceiptNote } from '../types';
-import { numberToVietnameseWords } from './excelExport';
+import { numberToVietnameseWords } from './numberToVietnameseWords';
 
 const getPrintHTMLWrapper = (title: string, bodyHTML: string) => `
 <!DOCTYPE html>

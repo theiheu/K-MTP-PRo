@@ -26,12 +26,18 @@ export interface Variant {
   sku?: string;
 }
 
-export type InventoryTransactionType = 'RETURN' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL';
+export type InventoryTransactionType = 'RETURN' | 'RETURN_DEFECTIVE' | 'REPAIR_EXPORT' | 'REPAIR_IMPORT' | 'DISPOSAL';
 
 export interface InventoryTransactionItem {
   variantId: string;
   quantity: number;
   reason?: string;
+  productId?: string;
+  exchangedAt?: string;
+  defectDescription?: string;
+  repairNeeds?: string;
+  defectImages?: string[];
+  sourceRequisitionId?: string;
   // For display
   productName?: string;
   variantAttributes?: { [key: string]: string };
@@ -47,6 +53,71 @@ export interface InventoryTransaction {
   createdAt: string;
   notes?: string;
   referenceId?: string;
+}
+
+export type RequisitionPurposeType = 'regular_use' | 'exchange' | 'farm_repair' | 'supplement' | 'other';
+
+export interface RequisitionGroup {
+  id: string;
+  requisitionId?: string;
+  name: string;
+  purposeType: RequisitionPurposeType;
+  notes?: string;
+  neededBy?: string;
+  displayOrder: number;
+}
+
+export type DefectiveItemState = 'waiting_repair' | 'sent_to_repair' | 'repaired' | 'disposed';
+
+export interface DefectiveItem {
+  id: string;
+  sourceRequisitionId?: string;
+  sourceRequisitionItemId?: string;
+  productId: string;
+  variantId: string;
+  quantity: number;
+  exchangedAt?: string;
+  defectStatus: string;
+  defectDescription?: string;
+  repairNeeds?: string;
+  images: string[];
+  currentState: DefectiveItemState;
+  createdBy: string;
+  createdAt: string;
+  productName?: string;
+  variantAttributes?: { [key: string]: string };
+  unit?: string;
+}
+
+export type RepairBatchStatus = 'draft' | 'sent' | 'partially_returned' | 'completed' | 'cancelled';
+
+export interface RepairBatchItem {
+  id: string;
+  repairBatchId: string;
+  defectiveItemId: string;
+  variantId: string;
+  quantitySent: number;
+  quantityReturned: number;
+  quantityDisposed: number;
+  returnNotes?: string;
+  returnedAt?: string;
+  defectiveItem?: DefectiveItem;
+  productName?: string;
+  variantAttributes?: { [key: string]: string };
+  unit?: string;
+}
+
+export interface RepairBatch {
+  id: string;
+  code: string;
+  repairVendor?: string;
+  sentAt: string;
+  expectedReturnAt?: string;
+  status: RepairBatchStatus;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  items: RepairBatchItem[];
 }
 
 export interface Product {
@@ -68,8 +139,16 @@ export interface CartItem {
   product: Product;
   variant: Variant;
   quantity: number;
+  groupId?: string;
+  groupName?: string;
+  purposeType?: RequisitionPurposeType;
+  groupNotes?: string;
+  neededBy?: string;
   isExchange?: boolean;
   defectNotes?: string;
+  defectDescription?: string;
+  repairNeeds?: string;
+  exchangedAt?: string;
   defectImages?: string[];
 }
 
@@ -80,6 +159,7 @@ export interface RequisitionForm {
   requesterName: string;
   zone: string;
   purpose: string;
+  groups?: RequisitionGroup[];
   items: CartItem[];
   status: Status;
   createdAt: string;
@@ -155,7 +235,7 @@ export interface GoodsReceiptNote {
   linkedRequisitionIds?: string[]; // Lưu ID các phiếu yêu cầu đã được tự động cấp phát
 }
 
-export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits" | "defects";
+export type AdminTab = "dashboard" | "products" | "categories" | "zones" | "users" | "deliveries" | "inventory_audits" | "defects" | "warehouse_core";
 
 // --- START: Thêm mới cho Phiếu Giao Nhận ---
 export type DeliveryStatus = "pending" | "verified" | "rejected";

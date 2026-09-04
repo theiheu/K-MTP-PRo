@@ -6,6 +6,8 @@ interface DesktopNavProps {
     view:
       | "shop"
       | "requisitions"
+      | "warehouse-requisitions"
+      | "warehouse-request"
       | "receipts"
       | "admin"
       | "deliveries"
@@ -36,14 +38,24 @@ const DesktopNav: React.FC<DesktopNavProps> = ({
             Kho vật tư
           </button>
           <button
-            onClick={() => onNavigate("requisitions")}
+            onClick={() => onNavigate("warehouse-requisitions")}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              currentView === "requisitions"
+              ["warehouse-requisitions", "requisitions"].includes(currentView)
                 ? "bg-amber-100 text-amber-800"
                 : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
             Phiếu yêu cầu
+          </button>
+          <button
+            onClick={() => onNavigate("warehouse-request")}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              currentView === "warehouse-request"
+                ? "bg-amber-100 text-amber-800"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+            }`}
+          >
+            Tạo yêu cầu
           </button>
           {["manager", "auditor"].includes(user.role) && (
             <>

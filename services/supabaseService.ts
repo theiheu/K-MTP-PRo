@@ -11,7 +11,10 @@ import type {
   CartItem,
   InventoryAudit,
   InventoryAuditItem,
-  InventoryTransaction
+  InventoryTransaction,
+  DefectiveItem,
+  RepairBatch,
+  RepairBatchStatus
 } from '../types';
 
 // =====================================================
@@ -462,15 +465,27 @@ export const zonesService = {
 
 export const requisitionsService = {
   async getAll(): Promise<RequisitionForm[]> {
-    const { data: forms, error: formsError } = await supabase
+    let { data: forms, error: formsError } = await supabase
       .from('requisition_forms')
       .select(`
         *,
+        requisition_groups(
+          id,
+          name,
+          purpose_type,
+          notes,
+          needed_by,
+          display_order
+        ),
         requisition_items(
           id,
           quantity,
+          group_id,
           is_exchange,
           defect_notes,
+          defect_description,
+          repair_needs,
+          defect_exchanged_at,
           defect_images,
           product:products(id, name, description, images, options, category:categories(name)),
           variant:variants(id, attributes, stock, price, images, unit)
@@ -478,23 +493,65 @@ export const requisitionsService = {
       `)
       .order('created_at', { ascending: false });
 
+    if (formsError) {
+      console.warn('Không tải được nhóm mục đích phiếu yêu cầu, dùng dữ liệu phiếu cũ:', formsError);
+      const fallback = await supabase
+        .from('requisition_forms')
+        .select(`
+          *,
+          requisition_items(
+            id,
+            quantity,
+            is_exchange,
+            defect_notes,
+            defect_description,
+            repair_needs,
+            defect_exchanged_at,
+            defect_images,
+            product:products(id, name, description, images, options, category:categories(name)),
+            variant:variants(id, attributes, stock, price, images, unit)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      forms = fallback.data;
+      formsError = fallback.error;
+    }
+
     if (formsError) throw formsError;
 
     // Transform data to match RequisitionForm interface
-    return (forms || []).map((f: any) => ({
-      id: f.id,
-      requesterName: f.requester_name,
-      zone: f.zone,
-      purpose: f.purpose,
-      status: f.status,
-      createdAt: f.created_at,
-      fulfilledBy: f.fulfilled_by,
-      fulfilledAt: f.fulfilled_at,
-      fulfillmentNotes: f.fulfillment_notes,
-      receivedBy: f.received_by,
-      receivedAt: f.received_at,
-      receiveNotes: f.receive_notes,
-      items: (f.requisition_items || []).filter((item: any) => item.product && item.variant).map((item: any) => ({
+    return (forms || []).map((f: any) => {
+      const groups = (f.requisition_groups || [])
+        .sort((a: any, b: any) => a.display_order - b.display_order)
+        .map((group: any) => ({
+          id: group.id,
+          requisitionId: f.id,
+          name: group.name,
+          purposeType: group.purpose_type,
+          notes: group.notes,
+          neededBy: group.needed_by,
+          displayOrder: group.display_order,
+        }));
+
+      return {
+        id: f.id,
+        requesterName: f.requester_name,
+        zone: f.zone,
+        purpose: f.purpose,
+        status: f.status,
+        createdAt: f.created_at,
+        fulfilledBy: f.fulfilled_by,
+        fulfilledAt: f.fulfilled_at,
+        fulfillmentNotes: f.fulfillment_notes,
+        receivedBy: f.received_by,
+        receivedAt: f.received_at,
+        receiveNotes: f.receive_notes,
+        groups,
+        items: (f.requisition_items || []).filter((item: any) => item.product && item.variant).map((item: any) => {
+          const group = groups.find((entry: any) => entry.id === item.group_id);
+          const purposeType = group?.purposeType;
+          return {
         product: {
           id: item.product.id,
           name: item.product.name || '(Sản phẩm đã xóa)',
@@ -513,11 +570,21 @@ export const requisitionsService = {
           unit: item.variant.unit,
         },
         quantity: item.quantity,
+        groupId: item.group_id,
+        groupName: group?.name,
+        purposeType,
+        groupNotes: group?.notes,
+        neededBy: group?.neededBy,
         isExchange: item.is_exchange,
         defectNotes: item.defect_notes,
+        defectDescription: item.defect_description,
+        repairNeeds: item.repair_needs,
+        exchangedAt: item.defect_exchanged_at,
         defectImages: item.defect_images,
-      })),
-    }));
+          };
+        }),
+      };
+    });
   },
 
   async create(form: Omit<RequisitionForm, 'id' | 'createdAt'>): Promise<RequisitionForm> {
@@ -541,14 +608,53 @@ export const requisitionsService = {
 
     if (formError) throw formError;
 
+    const sourceGroups = form.groups && form.groups.length > 0
+      ? form.groups
+      : Array.from(new Map(form.items.map(item => [
+          item.groupId || 'default',
+          {
+            id: item.groupId || 'default',
+            name: item.groupName || 'Sử dụng thường ngày',
+            purposeType: item.purposeType || 'regular_use',
+            notes: item.groupNotes,
+            neededBy: item.neededBy,
+            displayOrder: 0,
+          },
+        ])).values());
+
+    const { data: insertedGroups, error: groupsError } = await supabase
+      .from('requisition_groups')
+      .insert(sourceGroups.map((group, index) => ({
+        requisition_id: newForm.id,
+        name: group.name,
+        purpose_type: group.purposeType,
+        notes: group.notes,
+        needed_by: group.neededBy,
+        display_order: group.displayOrder ?? index,
+      })))
+      .select();
+
+    if (groupsError) throw groupsError;
+
+    const groupIdMap = new Map<string, string>();
+    sourceGroups.forEach((group, index) => {
+      if (insertedGroups?.[index]) {
+        groupIdMap.set(group.id, insertedGroups[index].id);
+      }
+    });
+
     // Insert requisition items
     const itemsToInsert = form.items.map((item) => ({
       requisition_id: newForm.id,
+      group_id: groupIdMap.get(item.groupId || 'default'),
       product_id: item.product.id,
       variant_id: item.variant.id,
       quantity: item.quantity,
       is_exchange: item.isExchange,
       defect_notes: item.defectNotes,
+      defect_description: item.defectDescription,
+      repair_needs: item.repairNeeds,
+      defect_exchanged_at: item.exchangedAt,
       defect_images: item.defectImages,
     }));
 
@@ -571,6 +677,15 @@ export const requisitionsService = {
       receivedBy: newForm.received_by,
       receivedAt: newForm.received_at,
       receiveNotes: newForm.receive_notes,
+      groups: insertedGroups?.map((group: any) => ({
+        id: group.id,
+        requisitionId: newForm.id,
+        name: group.name,
+        purposeType: group.purpose_type,
+        notes: group.notes,
+        neededBy: group.needed_by,
+        displayOrder: group.display_order,
+      })) || [],
       items: form.items,
     };
   },
@@ -590,7 +705,7 @@ export const requisitionsService = {
 
     if (formError) throw formError;
 
-    // 2. Delete all old items to prevent conflicts
+    // 2. Delete all old items/groups to prevent conflicts
     const { error: deleteError } = await supabase
       .from('requisition_items')
       .delete()
@@ -598,15 +713,61 @@ export const requisitionsService = {
 
     if (deleteError) throw deleteError;
 
+    const { error: deleteGroupsError } = await supabase
+      .from('requisition_groups')
+      .delete()
+      .eq('requisition_id', form.id);
+
+    if (deleteGroupsError) throw deleteGroupsError;
+
+    const sourceGroups = form.groups && form.groups.length > 0
+      ? form.groups
+      : Array.from(new Map(form.items.map(item => [
+          item.groupId || 'default',
+          {
+            id: item.groupId || 'default',
+            name: item.groupName || 'Sử dụng thường ngày',
+            purposeType: item.purposeType || 'regular_use',
+            notes: item.groupNotes,
+            neededBy: item.neededBy,
+            displayOrder: 0,
+          },
+        ])).values());
+
+    const { data: insertedGroups, error: groupsError } = await supabase
+      .from('requisition_groups')
+      .insert(sourceGroups.map((group, index) => ({
+        requisition_id: form.id,
+        name: group.name,
+        purpose_type: group.purposeType,
+        notes: group.notes,
+        needed_by: group.neededBy,
+        display_order: group.displayOrder ?? index,
+      })))
+      .select();
+
+    if (groupsError) throw groupsError;
+
+    const groupIdMap = new Map<string, string>();
+    sourceGroups.forEach((group, index) => {
+      if (insertedGroups?.[index]) {
+        groupIdMap.set(group.id, insertedGroups[index].id);
+      }
+    });
+
     // 3. Insert the new list of items
     if (form.items.length > 0) {
       const itemsToInsert = form.items.map((item) => ({
         requisition_id: form.id,
+        group_id: groupIdMap.get(item.groupId || 'default'),
         product_id: item.product.id,
         variant_id: item.variant.id,
         quantity: item.quantity,
         is_exchange: item.isExchange,
         defect_notes: item.defectNotes,
+        defect_description: item.defectDescription,
+        repair_needs: item.repairNeeds,
+        defect_exchanged_at: item.exchangedAt,
         defect_images: item.defectImages,
       }));
 
@@ -1189,6 +1350,190 @@ export const usersService = {
 
 
 
+
+// =====================================================
+// DEFECTIVE ITEMS AND REPAIR BATCHES SERVICE
+// =====================================================
+
+const mapDefectiveItem = (item: any): DefectiveItem => ({
+  id: item.id,
+  sourceRequisitionId: item.source_requisition_id,
+  sourceRequisitionItemId: item.source_requisition_item_id,
+  productId: item.product_id,
+  variantId: item.variant_id,
+  quantity: item.quantity,
+  exchangedAt: item.exchanged_at,
+  defectStatus: item.defect_status,
+  defectDescription: item.defect_description,
+  repairNeeds: item.repair_needs,
+  images: item.images || [],
+  currentState: item.current_state,
+  createdBy: item.created_by,
+  createdAt: item.created_at,
+  productName: item.product?.name,
+  variantAttributes: item.variant?.attributes,
+  unit: item.variant?.unit,
+});
+
+export const defectiveItemsService = {
+  async getAll(): Promise<DefectiveItem[]> {
+    const { data, error } = await supabase
+      .from('defective_items')
+      .select(`
+        *,
+        product:products(id, name),
+        variant:variants(id, attributes, unit)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map(mapDefectiveItem);
+  },
+
+  async createMany(items: Array<Omit<DefectiveItem, 'id' | 'createdAt'>>): Promise<DefectiveItem[]> {
+    if (items.length === 0) return [];
+
+    const { data, error } = await supabase
+      .from('defective_items')
+      .insert(items.map(item => ({
+        source_requisition_id: item.sourceRequisitionId,
+        source_requisition_item_id: item.sourceRequisitionItemId,
+        product_id: item.productId,
+        variant_id: item.variantId,
+        quantity: item.quantity,
+        exchanged_at: item.exchangedAt,
+        defect_status: item.defectStatus,
+        defect_description: item.defectDescription,
+        repair_needs: item.repairNeeds,
+        images: item.images || [],
+        current_state: item.currentState,
+        created_by: item.createdBy,
+      })))
+      .select(`
+        *,
+        product:products(id, name),
+        variant:variants(id, attributes, unit)
+      `);
+
+    if (error) throw error;
+
+    return (data || []).map(mapDefectiveItem);
+  },
+
+  async updateState(id: string, currentState: DefectiveItem['currentState']): Promise<void> {
+    const { error } = await supabase
+      .from('defective_items')
+      .update({ current_state: currentState })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+};
+
+export const repairBatchesService = {
+  async getAll(): Promise<RepairBatch[]> {
+    const { data, error } = await supabase
+      .from('repair_batches')
+      .select(`
+        *,
+        repair_batch_items(
+          *,
+          defective_item:defective_items(
+            *,
+            product:products(id, name),
+            variant:variants(id, attributes, unit)
+          ),
+          variant:variants(id, attributes, unit)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return (data || []).map((batch: any) => ({
+      id: batch.id,
+      code: batch.code,
+      repairVendor: batch.repair_vendor,
+      sentAt: batch.sent_at,
+      expectedReturnAt: batch.expected_return_at,
+      status: batch.status,
+      notes: batch.notes,
+      createdBy: batch.created_by,
+      createdAt: batch.created_at,
+      items: (batch.repair_batch_items || []).map((item: any) => ({
+        id: item.id,
+        repairBatchId: item.repair_batch_id,
+        defectiveItemId: item.defective_item_id,
+        variantId: item.variant_id,
+        quantitySent: item.quantity_sent,
+        quantityReturned: item.quantity_returned,
+        quantityDisposed: item.quantity_disposed,
+        returnNotes: item.return_notes,
+        returnedAt: item.returned_at,
+        defectiveItem: item.defective_item ? mapDefectiveItem(item.defective_item) : undefined,
+        productName: item.defective_item?.product?.name,
+        variantAttributes: item.variant?.attributes,
+        unit: item.variant?.unit,
+      })),
+    }));
+  },
+
+  async create(batch: Omit<RepairBatch, 'id' | 'createdAt' | 'items'>, items: Array<{ defectiveItemId: string; variantId: string; quantitySent: number }>): Promise<RepairBatch> {
+    const { data: newBatch, error: batchError } = await supabase
+      .from('repair_batches')
+      .insert({
+        code: batch.code,
+        repair_vendor: batch.repairVendor,
+        sent_at: batch.sentAt,
+        expected_return_at: batch.expectedReturnAt,
+        status: batch.status,
+        notes: batch.notes,
+        created_by: batch.createdBy,
+      })
+      .select()
+      .single();
+
+    if (batchError) throw batchError;
+
+    const { error: itemsError } = await supabase
+      .from('repair_batch_items')
+      .insert(items.map(item => ({
+        repair_batch_id: newBatch.id,
+        defective_item_id: item.defectiveItemId,
+        variant_id: item.variantId,
+        quantity_sent: item.quantitySent,
+      })));
+
+    if (itemsError) throw itemsError;
+
+    const allBatches = await this.getAll();
+    return allBatches.find(item => item.id === newBatch.id)!;
+  },
+
+  async updateItem(id: string, updates: { quantityReturned?: number; quantityDisposed?: number; returnNotes?: string; returnedAt?: string }): Promise<void> {
+    const { error } = await supabase
+      .from('repair_batch_items')
+      .update({
+        quantity_returned: updates.quantityReturned,
+        quantity_disposed: updates.quantityDisposed,
+        return_notes: updates.returnNotes,
+        returned_at: updates.returnedAt,
+      })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async updateStatus(id: string, status: RepairBatchStatus): Promise<void> {
+    const { error } = await supabase
+      .from('repair_batches')
+      .update({ status })
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+};
 
 // =====================================================
 // INVENTORY TRANSACTIONS SERVICE

@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import { GoodsReceiptNote, Product } from '../types';
-import { printPhieuNhapKho } from '../utils/printUtils';
 
 interface ReceiptCardProps {
   receipt: GoodsReceiptNote;
@@ -14,6 +13,10 @@ const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
+const printReceipt = async (receipt: GoodsReceiptNote, allProducts: Product[]) => {
+  const { printPhieuNhapKho } = await import('../utils/printUtils');
+  printPhieuNhapKho(receipt, allProducts);
+};
 
 const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt, allProducts }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -83,7 +86,7 @@ const ReceiptCard: React.FC<ReceiptCardProps> = ({ receipt, allProducts }) => {
       
       <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex justify-end gap-3">
           <button
-            onClick={() => printPhieuNhapKho(receipt, allProducts)}
+            onClick={() => { void printReceipt(receipt, allProducts); }}
             className="w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             title="In Phiếu ra file PDF hoặc Máy in"
           >

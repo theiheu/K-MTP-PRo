@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { RequisitionForm, UserRole } from '../types';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import ConfirmationModal from './ConfirmationModal';
-import { printPhieuXuatKho } from '../utils/printUtils';
+import { calculateVariantStock } from '../utils/stockCalculator';
 
 interface RequisitionCardProps {
   form: RequisitionForm;
@@ -24,6 +24,11 @@ const statusStyles = {
   'Đang chờ xử lý': 'bg-amber-100 text-amber-800',
   'Đã hoàn thành': 'bg-green-100 text-green-800',
   'Đã nhận hàng': 'bg-blue-100 text-blue-800',
+};
+
+const printRequisition = async (form: RequisitionForm) => {
+  const { printPhieuXuatKho } = await import('../utils/printUtils');
+  printPhieuXuatKho(form);
 };
 
 const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfillment, userRole, onImageClick, onEdit, onDelete, onConfirmReceipt }) => {
@@ -87,6 +92,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
               const variantAttributes = Object.entries(item.variant.attributes)
                 .map(([, value]) => value)
                 .join(' / ');
+              const stock = calculateVariantStock(item.variant, item.product.variants.length > 0 ? [item.product] : []);
 
               const variantImages = item.variant.images;
               // Use variant images if available, otherwise fall back to general product images
@@ -133,7 +139,15 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
                           </svg>
                           Cấp đổi (Thu hồi đồ cũ)
                         </p>
+                        {['Đã duyệt yêu cầu', 'Đã hoàn thành'].includes(form.status) && (
+                          <p className="mt-1 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                            Đã đổi và ghi nhận vào kho vật tư hỏng
+                          </p>
+                        )}
+                        {item.exchangedAt && <p className="text-xs text-red-600 mt-1"><span className="font-medium">Ngày đổi:</span> {new Date(item.exchangedAt).toLocaleDateString('vi-VN')}</p>}
                         {item.defectNotes && <p className="text-xs text-red-600 mt-1"><span className="font-medium">Lỗi:</span> {item.defectNotes}</p>}
+                        {item.defectDescription && <p className="text-xs text-red-600 mt-1"><span className="font-medium">Mô tả hỏng:</span> {item.defectDescription}</p>}
+                        {item.repairNeeds && <p className="text-xs text-red-600 mt-1"><span className="font-medium">Cần sửa:</span> {item.repairNeeds}</p>}
                         {item.defectImages && item.defectImages.length > 0 && (
                           <div className="mt-1 flex gap-1 overflow-x-auto">
                             {item.defectImages.map((src, idx) => (
@@ -160,7 +174,7 @@ const RequisitionCard: React.FC<RequisitionCardProps> = ({ form, onInitiateFulfi
 
       <div className="bg-gray-50 px-4 py-3 sm:px-6 border-t border-gray-200 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
           <button
-            onClick={() => printPhieuXuatKho(form)}
+            onClick={() => { void printRequisition(form); }}
             className="w-full sm:w-auto inline-flex items-center justify-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
             title="In Phiếu ra file PDF hoặc Máy in"
           >

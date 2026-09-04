@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useDataStore } from '../store/dataStore';
 import { InventoryAudit } from '../types';
-import * as XLSX from 'xlsx';
 import { useAuthStore } from '../store/authStore';
 import ImageWithPlaceholder from './ImageWithPlaceholder';
 import Pagination from './Pagination';
@@ -188,8 +187,9 @@ const InventoryAuditSection: React.FC = () => {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!selectedAudit) return;
+    const XLSX = await import('xlsx');
     const wsData = [
       ['PHIẾU KIỂM KÊ KHO', '', '', '', ''],
       [`Tên đợt: ${selectedAudit.title}`, '', '', '', ''],

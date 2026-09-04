@@ -9,7 +9,9 @@ interface HeaderProps {
     view:
       | "shop"
       | "requisitions"
+      | "warehouse-requisitions"
       | "create-requisition"
+      | "warehouse-request"
       | "admin"
       | "deliveries"
       | "create-delivery"
@@ -161,7 +163,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="ml-2 sm:ml-4">
               <NotificationBell 
                 userRole={user.role} 
-                onNavigateToRequisitions={() => onNavigate('requisitions')}
+                onNavigateToRequisitions={() => onNavigate('warehouse-requisitions')}
                 onNavigateToInventory={() => onNavigate('admin')}
               />
             </div>

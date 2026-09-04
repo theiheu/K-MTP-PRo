@@ -1,23 +1,30 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { Suspense, lazy, useState, useMemo, useRef, useEffect } from "react";
 
 import { useSortableData } from '../hooks/useSortableData';
 import SortableHeader from './SortableHeader';
 import { Product, Category, Variant, AdminTab, Zone, User } from "../types";
-import ProductFormModal from "./ProductFormModal";
 import ConfirmationModal from "./ConfirmationModal";
 import ImageGalleryModal from "./ImageGalleryModal";
-import DefectManagement from "./DefectManagement";
 import CategoryFormModal from "./CategoryFormModal";
 import ImageWithPlaceholder from "./ImageWithPlaceholder";
 import { calculateVariantStock } from "../utils/stockCalculator";
-import ReceiptList from "./ReceiptList";
-import ZoneListSection from "./ZoneListSection";
-import UserManagement from "./UserManagement";
 import { useAuthStore } from "../store/authStore";
 import { useDataStore } from "../store/dataStore";
-import Dashboard from "./Dashboard";
-import InventoryAuditSection from "./InventoryAuditSection";
 import Pagination from "./Pagination";
+
+const Dashboard = lazy(() => import("./Dashboard"));
+const DefectManagement = lazy(() => import("./DefectManagement"));
+const CoreInventoryAuditSection = lazy(() => import("./CoreInventoryAuditSection"));
+const InventoryCoreWorkspace = lazy(() => import("./InventoryCoreWorkspace"));
+const ProductFormModal = lazy(() => import("./ProductFormModal"));
+const ReceiptList = lazy(() => import("./ReceiptList"));
+const UserManagement = lazy(() => import("./UserManagement"));
+const WarehouseCoreStatus = lazy(() => import("./WarehouseCoreStatus"));
+const ZoneListSection = lazy(() => import("./ZoneListSection"));
+
+const AdminSectionFallback = () => (
+  <div className="py-12 text-center text-sm text-gray-500">Đang tải...</div>
+);
 
 interface AdminPageProps {
   products: Product[];
@@ -137,7 +144,12 @@ const AdminPage: React.FC<AdminPageProps> = ({
 }) => {
   const { user } = useAuthStore();
   const inventoryTransactions = useDataStore(s => s.inventoryTransactions);
+  const defectiveItems = useDataStore(s => s.defectiveItems);
+  const repairBatches = useDataStore(s => s.repairBatches);
   const createInventoryTransaction = useDataStore(s => s.createInventoryTransaction);
+  const createRepairBatch = useDataStore(s => s.createRepairBatch);
+  const receiveRepairBatchItems = useDataStore(s => s.receiveRepairBatchItems);
+  const disposeDefectiveItems = useDataStore(s => s.disposeDefectiveItems);
   const isReadOnly = user?.role !== "manager";
 
   const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
@@ -398,6 +410,17 @@ const AdminPage: React.FC<AdminPageProps> = ({
               Quản lý Vật tư
             </button>
             <button
+              onClick={() => setActiveTab("warehouse_core")}
+              aria-current={activeTab === "warehouse_core" ? "page" : undefined}
+              className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "warehouse_core"
+                  ? "border-yellow-500 text-yellow-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Sổ kho mới
+            </button>
+            <button
               onClick={() => setActiveTab("inventory_audits")}
               aria-current={activeTab === "inventory_audits" ? "page" : undefined}
               className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
@@ -472,6 +495,7 @@ const AdminPage: React.FC<AdminPageProps> = ({
       </div>
 
       <div className="mt-6">
+        <Suspense fallback={<AdminSectionFallback />}>
         {activeTab === "products" && (
           <div role="tabpanel" id="products-panel">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -926,12 +950,19 @@ const AdminPage: React.FC<AdminPageProps> = ({
 
         {activeTab === "inventory_audits" && (
           <div role="tabpanel" id="inventory-audits-panel">
-            <InventoryAuditSection />
+            <CoreInventoryAuditSection />
+          </div>
+        )}
+
+        {activeTab === "warehouse_core" && (
+          <div role="tabpanel" id="warehouse-core-panel">
+            <InventoryCoreWorkspace />
           </div>
         )}
 
         {activeTab === "dashboard" && (
           <div role="tabpanel" id="dashboard-panel">
+            <WarehouseCoreStatus />
             <Dashboard />
           </div>
         )}
@@ -941,21 +972,31 @@ const AdminPage: React.FC<AdminPageProps> = ({
             <DefectManagement
               products={products}
               transactions={inventoryTransactions}
+              defectiveItems={defectiveItems}
+              repairBatches={repairBatches}
               onCreateTransaction={createInventoryTransaction}
+              onCreateRepairBatch={createRepairBatch}
+              onReceiveRepairBatchItems={receiveRepairBatchItems}
+              onDisposeDefectiveItems={disposeDefectiveItems}
               currentUser={user}
             />
           </div>
         )}
+        </Suspense>
       </div>
 
-      <ProductFormModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onSubmit={handleFormSubmit}
-        product={editingProduct}
-        allProducts={products}
-        categories={categories}
-      />
+      {isModalOpen && (
+        <Suspense fallback={<AdminSectionFallback />}>
+          <ProductFormModal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            onSubmit={handleFormSubmit}
+            product={editingProduct}
+            allProducts={products}
+            categories={categories}
+          />
+        </Suspense>
+      )}
 
       <CategoryFormModal
         isOpen={isCategoryModalOpen}
